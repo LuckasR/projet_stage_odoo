@@ -1,0 +1,7 @@
+<!-- data/ir_config_parameter.xml -->
+<odoo>
+    <record id="config_oda_path" model="ir.config_parameter">
+        <field name="key">construction_dwg.oda_path</field>
+        <field name="value">/home/luckas/Téléchargements/ODAFileConverter_QT6_lnxX64_8.3dll_27.1.AppImage</field>
+    </record>
+</odoo>

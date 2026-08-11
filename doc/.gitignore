@@ -1,0 +1,55 @@
+# ============================
+# Odoo - ignorer le core et les addons
+# sauf notre module custom
+# ============================
+
+odoo/*
+!odoo/addons/
+odoo/addons/*
+!odoo/addons/miro_construction_management/
+!odoo/addons/miro_construction_management/**
+
+# ============================
+# Python
+# ============================
+
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+env/
+
+# ============================
+# Odoo - fichiers générés
+# ============================
+
+odoo.conf
+*.pot
+filestore/
+sessions/
+*.log
+
+# ============================
+# Base de données
+# ============================
+
+*.sql
+*.dump
+*.backup
+
+# ============================
+# IDE / OS
+# ============================
+
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ============================
+# Node
+# ============================
+
+node_modules/

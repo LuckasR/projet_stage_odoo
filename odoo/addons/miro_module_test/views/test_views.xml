@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- Vue liste -->
+    <record id="view_test_model_tree" model="ir.ui.view">
+        <field name="name">test.model.tree</field>
+        <field name="model">test.model</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="description"/>
+            </tree>     
+        </field>
+    </record>
+
+    <!-- Vue formulaire -->
+    <record id="view_test_model_form" model="ir.ui.view">
+        <field name="name">test.model.form</field>
+        <field name="model">test.model</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="description"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_test_model" model="ir.actions.act_window">
+        <field name="name">Tests</field>
+        <field name="res_model">test.model</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- Menu principal -->
+    <menuitem
+        id="menu_test_root"
+        name="Test Module"
+        sequence="10"/>
+
+    <!-- Sous-menu -->
+    <menuitem
+        id="menu_test_model"
+        name="Tests"
+        parent="menu_test_root"
+        action="action_test_model"/>
+
+</odoo>

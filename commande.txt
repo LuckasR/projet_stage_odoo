@@ -1,0 +1,9 @@
+python3 -m odoo -d odoo17 -i base --stop-after-init 
+
+sudo -u postgres psql
+
+-- Pour le port 
+
+sudo lsof -i :8069
+
+sudo fuser -k 8069/tcp

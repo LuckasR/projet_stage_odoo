@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <menuitem
+        id="menu_construction_root"
+        name="Construction Management"
+        sequence="10"/>
+
+    <menuitem
+        id="menu_construction_dxf"
+        name="Dashboard"
+        parent="menu_construction_root"
+        action="action_construction_dxf_file"
+        sequence="1"/>
+
+    <menuitem
+        id="menu_construction_dxf"
+        name="Fichiers DXF"
+        parent="menu_construction_root"
+        action="action_construction_dxf_file"
+        sequence="1"/>
+
+
+</odoo>

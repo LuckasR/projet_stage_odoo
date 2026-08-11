@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- === ACTIONS (doivent être définies avant les menus) === -->
+    
+    <!-- Action pour la liste -->
+    <record id="action_miro_custom_module_list" model="ir.actions.act_window">
+        <field name="name">Miro Custom Module</field>
+        <field name="res_model">miro_custom_module.model</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first Miro Custom Module
+            </p>
+        </field>
+    </record>
+    
+    <!-- === MENUS === -->
+    
+    <menuitem id="menu_miro_custom_module_root" 
+              name="Miro Custom Module" 
+              sequence="10"/>
+              
+    <menuitem id="menu_miro_custom_module_config" 
+              name="Configuration" 
+              parent="menu_miro_custom_module_root" 
+              sequence="10"/>
+              
+    <menuitem id="menu_miro_custom_module_list" 
+              name="Miro Custom Module" 
+              parent="menu_miro_custom_module_root" 
+              action="action_miro_custom_module_list" 
+              sequence="20"/>
+</odoo>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- Vue liste -->
+    <record id="view_construction_dxf_file_list" model="ir.ui.view">
+        <field name="name">construction.dxf.file.list</field>
+        <field name="model">construction.dxf.file</field>
+        <field name="arch" type="xml">
+            <tree string="Fichiers DXF">
+                <field name="filename"/>
+                <field name="project_id"/>
+                <field name="prix_ht"/>
+                <field name="taxe"/>
+                <field name="prix_ttc"/>
+                <field name="state"/>
+                <field name="imported_at"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Vue formulaire -->
+    <record id="view_construction_dxf_file_form" model="ir.ui.view">
+        <field name="name">construction.dxf.file.form</field>
+        <field name="model">construction.dxf.file</field> 
+        <field name="arch" type="xml">
+            <form string="Fichier DXF">
+                <sheet>
+                    <group>
+                        <field name="project_id"/>
+                        <field name="filename"/>
+                        <field name="file" filename="filename"/>
+                    </group>
+
+                    <group>
+                        <field name="prix_ht"/>
+                        <field name="taxe"/>
+                        <field name="prix_ttc"/>
+                    </group>
+
+                    <group>
+                        <field name="state" readonly="1"/>
+                        <field name="imported_at" readonly="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+ 
+ <record id="action_construction_dxf_file" model="ir.actions.act_window">
+    <field name="name">Fichiers DXF</field>
+    <field name="res_model">construction.dxf.file</field>
+    <field name="view_mode">tree,form</field>
+</record>
+
+</odoo>

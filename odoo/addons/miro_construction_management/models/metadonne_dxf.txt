@@ -1,0 +1,158 @@
+#!/usr/bin/env python3
+"""
+Extraction des métadonnées d'un fichier DXF.
+
+Extrait : version DXF, unités, dates de création/modification,
+auteur (propriétés personnalisées), et quelques statistiques
+générales (nombre de calques, blocs, entités).
+
+Usage :
+    python extract_dxf_metadata.py chemin/vers/fichier.dxf
+    python extract_dxf_metadata.py chemin/vers/fichier.dxf --json sortie.json
+"""
+
+import argparse
+import json
+import sys
+from datetime import datetime, timedelta
+from pathlib import Path
+
+import ezdxf
+
+# Table de correspondance des codes de version DXF vers un nom lisible
+DXF_VERSION_NAMES = {
+    "AC1006": "R10",
+    "AC1009": "R11/R12",
+    "AC1012": "R13",
+    "AC1014": "R14",
+    "AC1015": "AutoCAD 2000",
+    "AC1018": "AutoCAD 2004",
+    "AC1021": "AutoCAD 2007",
+    "AC1024": "AutoCAD 2010",
+    "AC1027": "AutoCAD 2013",
+    "AC1032": "AutoCAD 2018",
+}
+
+# Table de correspondance des codes d'unités DXF ($INSUNITS)
+DXF_UNITS = {
+    0: "Non spécifiées",
+    1: "Pouces",
+    2: "Pieds",
+    3: "Miles",
+    4: "Millimètres",
+    5: "Centimètres",
+    6: "Mètres",
+    7: "Kilomètres",
+    8: "Micropouces",
+    9: "Mils",
+    10: "Yards",
+    11: "Angströms",
+    12: "Nanomètres",
+    13: "Microns",
+    14: "Décimètres",
+    15: "Décamètres",
+    16: "Hectomètres",
+    17: "Gigamètres",
+    18: "Unités astronomiques",
+    19: "Années-lumière",
+    20: "Parsecs",
+}
+
+
+def julian_to_datetime(julian_value):
+    """Convertit une date julienne AutoCAD (ex: $TDCREATE) en datetime."""
+    if not julian_value:
+        return None
+    try:
+        # Format AutoCAD : JJJJJJJ.FFFFFFFF (jour julien . fraction du jour)
+        epoch = datetime(1858, 11, 17)  # époque julienne modifiée (jour 2400000.5)
+        jd = float(julian_value) - 2400000.5
+        return (epoch + timedelta(days=jd)).isoformat()
+    except (ValueError, OverflowError):
+        return None
+
+
+def extract_metadata(dxf_path: str) -> dict:
+    """Extrait les métadonnées générales d'un fichier DXF."""
+    doc = ezdxf.readfile(dxf_path)
+    header = doc.header
+
+    def hget(var, default=None):
+        return header.get(var, default)
+
+    # --- Version et unités ---
+    version_code = doc.dxfversion
+    units_code = hget("$INSUNITS", 0)
+
+    metadata = {
+        "fichier": str(Path(dxf_path).resolve()),
+        "taille_octets": Path(dxf_path).stat().st_size,
+        "version": {
+            "code": version_code,
+            "nom": DXF_VERSION_NAMES.get(version_code, "Inconnue"),
+        },
+        "unites": {
+            "code": units_code,
+            "nom": DXF_UNITS.get(units_code, "Inconnue"),
+        },
+        "dates": {
+            "creation": julian_to_datetime(hget("$TDCREATE")),
+            "derniere_modification": julian_to_datetime(hget("$TDUPDATE")),
+        },
+        "auteur_et_proprietes_personnalisees": dict(
+            zip(
+                header.get("$CUSTOMPROPERTYTAG", []) if hasattr(header, "get") else [],
+                header.get("$CUSTOMPROPERTY", []) if hasattr(header, "get") else [],
+            )
+        ),
+        "nom_projet": hget("$PROJECTNAME", "") or None,
+        "point_insertion_base": list(hget("$INSBASE", (0, 0, 0))),
+        "limites_dessin": {
+            "min": list(hget("$EXTMIN", (0, 0, 0))),
+            "max": list(hget("$EXTMAX", (0, 0, 0))),
+        },
+        "statistiques": {
+            "nb_calques": len(doc.layers),
+            "nb_blocs": len(doc.blocks),
+            "nb_entites_modelspace": len(doc.modelspace()),
+            "nb_styles_texte": len(doc.styles),
+            "nb_types_lignes": len(doc.linetypes),
+        },
+    }
+
+    # Propriétés personnalisées : essai via API dédiée d'ezdxf si disponible
+    try:
+        custom_props = list(doc.header.custom_vars.properties)
+        if custom_props:
+            metadata["auteur_et_proprietes_personnalisees"] = dict(custom_props)
+    except AttributeError:
+        pass
+
+    return metadata
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Extrait les métadonnées d'un fichier DXF.")
+    parser.add_argument("dxf_file", help="Chemin vers le fichier .dxf")
+    parser.add_argument("--json", help="Chemin de sortie pour un export JSON (optionnel)")
+    args = parser.parse_args()
+
+    try:
+        metadata = extract_metadata(args.dxf_file)
+    except IOError:
+        print(f"Erreur : impossible de lire le fichier '{args.dxf_file}'.", file=sys.stderr)
+        sys.exit(1)
+    except ezdxf.DXFStructureError as e:
+        print(f"Erreur : fichier DXF invalide ou corrompu ({e}).", file=sys.stderr)
+        sys.exit(1)
+
+    print(json.dumps(metadata, indent=2, ensure_ascii=False))
+
+    if args.json:
+        with open(args.json, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, indent=2, ensure_ascii=False)
+        print(f"\nMétadonnées exportées vers : {args.json}", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()

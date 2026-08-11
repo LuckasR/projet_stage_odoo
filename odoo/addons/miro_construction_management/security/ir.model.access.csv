@@ -1,0 +1,2 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_construction_dwg_files_user,construction.dwg.files.user,model_construction_dwg_files,base.group_user,1,0,0,0

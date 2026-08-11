@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_miro_custom_module_user,miro_custom_module.user,model_miro_custom_module_model,group_miro_custom_module_user,1,0,0,0
+access_miro_custom_module_manager,miro_custom_module.manager,model_miro_custom_module_model,group_miro_custom_module_manager,1,1,1,1

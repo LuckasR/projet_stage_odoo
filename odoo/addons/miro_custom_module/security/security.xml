@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data noupdate="0">
+        <!-- Security Groups -->
+        <record id="group_miro_custom_module_user" model="res.groups">
+            <field name="name">miro custom module User</field>
+            <!-- <field name="category_id" ref="base.module_category_miro_custom_module"/> -->
+        </record>
+        
+        <record id="group_miro_custom_module_manager" model="res.groups">
+            <field name="name">miro custom module Manager</field>
+            <field name="implied_ids" eval="[(4, ref('group_miro_custom_module_user'))]"/>
+            <!-- <field name="category_id" ref="base.module_category_miro_custom_module"/> -->
+        </record>
+    </data>
+</odoo>

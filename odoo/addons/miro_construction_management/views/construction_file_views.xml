@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- Vue liste -->
+    <record id="view_construction_dwg_files_list" model="ir.ui.view">
+        <field name="name">construction.dwg.files.list</field>
+        <field name="model">construction.dwg.files</field>
+        <field name="arch" type="xml">
+            <tree string="Fichiers DWG">
+                <field name="filename" />
+                <field name="project_id" />
+                <field name="file" filename="filename" />
+                <field name="dxf_filename" />
+                <field name="dxf_file" filename="dxf_filename" />
+                <field name="state" />
+                <field name="imported_at" />
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_construction_dwg_files_form" model="ir.ui.view">
+        <field name="name">construction.dwg.files.form</field>
+        <field name="model">construction.dwg.files</field>
+        <field name="arch" type="xml">
+            <form string="Fichier DWG">
+                <header>
+                    <button name="action_process_file"
+                            string="Traiter / Convertir"
+                            type="object"
+                            class="oe_highlight"
+                            invisible="state not in ('draft', 'error')"/>
+
+                    <button name="action_visualize"
+                            string="Visualiser"
+                            type="object"
+                            class="btn-primary"
+                            icon="fa-eye"
+                            invisible="not dxf_file"/>
+                </header>
+
+                <sheet>
+                    <group>
+                        <group string="Fichier source">
+                            <field name="project_id"/>
+                            <field name="filename"/>
+                            <field name="file" filename="filename"/>
+                        </group>
+
+                        <group string="Fichier DXF généré">
+                            <field name="dxf_filename" readonly="1"/>
+                            <field name="dxf_file" filename="dxf_filename" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group>
+                        <field name="state" readonly="1"/>
+                        <field name="imported_at" readonly="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_construction_dwg_files" model="ir.actions.act_window">
+        <field name="name">Fichiers DWG</field>
+        <field name="res_model">construction.dwg.files</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+</odoo>
