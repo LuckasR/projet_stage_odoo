@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Application principale -->
+    <menuitem
+        id="menu_construction_root"
+        name="Construction"
+        sequence="90"
+    />
+
+    <!-- Produits -->
+    <menuitem
+        id="menu_construction_products"
+        name="Matériaux de construction"
+        parent="menu_construction_root"
+        action="action_construction_material_products"
+        sequence="10"
+    />
+
+    <!-- Types -->
+    <menuitem
+        id="menu_construction_material_type"
+        name="Types de matériaux"
+        parent="menu_construction_root"
+        action="action_construction_material_type"
+        sequence="20"
+    />
+
+    <!-- Caractéristiques -->
+    <menuitem
+        id="menu_construction_material_attribute"
+        name="Caractéristiques"
+        parent="menu_construction_root"
+        action="action_construction_material_attribute"
+        sequence="30"
+    />
+
+    <!--  NOMENCLATURES / RECETTES -->
+    <menuitem id="menu_construction_bom" 
+              name="Nomenclatures" 
+              parent="menu_construction_root"
+              action="action_construction_bom" 
+              sequence="40" 
+    />
+
+</odoo>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Renseigne l'analyse par défaut de chaque type de plan (ARCH -> murs, FOND/COFF -> éléments).
+     Exécuté à chaque mise à jour : ne modifie jamais une valeur déjà choisie. -->
+<odoo>
+    <function model="construction.plan.type" name="_set_default_analyzers"/>
+
+    <!-- Dote les éléments déjà créés des caractéristiques de leur type.
+         Rejoué à chaque mise à jour : la synchronisation est idempotente. -->
+    <function model="construction.element" name="_sync_all_value_lines"/>
+
+    <!-- Reprend la zone source des éléments générés avant l'introduction de
+         source_bbox, depuis leur brouillon d'origine. Idempotent : ne touche
+         qu'aux éléments encore sans zone source. -->
+    <function model="construction.element" name="_backfill_source_bbox"/>
+
+    <!-- Relie chaque mur à ses brouillons et éléments créés avant le lien
+         mur -> élément, puis reporte ses cotes à jour. Idempotent. -->
+    <function model="construction.wall" name="_link_elements"/>
+
+    <!-- Retire les brouillons « Inchangé » en attente dont l'élément existe
+         déjà : il n'y a rien à valider. Idempotent. -->
+    <function model="construction.analysis" name="_purge_unchanged_drafts"/>
+</odoo>

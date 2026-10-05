@@ -1,0 +1,792 @@
+/* =========================================================
+   MIRO CONSTRUCTION MANAGEMENT
+   ODOO 17 - PROFESSIONAL BACKEND THEME (FIXED)
+   ========================================================= */
+
+/* =========================================================
+   VARIABLES
+   ========================================================= */
+
+:root {
+    --miro-primary: #0f172a;
+    --miro-primary-light: #1e293b;
+    --miro-primary-dark: #0a0f1e;
+
+    /* Dégradé principal (utilisé uniquement pour les grandes surfaces) */
+    --miro-gradient: linear-gradient(135deg, #0f172a 0%, #1a2a4a 100%);
+    --miro-gradient-accent: linear-gradient(135deg, #f59e0b, #f97316);
+
+    --miro-accent: #f59e0b;
+    --miro-accent-dark: #d97706;
+    --miro-accent-light: #fbbf24;
+
+    --miro-bg: #f1f5f9;
+    --miro-card: #ffffff;
+    --miro-border: #e9edf2;
+
+    --miro-text: #0f172a;
+    --miro-muted: #64748b;
+    --miro-muted-light: #94a3b8;
+
+    --miro-success: #22c55e;
+    --miro-success-bg: #ecfdf5;
+    --miro-danger: #ef4444;
+    --miro-danger-bg: #fef2f2;
+    --miro-info: #3b82f6;
+    --miro-info-bg: #eff6ff;
+    --miro-warning: #f59e0b;
+    --miro-warning-bg: #fffbeb;
+
+    --miro-radius: 12px;
+    --miro-radius-sm: 8px;
+    --miro-radius-full: 9999px;
+
+    --miro-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
+    --miro-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+    --miro-shadow-lg: 0 10px 35px rgba(15, 23, 42, 0.12);
+    --miro-shadow-xl: 0 20px 50px rgba(15, 23, 42, 0.15);
+
+    --miro-transition: 0.2s ease;
+}
+
+
+/* =========================================================
+   GLOBAL
+   ========================================================= */
+
+.o_web_client {
+    background: var(--miro-bg) !important;
+    color: var(--miro-text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: var(--miro-radius-full); }
+::-webkit-scrollbar-thumb:hover { background: var(--miro-accent); }
+
+
+/* =========================================================
+   NAVBAR (HAUT)
+   ========================================================= */
+
+.o_main_navbar {
+    background: var(--miro-gradient) !important;
+    border-bottom: none !important;
+    height: 56px !important;
+    box-shadow: 0 2px 15px rgba(15, 23, 42, 0.15);
+    position: relative;
+    z-index: 1050;
+}
+
+.o_main_navbar::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--miro-gradient-accent);
+    opacity: 0.9;
+}
+
+/* Marque / Logo (fix : suppression du gradient texte qui beugue) */
+.o_main_navbar .o_menu_brand {
+    color: #ffffff !important;
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: -0.5px;
+    padding: 8px 12px;
+    border-radius: var(--miro-radius-sm);
+    background: transparent !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Éléments du menu navbar (ex: "Tableau de bord", "Planning") */
+.o_main_navbar .o_nav_entry {
+    color: rgba(255, 255, 255, 0.75) !important;
+    transition: all var(--miro-transition);
+    border-radius: var(--miro-radius-sm);
+    padding: 6px 14px !important;
+    font-weight: 500;
+    font-size: 13px;
+}
+
+.o_main_navbar .o_nav_entry:hover {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.o_main_navbar .o_nav_entry.active {
+    color: #ffffff !important;
+    background: rgba(245, 158, 11, 0.2) !important;
+}
+
+/* Menu utilisateur en haut à droite */
+.o_main_navbar .o_user_menu .dropdown-toggle {
+    color: rgba(255, 255, 255, 0.85) !important;
+    padding: 6px 10px !important;
+    border-radius: var(--miro-radius-sm);
+    transition: all var(--miro-transition);
+}
+
+.o_main_navbar .o_user_menu .dropdown-toggle:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+}
+
+/* Icônes de notification */
+.o_main_navbar .o_notification_counter {
+    background: var(--miro-accent) !important;
+    color: #0f172a !important;
+    font-weight: 700;
+    border: 2px solid #0f172a;
+}
+
+
+/* =========================================================
+   APPS MENU (LANCEUR D'APPLICATIONS)
+   ========================================================= */
+
+.o_app_drawer {
+    background: var(--miro-primary-dark) !important;
+    backdrop-filter: blur(10px);
+    border-right: 1px solid rgba(255,255,255,0.05);
+}
+
+.o_app_drawer .o_app {
+    border-radius: var(--miro-radius);
+    transition: all var(--miro-transition);
+    padding: 14px 12px !important;
+}
+
+.o_app_drawer .o_app:hover {
+    background: rgba(255, 255, 255, 0.06);
+    transform: translateY(-2px);
+}
+
+.o_app_drawer .o_app .o_app_icon { font-size: 26px !important; margin-bottom: 4px; }
+.o_app_drawer .o_app_name { color: #e2e8f0; font-weight: 500; font-size: 12px; }
+
+/* Recherche dans le lanceur */
+.o_app_drawer .o_searchview_input {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: var(--miro-radius-full) !important;
+    color: #ffffff !important;
+}
+.o_app_drawer .o_searchview_input::placeholder { color: rgba(255, 255, 255, 0.35); }
+
+
+/* =========================================================
+   CONTROL PANEL (BANDEAU D'ACTIONS - CORRECTION MAJEURE)
+   ========================================================= */
+
+.o_control_panel {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--miro-border) !important;
+    box-shadow: var(--miro-shadow-sm);
+    padding: 6px 0 !important;
+    min-height: 52px !important;
+}
+
+/* --- BOUTONS DU BANDEAU (PROFESSIONNELS) --- */
+.o_control_panel .btn {
+    border-radius: var(--miro-radius-sm) !important;
+    font-weight: 500 !important;
+    font-size: 13px !important;
+    padding: 6px 14px !important;
+    transition: all var(--miro-transition);
+    /* SUPPRESSION DES TRANSFORM POUR ÉVITER LES SAUTS */
+    transform: none !important;
+    box-shadow: none !important;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+/* Bouton principal (ex: "Créer", "Modifier") */
+.o_control_panel .btn-primary {
+    background: var(--miro-accent) !important;
+    border-color: var(--miro-accent) !important;
+    color: #0f172a !important;
+}
+
+.o_control_panel .btn-primary:hover {
+    background: var(--miro-accent-dark) !important;
+    border-color: var(--miro-accent-dark) !important;
+    color: #0f172a !important;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3) !important;
+}
+
+.o_control_panel .btn-primary:active {
+    background: #b45309 !important;
+    border-color: #b45309 !important;
+}
+
+/* Bouton secondaire (ex: "Annuler", "Fermer") */
+.o_control_panel .btn-secondary {
+    background: #ffffff !important;
+    border-color: var(--miro-border) !important;
+    color: var(--miro-text) !important;
+}
+
+.o_control_panel .btn-secondary:hover {
+    background: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+}
+
+/* Bouton Danger (ex: "Supprimer") */
+.o_control_panel .btn-danger {
+    background: #ffffff !important;
+    border-color: #fca5a5 !important;
+    color: var(--miro-danger) !important;
+}
+
+.o_control_panel .btn-danger:hover {
+    background: var(--miro-danger) !important;
+    border-color: var(--miro-danger) !important;
+    color: #ffffff !important;
+}
+
+/* Bouton Succès (ex: "Confirmer") */
+.o_control_panel .btn-success {
+    background: #ffffff !important;
+    border-color: #86efac !important;
+    color: var(--miro-success) !important;
+}
+
+.o_control_panel .btn-success:hover {
+    background: var(--miro-success) !important;
+    border-color: var(--miro-success) !important;
+    color: #ffffff !important;
+}
+
+/* --- BARRE DE RECHERCHE DU BANDEAU --- */
+.o_control_panel .o_searchview {
+    background: #ffffff;
+    border: 1px solid var(--miro-border);
+    border-radius: var(--miro-radius-sm);
+    padding: 2px 8px;
+    transition: all var(--miro-transition);
+}
+
+.o_control_panel .o_searchview:focus-within {
+    border-color: var(--miro-accent);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+
+.o_control_panel .o_searchview .o_searchview_input {
+    border: none !important;
+    padding: 4px 4px !important;
+    background: transparent !important;
+    height: 30px !important;
+}
+
+/* Filtres & Group By */
+.o_control_panel .o_dropdown_toggler {
+    background: #ffffff !important;
+    border: 1px solid var(--miro-border) !important;
+    border-radius: var(--miro-radius-sm) !important;
+    color: var(--miro-text) !important;
+    padding: 5px 12px !important;
+    font-size: 12px !important;
+    font-weight: 500;
+}
+
+.o_control_panel .o_dropdown_toggler:hover {
+    background: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+}
+
+/* Affichage du nombre de résultats */
+.o_control_panel .o_cp_right .o_cp_searchview {
+    color: var(--miro-muted);
+    font-size: 13px;
+    padding-left: 12px;
+}
+
+
+/* =========================================================
+   FORM VIEW
+   ========================================================= */
+
+.o_form_view {
+    background: var(--miro-bg) !important;
+}
+
+.o_form_view .o_form_sheet_bg {
+    background: var(--miro-bg) !important;
+}
+
+.o_form_view .o_form_sheet {
+    background: var(--miro-card) !important;
+    border-radius: var(--miro-radius) !important;
+    border: 1px solid var(--miro-border) !important;
+    box-shadow: var(--miro-shadow);
+    margin-top: 24px;
+    margin-bottom: 24px;
+    padding: 24px 32px !important;
+    transition: all var(--miro-transition);
+}
+
+.o_form_view .o_form_sheet:hover {
+    box-shadow: var(--miro-shadow-lg);
+}
+
+
+/* =========================================================
+   FORM HEADER
+   ========================================================= */
+
+.o_form_view .oe_title h1 {
+    color: var(--miro-primary);
+    font-weight: 800;
+    font-size: 26px;
+    letter-spacing: -0.5px;
+}
+
+.o_form_view .o_form_label {
+    color: var(--miro-text);
+    font-weight: 600;
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   INPUTS
+   ========================================================= */
+
+.o_form_view input,
+.o_form_view textarea,
+.o_form_view select {
+    border: 1.5px solid var(--miro-border) !important;
+    border-radius: var(--miro-radius-sm) !important;
+    background: #ffffff !important;
+    transition: all var(--miro-transition);
+    padding: 8px 12px !important;
+    font-size: 13px;
+}
+
+.o_form_view input:focus,
+.o_form_view textarea:focus,
+.o_form_view select:focus {
+    border-color: var(--miro-accent) !important;
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1) !important;
+    outline: none !important;
+}
+
+.o_form_view .o_field_char.o_field_readonly input {
+    background: #f8fafc !important;
+    border-color: transparent !important;
+}
+
+
+/* =========================================================
+   NOTEBOOK / TABS
+   ========================================================= */
+
+.o_notebook .nav-tabs {
+    border-bottom: 2px solid var(--miro-border);
+    gap: 4px;
+}
+
+.o_notebook .nav-tabs .nav-link {
+    color: var(--miro-muted);
+    font-weight: 600;
+    border: none !important;
+    padding: 12px 20px;
+    transition: all var(--miro-transition);
+    border-radius: var(--miro-radius-sm) var(--miro-radius-sm) 0 0;
+    position: relative;
+    font-size: 13px;
+    background: transparent !important;
+}
+
+.o_notebook .nav-tabs .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%) scaleX(0);
+    width: 60%;
+    height: 3px;
+    background: var(--miro-accent);
+    border-radius: var(--miro-radius-full);
+    transition: all var(--miro-transition);
+}
+
+.o_notebook .nav-tabs .nav-link:hover {
+    color: var(--miro-accent);
+    background: rgba(245, 158, 11, 0.04) !important;
+}
+
+.o_notebook .nav-tabs .nav-link:hover::after {
+    transform: translateX(-50%) scaleX(1);
+}
+
+.o_notebook .nav-tabs .nav-link.active {
+    color: var(--miro-accent) !important;
+    background: transparent !important;
+}
+
+.o_notebook .nav-tabs .nav-link.active::after {
+    transform: translateX(-50%) scaleX(1);
+}
+
+
+/* =========================================================
+   LIST VIEW
+   ========================================================= */
+
+.o_list_view {
+    background: #ffffff;
+    border-radius: var(--miro-radius);
+    overflow: hidden;
+    border: 1px solid var(--miro-border);
+    box-shadow: var(--miro-shadow-sm);
+}
+
+.o_list_view thead {
+    background: var(--miro-gradient) !important;
+}
+
+.o_list_view thead th {
+    color: #ffffff !important;
+    font-weight: 600;
+    border: none !important;
+    padding: 14px 12px !important;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.o_list_view tbody tr {
+    transition: all var(--miro-transition);
+    border-bottom: 1px solid var(--miro-border);
+}
+.o_list_view tbody tr:last-child { border-bottom: none; }
+.o_list_view tbody tr:hover {
+    background: var(--miro-warning-bg) !important;
+    cursor: pointer;
+}
+.o_list_view tbody tr.selected {
+    background: rgba(245, 158, 11, 0.08) !important;
+    border-left: 3px solid var(--miro-accent);
+}
+.o_list_view tbody td {
+    border-color: transparent !important;
+    padding: 12px 10px !important;
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   STATUSBAR (EN-TÊTE DE FORMULAIRE)
+   ========================================================= */
+
+.o_form_statusbar {
+    background: transparent !important;
+    border-bottom: none !important;
+    padding: 8px 0 !important;
+}
+
+.o_form_statusbar .o_arrow_button {
+    font-weight: 600;
+    padding: 6px 18px !important;
+    border-radius: var(--miro-radius-sm);
+    transition: all var(--miro-transition);
+    transform: none !important;
+}
+
+.o_form_statusbar .o_arrow_button.btn-primary {
+    background: var(--miro-accent) !important;
+    border: 1px solid var(--miro-accent) !important;
+    color: #0f172a !important;
+}
+
+.o_form_statusbar .o_arrow_button.btn-primary:hover {
+    background: var(--miro-accent-dark) !important;
+    border-color: var(--miro-accent-dark) !important;
+}
+
+.o_form_statusbar .o_arrow_button.btn-secondary {
+    background: rgba(255, 255, 255, 0.7) !important;
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--miro-border) !important;
+}
+
+
+/* =========================================================
+   KANBAN
+   ========================================================= */
+
+.o_kanban_view {
+    background: var(--miro-bg) !important;
+}
+
+.o_kanban_record {
+    background: #ffffff !important;
+    border: 1px solid var(--miro-border) !important;
+    border-radius: var(--miro-radius) !important;
+    box-shadow: var(--miro-shadow-sm);
+    transition: all var(--miro-transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.o_kanban_record::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--miro-accent);
+    opacity: 0;
+    transition: all var(--miro-transition);
+}
+
+.o_kanban_record:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--miro-shadow-lg);
+    border-color: var(--miro-accent) !important;
+}
+.o_kanban_record:hover::before { opacity: 1; }
+
+
+/* =========================================================
+   DASHBOARD CARDS (CLASSES PERSONNALISÉES)
+   ========================================================= */
+
+.miro_card {
+    background: #ffffff;
+    border: 1px solid var(--miro-border);
+    border-radius: var(--miro-radius);
+    padding: 24px;
+    box-shadow: var(--miro-shadow-sm);
+    transition: all var(--miro-transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.miro_card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--miro-accent);
+    opacity: 0;
+    transition: all var(--miro-transition);
+}
+
+.miro_card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--miro-shadow-lg);
+    border-color: var(--miro-accent);
+}
+.miro_card:hover::after { opacity: 1; }
+
+
+/* =========================================================
+   BADGES
+   ========================================================= */
+
+.badge {
+    border-radius: var(--miro-radius-full) !important;
+    padding: 4px 14px;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+.badge-success { background: var(--miro-success-bg) !important; color: var(--miro-success) !important; }
+.badge-danger { background: var(--miro-danger-bg) !important; color: var(--miro-danger) !important; }
+.badge-info { background: var(--miro-info-bg) !important; color: var(--miro-info) !important; }
+.badge-warning { background: var(--miro-warning-bg) !important; color: var(--miro-warning) !important; }
+
+
+/* =========================================================
+   ALERTS
+   ========================================================= */
+
+.alert {
+    border-radius: var(--miro-radius-sm) !important;
+    border: none !important;
+    padding: 16px 20px !important;
+    box-shadow: var(--miro-shadow-sm);
+}
+.alert-success { background: var(--miro-success-bg) !important; color: #065f46 !important; }
+.alert-danger { background: var(--miro-danger-bg) !important; color: #991b1b !important; }
+.alert-info { background: var(--miro-info-bg) !important; color: #1e40af !important; }
+.alert-warning { background: var(--miro-warning-bg) !important; color: #92400e !important; }
+
+
+/* =========================================================
+   MODALS
+   ========================================================= */
+
+.modal-content {
+    border: none !important;
+    border-radius: var(--miro-radius) !important;
+    box-shadow: var(--miro-shadow-xl);
+    overflow: hidden;
+}
+
+.modal-header {
+    background: var(--miro-gradient) !important;
+    color: #ffffff;
+    padding: 18px 24px !important;
+    border-bottom: none !important;
+}
+.modal-title { font-weight: 700; font-size: 18px; }
+.modal-header .close {
+    color: #ffffff !important;
+    opacity: 0.6;
+    transition: all var(--miro-transition);
+}
+.modal-header .close:hover {
+    opacity: 1;
+    transform: rotate(90deg);
+}
+.modal-body { padding: 24px !important; }
+.modal-footer {
+    padding: 16px 24px !important;
+    border-top: 1px solid var(--miro-border);
+}
+
+
+/* =========================================================
+   DROPDOWN
+   ========================================================= */
+
+.dropdown-menu {
+    border: 1px solid var(--miro-border) !important;
+    border-radius: var(--miro-radius) !important;
+    box-shadow: var(--miro-shadow-lg);
+    padding: 6px !important;
+    min-width: 200px;
+}
+
+.dropdown-item {
+    padding: 8px 14px !important;
+    border-radius: var(--miro-radius-sm);
+    transition: all var(--miro-transition);
+    font-size: 13px;
+}
+
+.dropdown-item:hover {
+    background: var(--miro-warning-bg) !important;
+    color: var(--miro-accent-dark) !important;
+}
+
+
+/* =========================================================
+   CONSTRUCTION SPECIFIC (HEADER PERSONNALISÉ)
+   ========================================================= */
+
+.miro-construction-header {
+    background: var(--miro-gradient) !important;
+    color: #ffffff;
+    padding: 24px 32px;
+    border-radius: var(--miro-radius);
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--miro-shadow);
+}
+
+.miro-construction-header::before {
+    content: '🏗️';
+    position: absolute;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 44px;
+    opacity: 0.1;
+}
+
+.miro-construction-title {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+}
+.miro-construction-subtitle {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+}
+
+
+/* =========================================================
+   ELEMENT COLORS
+   ========================================================= */
+
+.miro-wall { color: #64748b; }
+.miro-wall-bg { background: #f1f5f9; }
+.miro-door { color: #3b82f6; }
+.miro-door-bg { background: #eff6ff; }
+.miro-window { color: #06b6d4; }
+.miro-window-bg { background: #ecfeff; }
+.miro-column { color: #ef4444; }
+.miro-column-bg { background: #fef2f2; }
+.miro-beam { color: #8b5cf6; }
+.miro-beam-bg { background: #f5f3ff; }
+.miro-room { color: #22c55e; }
+.miro-room-bg { background: #ecfdf5; }
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 900px) {
+    .o_form_view .o_form_sheet {
+        margin-left: 12px;
+        margin-right: 12px;
+        padding: 16px !important;
+    }
+    .o_list_view { font-size: 12px; }
+    .o_list_view thead th,
+    .o_list_view tbody td { padding: 8px 6px !important; }
+    .miro-construction-header { padding: 20px; }
+    .miro-construction-title { font-size: 20px; }
+    .modal-content { margin: 12px; border-radius: var(--miro-radius-sm) !important; }
+    .o_control_panel .btn { font-size: 12px !important; padding: 4px 10px !important; }
+}
+
+
+/* =========================================================
+   ANIMATIONS
+   ========================================================= */
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.o_form_view .o_form_sheet {
+    animation: fadeInUp 0.35s ease forwards;
+}
+
+
+/* =========================================================
+   LOADING SPINNER
+   ========================================================= */
+
+.o_spinner {
+    border: 3px solid var(--miro-border) !important;
+    border-top-color: var(--miro-accent) !important;
+    border-radius: 50% !important;
+    width: 28px !important;
+    height: 28px !important;
+    animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

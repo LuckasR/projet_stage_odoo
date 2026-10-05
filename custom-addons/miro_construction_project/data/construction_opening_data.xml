@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Types d'éléments produits par l'analyse « Ouvertures détectées ».
+     Un ouvrage par niveau, comme les murs : on pose les menuiseries étage
+     par étage. Pas de gabarit de phases : à choisir dans Configuration,
+     le découpage dépend du lot (fourniture, pose, finitions...). -->
+<odoo noupdate="1">
+
+    <record id="element_type_porte" model="construction.element.type">
+        <field name="name">Porte</field>
+        <field name="code">porte</field>
+        <field name="work_name">Menuiseries</field>
+        <field name="ouvrage_per_level" eval="True"/>
+    </record>
+    <record id="element_type_fenetre" model="construction.element.type">
+        <field name="name">Fenêtre</field>
+        <field name="code">fenetre</field>
+        <field name="work_name">Menuiseries</field>
+        <field name="ouvrage_per_level" eval="True"/>
+    </record>
+
+    <!-- Porte : largeur et épaisseur viennent de la vue en plan, hauteur de
+         la façade. Une porte intérieure n'est sur aucune façade : sa hauteur
+         prend la valeur courante d'un bloc-porte (2,04 m), modifiable. -->
+    <record id="field_porte_l" model="construction.element.type.field">
+        <field name="type_id" ref="element_type_porte"/>
+        <field name="sequence">10</field>
+        <field name="name">Largeur</field>
+        <field name="code">l</field>
+        <field name="uom">m</field>
+        <field name="required" eval="True"/>
+    </record>
+    <record id="field_porte_ep" model="construction.element.type.field">
+        <field name="type_id" ref="element_type_porte"/>
+        <field name="sequence">20</field>
+        <field name="name">Épaisseur du mur</field>
+        <field name="code">ep</field>
+        <field name="uom">m</field>
+        <field name="required" eval="True"/>
+    </record>
+    <record id="field_porte_h" model="construction.element.type.field">
+        <field name="type_id" ref="element_type_porte"/>
+        <field name="sequence">30</field>
+        <field name="name">Hauteur</field>
+        <field name="code">h</field>
+        <field name="uom">m</field>
+        <field name="required" eval="True"/>
+        <field name="default_value">2.04</field>
+    </record>
+
+    <!-- Fenêtre : la hauteur et l'allège ne se lisent qu'en façade. Pas de
+         valeur par défaut : elles varient trop d'une baie à l'autre. -->
+    <record id="field_fenetre_l" model="construction.element.type.field">
+        <field name="type_id" ref="element_type_fenetre"/>
+        <field name="sequence">10</field>
+        <field name="name">Largeur</field>
+        <field name="code">l</field>
+        <field name="uom">m</field>
+        <field name="required" eval="True"/>
+    </record>
+    <record id="field_fenetre_ep" model="construction.element.type.field">
+        <field name="type_id" ref="element_type_fenetre"/>
+        <field name="sequence">20</field>
+        <field name="name">Épaisseur du mur</field>
+        <field name="code">ep</field>
+        <field name="uom">m</field>
+        <field name="required" eval="True"/>
+    </record>
+    <record id="field_fenetre_h" model="construction.element.type.field">
+        <field name="type_id" ref="element_type_fenetre"/>
+        <field name="sequence">30</field>
+        <field name="name">Hauteur</field>
+        <field name="code">h</field>
+        <field name="uom">m</field>
+        <field name="required" eval="True"/>
+    </record>
+    <record id="field_fenetre_allege" model="construction.element.type.field">
+        <field name="type_id" ref="element_type_fenetre"/>
+        <field name="sequence">40</field>
+        <field name="name">Allège</field>
+        <field name="code">allege</field>
+        <field name="uom">m</field>
+    </record>
+    <record id="field_fenetre_surface" model="construction.element.type.field">
+        <field name="type_id" ref="element_type_fenetre"/>
+        <field name="sequence">50</field>
+        <field name="name">Surface de baie</field>
+        <field name="code">surface_m2</field>
+        <field name="nature">quantity</field>
+        <field name="uom">m2</field>
+    </record>
+    <record id="field_porte_surface" model="construction.element.type.field">
+        <field name="type_id" ref="element_type_porte"/>
+        <field name="sequence">50</field>
+        <field name="name">Surface de baie</field>
+        <field name="code">surface_m2</field>
+        <field name="nature">quantity</field>
+        <field name="uom">m2</field>
+    </record>
+
+</odoo>

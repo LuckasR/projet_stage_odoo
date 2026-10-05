@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ========================================================= -->
+    <!-- APPLICATION PRINCIPALE : CONSTRUCTION                    -->
+    <!-- ========================================================= -->
+
+    <menuitem
+        id="menu_construction_root"
+        name="Project Management"
+        sequence="20"/>
+
+
+    <!-- ========================================================= -->
+    <!-- PROJETS  (action = vue liste des chantiers)              -->
+    <!-- ========================================================= -->
+
+    <!-- <menuitem
+        id="menu_construction_projects"
+        name="Projets"
+        parent="menu_construction_root"
+        action="miro_construction_project.action_project_project_construction"
+        sequence="10"/> -->
+
+
+    <!-- ========================================================= -->
+    <!-- TÂCHES                                                    -->
+    <!-- ========================================================= -->
+
+    <menuitem
+        id="menu_construction_tasks"
+        name="Tâches"
+        parent="menu_construction_root"
+        action="action_project_task_list_construction"
+        sequence="20"/>
+
+
+    <!-- ========================================================= -->
+    <!-- DIAGRAMME HIERARCHIQUE                                   -->
+    <!-- ========================================================= -->
+
+    <!-- <menuitem
+        id="menu_construction_hierarchy"
+        name="Diagramme des tâches"
+        parent="menu_construction_root"
+        action="action_project_task_hierarchy"
+        sequence="30"/> -->
+
+
+    <!-- ========================================================= -->
+    <!-- INCIDENTS                                                 -->
+    <!-- ========================================================= -->
+
+    <menuitem
+        id="menu_construction_task_incident"
+        name="Incidents de chantier"
+        parent="menu_construction_root"
+        action="action_construction_task_incident"
+        sequence="40"/>
+
+</odoo>

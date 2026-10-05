@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_project_form_construction" model="ir.ui.view">
+        <field name="name">project.project.form.construction</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="project.edit_project"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
+                <button name="action_view_task_hierarchy" type="object"
+                        class="oe_stat_button" icon="fa-sitemap">
+                    <div class="o_stat_info">
+                        <span class="o_stat_value">
+                            <field name="x_avancement_global" widget="progressbar"
+                                   nolabel="1" style="width: 60px;"/>
+                        </span>
+                        <span class="o_stat_text">Diagramme du chantier</span>
+                    </div>
+                </button>
+                <button name="action_view_tasks_flat" type="object"
+                        class="oe_stat_button" icon="fa-list">
+                    <div class="o_stat_info">
+                        <span class="o_stat_value"><field name="x_task_count_all"/></span>
+                        <span class="o_stat_text">Tâches (total)</span>
+                    </div>
+                </button>
+                <button name="action_view_dwg_files" type="object"
+                        class="oe_stat_button" icon="fa-file-image-o">
+                    <div class="o_stat_info">
+                        <span class="o_stat_value"><field name="dxf_file_count"/></span>
+                        <span class="o_stat_text">Plans DWG/DXF</span>
+                    </div>
+                </button>
+            </xpath>
+
+            <xpath expr="//sheet" position="inside">
+                <group string="Informations chantier">
+                    <group>
+                        <field name="x_type_projet"/>
+                        <field name="x_type_construction"/>
+                        <field name="x_phase_projet"/>
+                        <field name="x_maitre_ouvrage"/>
+                        <field name="x_architecte"/>
+                        <field name="x_responsable_chantier_id"/>
+                    </group>
+                    <group>
+                        <field name="x_adresse_chantier"/>
+                        <field name="x_ville_chantier"/>
+                        <field name="x_surface_totale"/>
+                        <field name="x_date_debut_travaux"/>
+                        <field name="x_date_fin_prevue"/>
+                    </group>
+                </group>
+                <group string="Budget et avancement">
+                    <group>
+                        <field name="x_budget_total"/>
+                        <field name="x_cout_prevue_total"/>
+                        <field name="x_cout_reel_total"/>
+                    </group>
+                    <group>
+                        <field name="x_avancement_global" widget="progressbar"/>
+                        <field name="x_task_en_retard_count"/>
+                    </group>
+                </group>
+            </xpath>
+
+            <xpath expr="//notebook" position="inside">
+                <page string="Plans DWG/DXF" name="dwg_files">
+                    <field name="dxf_file_ids" context="{'default_project_id': id}">
+                        <tree decoration-danger="state == 'error'"
+                              decoration-muted="state == 'draft'"
+                              decoration-success="state == 'analysed'">
+                            <field name="filename" string="Fichier"/>
+                            <field name="file" filename="filename" string="Source"/>
+                            <field name="dxf_filename" string="DXF généré"/>
+                            <field name="state" widget="badge"
+                                   decoration-success="state == 'analysed'"
+                                   decoration-info="state == 'imported'"
+                                   decoration-danger="state == 'error'"
+                                   decoration-muted="state == 'draft'"/>
+                            <field name="wall_detection_state" widget="badge"
+                                   decoration-warning="wall_detection_state in ('queued', 'in_progress')"
+                                   decoration-success="wall_detection_state == 'done'"
+                                   decoration-danger="wall_detection_state == 'failed'"/>
+                            <field name="wall_count" string="Murs détectés"/>
+                            <field name="imported_at"/>
+                        </tree>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

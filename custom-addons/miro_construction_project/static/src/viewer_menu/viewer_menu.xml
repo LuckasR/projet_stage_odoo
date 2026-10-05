@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="miro_construction_project.ViewerMenu">
+        <Dropdown togglerClass="'btn btn-primary'" beforeOpen.bind="beforeOpen"
+                  showCaret="true" class="'o_construction_viewer_menu'">
+            <t t-set-slot="toggler">
+                <i class="fa fa-eye me-1"/>Visualiser
+            </t>
+            <t t-foreach="state.items" t-as="item" t-key="item.key">
+                <DropdownItem onSelected="() => this.open(item)">
+                    <i t-attf-class="fa fa-fw {{ item.icon }} me-2"/>
+                    <t t-esc="item.label"/>
+                </DropdownItem>
+            </t>
+            <div t-if="state.loaded and !state.items.length" class="dropdown-item-text text-muted">
+                Aucune visualisation disponible : traitez d'abord le fichier.
+            </div>
+        </Dropdown>
+    </t>
+</templates>

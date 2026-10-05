@@ -1,0 +1,414 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- ============================================================= -->
+    <!-- FAÇADE — liste                                                 -->
+    <!-- ============================================================= -->
+    <record id="view_construction_facade_tree" model="ir.ui.view">
+        <field name="name">construction.facade.tree</field>
+        <field name="model">construction.facade</field>
+        <field name="arch" type="xml">
+            <tree string="Façades" decoration-muted="not is_validated"
+                  decoration-warning="confidence &lt; 70 and not is_validated">
+                <field name="name"/>
+                <field name="mark" optional="hide"/>
+                <field name="orientation"/>
+                <field name="project_id" optional="show"/>
+                <field name="dwg_file_id" optional="hide"/>
+                <field name="drawing_number" optional="show"/>
+                <field name="width" sum="Largeur totale"/>
+                <field name="height"/>
+                <field name="gross_area" sum="Surface brute" optional="show"/>
+                <field name="opening_area" sum="Surface des ouvertures" optional="hide"/>
+                <field name="net_area" sum="Surface pleine" optional="show"/>
+                <field name="opening_ratio" optional="hide"/>
+                <field name="level_count" optional="show"/>
+                <field name="opening_count" optional="show"/>
+                <field name="material" optional="hide"/>
+                <field name="confidence" optional="show"/>
+                <field name="is_validated"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- FAÇADE — formulaire                                            -->
+    <!-- ============================================================= -->
+    <record id="view_construction_facade_form" model="ir.ui.view">
+        <field name="name">construction.facade.form</field>
+        <field name="model">construction.facade</field>
+        <field name="arch" type="xml">
+            <form string="Façade">
+                <header>
+                    <button name="action_validate" type="object" string="Valider"
+                            class="btn-primary" invisible="is_validated"
+                            help="Une façade validée n'est plus réécrite par une
+                                  nouvelle détection : les corrections saisies ici
+                                  sont conservées."/>
+                    <button name="action_reset" type="object" string="Remettre à vérifier"
+                            invisible="not is_validated"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_walls" type="object"
+                                class="oe_stat_button" icon="fa-th-large">
+                            <field name="wall_count" widget="statinfo" string="Murs"/>
+                        </button>
+                    </div>
+
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="Façade Nord"/></h1>
+                    </div>
+
+                    <!-- ============ INFORMATIONS GÉNÉRALES ============ -->
+                    <group>
+                        <group string="Identification">
+                            <field name="mark"/>
+                            <field name="orientation"/>
+                            <field name="drawing_number"/>
+                            <field name="project_id" readonly="1"/>
+                            <field name="dwg_file_id" readonly="1"/>
+                            <field name="match_key" readonly="1" groups="base.group_no_one"/>
+                        </group>
+                        <group string="Géométrie">
+                            <label for="width"/>
+                            <div><field name="width" class="oe_inline"/> m</div>
+                            <label for="height"/>
+                            <div><field name="height" class="oe_inline"/> m</div>
+                            <field name="gross_area"/>
+                            <field name="net_area"/>
+                            <field name="opening_ratio"/>
+                        </group>
+                    </group>
+
+                    <group>
+                        <group string="Murs">
+                            <field name="material"/>
+                            <label for="wall_thickness"/>
+                            <div>
+                                <field name="wall_thickness" class="oe_inline"/> m
+                                <span class="text-muted" invisible="wall_thickness">
+                                    — non observable en façade : importez une vue
+                                    en plan ou en coupe du même niveau
+                                </span>
+                            </div>
+                        </group>
+                        <group string="Détection">
+                            <field name="detection_method"/>
+                            <field name="confidence"/>
+                            <field name="is_validated"/>
+                            <field name="source_file_ids" widget="many2many_tags"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <!-- ============ NIVEAUX ============ -->
+                        <page string="Niveaux" name="levels">
+                            <field name="level_ids">
+                                <tree editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="floor_index"/>
+                                    <field name="name"/>
+                                    <field name="level_id"/>
+                                    <field name="bottom_elevation"/>
+                                    <field name="top_elevation"/>
+                                    <field name="height" sum="Hauteur totale"/>
+                                    <field name="slab_thickness" optional="show"/>
+                                </tree>
+                            </field>
+                            <p class="text-muted">
+                                Les altitudes sont comptées depuis le bas de la façade.
+                                Le niveau du projet est déduit des niveaux cochés sur
+                                le plan, triés par altitude croissante.
+                            </p>
+                        </page>
+
+                        <!-- ============ MURS ============ -->
+                        <page string="Murs" name="walls">
+                            <field name="wall_ids" readonly="1">
+                                <tree>
+                                    <field name="name"/>
+                                    <field name="level_id"/>
+                                    <field name="wall_type"/>
+                                    <field name="material"/>
+                                    <field name="length" sum="Longueur"/>
+                                    <field name="thickness"/>
+                                    <field name="height"/>
+                                    <field name="area" sum="Surface"/>
+                                    <field name="confidence"/>
+                                </tree>
+                            </field>
+                            <p class="text-muted">
+                                Les murs ne sont pas dupliqués ici : ils vivent dans
+                                « Murs détectés », où une vue en plan vient compléter
+                                l'épaisseur que la façade ne montre pas.
+                            </p>
+                        </page>
+
+                        <!-- ============ OUVERTURES ============ -->
+                        <page string="Ouvertures" name="openings">
+                            <field name="opening_ids">
+                                <tree editable="bottom" decoration-warning="not mark">
+                                    <field name="mark"/>
+                                    <field name="opening_type"/>
+                                    <field name="facade_level_id"
+                                           domain="[('facade_id', '=', parent.id)]"/>
+                                    <field name="width"/>
+                                    <field name="height"/>
+                                    <field name="sill_above_floor"/>
+                                    <field name="lintel_above_floor" optional="show"/>
+                                    <field name="sill_height" optional="hide"/>
+                                    <field name="lintel_height" optional="hide"/>
+                                    <field name="quantity"/>
+                                    <field name="area" optional="hide"/>
+                                    <field name="total_area" sum="Surface totale"/>
+                                    <field name="material" optional="show"/>
+                                    <field name="layer" optional="hide"/>
+                                    <field name="confidence" optional="hide"/>
+                                    <field name="name" column_invisible="1"/>
+                                </tree>
+                            </field>
+                        </page>
+
+                        <!-- ============ ÉLÉMENTS ARCHITECTURAUX ============ -->
+                        <page string="Éléments architecturaux" name="features">
+                            <field name="feature_ids">
+                                <tree editable="bottom">
+                                    <field name="feature_type"/>
+                                    <field name="mark" optional="hide"/>
+                                    <field name="facade_level_id"
+                                           domain="[('facade_id', '=', parent.id)]"/>
+                                    <field name="width"/>
+                                    <field name="height"/>
+                                    <field name="projection"/>
+                                    <field name="quantity"/>
+                                    <field name="area" sum="Surface"/>
+                                    <field name="material" optional="show"/>
+                                    <field name="layer" optional="hide"/>
+                                    <field name="name" column_invisible="1"/>
+                                </tree>
+                            </field>
+                        </page>
+
+                        <!-- ============ DIMENSIONS / COTES ============ -->
+                        <page string="Cotes" name="dimensions">
+                            <field name="dimension_ids">
+                                <tree editable="bottom">
+                                    <field name="dimension_type"/>
+                                    <field name="text"/>
+                                    <field name="value"/>
+                                    <field name="elevation"/>
+                                    <field name="origin"/>
+                                    <field name="layer" optional="hide"/>
+                                    <field name="pos_x" optional="hide"/>
+                                    <field name="pos_y" optional="hide"/>
+                                    <field name="name" column_invisible="1"/>
+                                </tree>
+                            </field>
+                        </page>
+
+                        <!-- ============ ANNOTATIONS ============ -->
+                        <page string="Annotations" name="annotations">
+                            <field name="annotation_ids">
+                                <tree editable="bottom">
+                                    <field name="annotation_type"/>
+                                    <field name="text"/>
+                                    <field name="material"/>
+                                    <field name="layer" optional="show"/>
+                                    <field name="pos_x" optional="hide"/>
+                                    <field name="pos_y" optional="hide"/>
+                                    <field name="name" column_invisible="1"/>
+                                </tree>
+                            </field>
+                        </page>
+
+                        <page string="Remarques" name="notes">
+                            <field name="notes" placeholder="Observations sur ce relevé…"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- FAÇADE — recherche                                             -->
+    <!-- ============================================================= -->
+    <record id="view_construction_facade_search" model="ir.ui.view">
+        <field name="name">construction.facade.search</field>
+        <field name="model">construction.facade</field>
+        <field name="arch" type="xml">
+            <search string="Rechercher une façade">
+                <field name="name"/>
+                <field name="mark"/>
+                <field name="drawing_number"/>
+                <field name="project_id"/>
+                <field name="dwg_file_id"/>
+
+                <filter name="filter_to_review" string="À vérifier"
+                        domain="[('is_validated', '=', False)]"/>
+                <filter name="filter_validated" string="Validées"
+                        domain="[('is_validated', '=', True)]"/>
+                <filter name="filter_low_confidence" string="Confiance faible"
+                        domain="[('confidence', '&lt;', 70), ('is_validated', '=', False)]"/>
+
+                <separator/>
+
+                <!-- Une façade sans orientation ne peut pas être rapprochée des
+                     murs vus en plan : c'est la première chose à corriger. -->
+                <filter name="filter_no_orientation" string="Orientation manquante"
+                        domain="[('orientation', '=', False)]"/>
+                <filter name="filter_no_thickness" string="Épaisseur de mur manquante"
+                        domain="[('wall_thickness', '=', 0)]"/>
+
+                <separator/>
+
+                <filter name="group_project" string="Projet"
+                        context="{'group_by': 'project_id'}"/>
+                <filter name="group_orientation" string="Orientation"
+                        context="{'group_by': 'orientation'}"/>
+                <filter name="group_file" string="Plan d'origine"
+                        context="{'group_by': 'dwg_file_id'}"/>
+                <filter name="group_material" string="Matériau"
+                        context="{'group_by': 'material'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_construction_facade" model="ir.actions.act_window">
+        <field name="name">Façades</field>
+        <field name="res_model">construction.facade</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_construction_facade_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aucune façade relevée pour l'instant</p>
+            <p>
+                Les façades sont relevées à l'import d'un plan classé en vue
+                « Façade ». Chaque façade regroupe ses niveaux, ses ouvertures,
+                ses éléments architecturaux, ses cotes et ses annotations.
+            </p>
+        </field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- OUVERTURES — vue transverse (métrés menuiseries)               -->
+    <!-- ============================================================= -->
+    <record id="view_construction_facade_opening_tree" model="ir.ui.view">
+        <field name="name">construction.facade.opening.tree</field>
+        <field name="model">construction.facade.opening</field>
+        <field name="arch" type="xml">
+            <tree string="Ouvertures">
+                <field name="mark"/>
+                <field name="opening_type"/>
+                <field name="facade_id"/>
+                <field name="project_id" optional="show"/>
+                <field name="level_id" optional="show"/>
+                <field name="width"/>
+                <field name="height"/>
+                <field name="sill_above_floor" optional="show"/>
+                <field name="lintel_above_floor" optional="hide"/>
+                <field name="quantity" sum="Quantité"/>
+                <field name="total_area" sum="Surface totale"/>
+                <field name="material" optional="show"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_construction_facade_opening_search" model="ir.ui.view">
+        <field name="name">construction.facade.opening.search</field>
+        <field name="model">construction.facade.opening</field>
+        <field name="arch" type="xml">
+            <search string="Rechercher une ouverture">
+                <field name="mark"/>
+                <field name="facade_id"/>
+                <field name="project_id"/>
+                <filter name="filter_windows" string="Fenêtres et baies"
+                        domain="[('opening_type', 'in', ['window', 'french_window', 'bay'])]"/>
+                <filter name="filter_doors" string="Portes"
+                        domain="[('opening_type', 'in', ['door', 'garage_door'])]"/>
+                <filter name="filter_no_mark" string="Sans repère"
+                        domain="[('mark', '=', False)]"/>
+                <separator/>
+                <filter name="group_type" string="Type"
+                        context="{'group_by': 'opening_type'}"/>
+                <filter name="group_facade" string="Façade"
+                        context="{'group_by': 'facade_id'}"/>
+                <filter name="group_level" string="Niveau"
+                        context="{'group_by': 'level_id'}"/>
+                <filter name="group_project" string="Projet"
+                        context="{'group_by': 'project_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_construction_facade_opening" model="ir.actions.act_window">
+        <field name="name">Ouvertures</field>
+        <field name="res_model">construction.facade.opening</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_construction_facade_opening_search"/>
+        <field name="context">{'search_default_group_type': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aucune ouverture relevée</p>
+            <p>
+                Regroupées par type, ces lignes donnent le métré des menuiseries
+                du projet (nombre, dimensions, surface totale).
+            </p>
+        </field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- PLAN DWG — bouton et suivi de la détection de façades          -->
+    <!-- ============================================================= -->
+    <record id="view_construction_dwg_files_form_facade" model="ir.ui.view">
+        <field name="name">construction.dwg.files.form.facade</field>
+        <field name="model">construction.dwg.files</field>
+        <field name="inherit_id" ref="view_construction_dwg_files_form"/>
+        <field name="arch" type="xml">
+
+            <button name="action_detect_walls" position="after">
+                <button name="action_detect_facades"
+                        string="Analyser les façades"
+                        type="object"
+                        class="btn-secondary"
+                        icon="fa-window-maximize"
+                        invisible="not dxf_file or facade_detection_state in ('queued', 'in_progress')"/>
+
+                <field name="facade_detection_state" widget="badge"
+                       invisible="facade_detection_state == 'draft'"
+                       decoration-warning="facade_detection_state in ('queued', 'in_progress')"
+                       decoration-success="facade_detection_state == 'done'"
+                       decoration-danger="facade_detection_state == 'failed'"/>
+            </button>
+
+            <xpath expr="//sheet/notebook" position="before">
+                <div class="alert alert-danger" role="alert"
+                     invisible="facade_detection_state != 'failed'">
+                    <field name="facade_detection_error" readonly="1" nolabel="1"/>
+                </div>
+
+                <group string="Analyse des façades"
+                       invisible="facade_detection_state == 'draft'">
+                    <field name="facade_count"/>
+                    <field name="facade_detection_job_id" readonly="1"
+                           invisible="not facade_detection_job_id"/>
+                    <button name="action_view_facades" type="object"
+                            string="Voir les façades" class="btn-link"
+                            icon="fa-arrow-right" invisible="not facade_count"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- MENUS                                                          -->
+    <!-- ============================================================= -->
+    <menuitem id="menu_construction_facade" name="Façades"
+              parent="menu_construction_root" action="action_construction_facade"
+              sequence="66"/>
+
+    <menuitem id="menu_construction_facade_opening" name="Ouvertures"
+              parent="menu_construction_root" action="action_construction_facade_opening"
+              sequence="67"/>
+
+</odoo>

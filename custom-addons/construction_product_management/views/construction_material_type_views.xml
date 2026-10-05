@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_construction_material_type_tree" model="ir.ui.view">
+        <field name="name">construction.material.type.tree</field>
+        <field name="model">construction.material.type</field>
+        <field name="arch" type="xml">
+            <tree string="Types de matériaux" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="category"/>
+                <field name="product_count"/>
+                <field name="active" widget="boolean_toggle" optional="hide"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_construction_material_type_form" model="ir.ui.view">
+        <field name="name">construction.material.type.form</field>
+        <field name="model">construction.material.type</field>
+        <field name="arch" type="xml">
+            <form string="Type de matériau">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="%(construction_product_management.action_construction_material_products)d"
+                                type="action"
+                                class="oe_stat_button"
+                                icon="fa-cubes"
+                                context="{'search_default_construction_material_type_id': active_id}">
+                            <field name="product_count" widget="statinfo" string="Produits"/>
+                        </button>
+                    </div>
+                    <group>
+                        <field name="name"/>
+                        <field name="category"/>
+                        <field name="active" invisible="1"/>
+                    </group>
+                    <group string="Caractéristiques applicables">
+                        <field name="attribute_ids" nolabel="1" widget="many2many_tags"/>
+                    </group>
+                    <group string="Description">
+                        <field name="description" nolabel="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_construction_material_type_search" model="ir.ui.view">
+        <field name="name">construction.material.type.search</field>
+        <field name="model">construction.material.type</field>
+        <field name="arch" type="xml">
+            <search string="Types de matériaux">
+                <field name="name"/>
+                <field name="category"/>
+                <filter string="Archivé" name="inactive" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Regrouper par">
+                    <filter string="Catégorie" name="group_by_category" context="{'group_by': 'category'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_construction_material_type" model="ir.actions.act_window">
+        <field name="name">Types de matériaux</field>
+        <field name="res_model">construction.material.type</field>
+        <field name="view_mode">tree,form</field>
+        <field name="context">{'search_default_group_by_category': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Créez un type de matériau
+            </p>
+            <p>
+                Ex : Ciment CPJ 42.5, Sable de rivière 0/4, Gravier 8/15...
+            </p>
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="miro_construction_project.TaskHierarchy" owl="1">
+        <div class="o_ch">
+
+            <!-- ═══════════════ HEADER ═══════════════ -->
+            <header class="o_ch_header">
+                <div class="o_ch_heading">
+                    <span class="o_ch_eyebrow">
+                        <i class="fa fa-sitemap"/>
+                        <span>Diagramme des tâches</span>
+                    </span>
+                    <h1 t-esc="store.projectName || 'Projet sans titre'"/>
+                </div>
+
+                <div class="o_ch_toolbar">
+                    <div class="o_ch_search">
+                        <i class="fa fa-search"/>
+                        <input type="text"
+                               placeholder="Rechercher une tâche…"
+                               t-att-value="store.search"
+                               t-on-input="onSearchInput"/>
+                        <button t-if="store.search"
+                                class="o_ch_search_clear"
+                                t-on-click="clearSearch"
+                                title="Effacer">
+                            <i class="fa fa-times-circle"/>
+                        </button>
+                    </div>
+
+                    <div class="o_ch_btn_group">
+                        <button class="o_ch_btn" t-on-click="expandAll" title="Tout déplier">
+                            <i class="fa fa-angle-double-down"/>
+                            <span>Déplier</span>
+                        </button>
+                        <button class="o_ch_btn" t-on-click="collapseAll" title="Tout replier">
+                            <i class="fa fa-angle-double-up"/>
+                            <span>Replier</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- ═══════════════ STATS + PROGRESSION ═══════════════ -->
+            <section class="o_ch_summary">
+
+                <!-- Barre de progression globale -->
+                <div class="o_ch_overall">
+                    <div class="o_ch_overall_head">
+                        <span class="o_ch_overall_label">Avancement global du projet</span>
+                        <span class="o_ch_overall_pct" t-esc="globalProgress + '%'"/>
+                    </div>
+                    <div class="o_ch_overall_bar">
+                        <span class="o_ch_overall_fill"
+                              t-attf-style="width: #{globalProgress}%;"/>
+                    </div>
+                    <div class="o_ch_overall_hint">
+                        <span t-esc="store.stats.done"/>
+                        sur
+                        <span t-esc="store.stats.total"/>
+                        tâches terminées
+                    </div>
+                </div>
+
+                <!-- Cartes statistiques -->
+                <div class="o_ch_cards">
+                    <div class="o_ch_card">
+                        <span class="o_ch_card_icon o_ch_icon_total">
+                            <i class="fa fa-tasks"/>
+                        </span>
+                        <div class="o_ch_card_body">
+                            <span class="o_ch_card_value" t-esc="store.stats.total"/>
+                            <span class="o_ch_card_label">Tâches</span>
+                        </div>
+                    </div>
+
+                    <div class="o_ch_card">
+                        <span class="o_ch_card_icon o_ch_icon_done">
+                            <i class="fa fa-check"/>
+                        </span>
+                        <div class="o_ch_card_body">
+                            <span class="o_ch_card_value" t-esc="store.stats.done"/>
+                            <span class="o_ch_card_label">Terminées</span>
+                        </div>
+                    </div>
+
+                    <div class="o_ch_card">
+                        <span class="o_ch_card_icon o_ch_icon_progress">
+                            <i class="fa fa-hourglass-half"/>
+                        </span>
+                        <div class="o_ch_card_body">
+                            <span class="o_ch_card_value" t-esc="store.stats.inProgress"/>
+                            <span class="o_ch_card_label">En cours</span>
+                        </div>
+                    </div>
+
+                    <div class="o_ch_card">
+                        <span class="o_ch_card_icon o_ch_icon_late">
+                            <i class="fa fa-exclamation"/>
+                        </span>
+                        <div class="o_ch_card_body">
+                            <span class="o_ch_card_value" t-esc="store.stats.late"/>
+                            <span class="o_ch_card_label">En retard</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════════ BODY ═══════════════ -->
+            <div t-if="store.loading" class="o_ch_loading">
+                <span class="o_ch_spinner"/>
+                <span>Chargement…</span>
+            </div>
+
+            <div t-else="" class="o_ch_body">
+                <div t-if="!visibleRootIds.length" class="o_ch_empty">
+                    <i class="fa fa-folder-open-o"/>
+                    <p t-if="store.search">
+                        Aucun résultat pour «&#8202;<b t-esc="store.search"/>&#8202;»
+                    </p>
+                    <p t-else="">Aucune tâche enregistrée pour ce projet.</p>
+                </div>
+
+                <div t-else="" class="o_ch_table" role="table">
+                    <div class="o_ch_thead" role="row">
+                        <div class="o_ch_th o_ch_col_name" role="columnheader">Tâche</div>
+                        <div class="o_ch_th o_ch_col_corps" role="columnheader">Corps de métier</div>
+                        <div class="o_ch_th o_ch_col_progress" role="columnheader">Avancement</div>
+                    </div>
+                    <div class="o_ch_tbody" role="rowgroup">
+                        <ConstructionTaskNode
+                            t-foreach="visibleRootIds" t-as="taskId" t-key="taskId"
+                            store="store" taskId="taskId" depth="0"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+
+    <t t-name="miro_construction_project.TaskNode" owl="1">
+        <div class="o_construction_task_node">
+            <div class="o_construction_task_row"
+                 t-att-class="{ 'is-done': isDone, 'is-late': task.x_est_en_retard, 'is-element': isElement }"
+                 t-on-click="openForm">
+
+                <div class="o_ch_col_name o_ch_cell_name"
+                     t-attf-style="padding-left: #{props.depth * 22}px;">
+                    <button type="button"
+                            class="o_ch_toggle"
+                            t-att-class="{ 'is-leaf': !hasChildren }"
+                            t-on-click.stop="toggle"
+                            tabindex="-1">
+                        <i t-if="hasChildren"
+                           t-att-class="isExpanded ? 'fa fa-caret-down' : 'fa fa-caret-right'"/>
+                    </button>
+
+                    <span class="o_ch_dot" t-att-class="statusDotClass"/>
+                    <i t-if="isElement" class="fa fa-cube o_ch_element_icon" title="Élément de construction"/>
+                    <span class="o_ch_task_name" t-esc="task.name"
+                          t-att-title="isElement ? task.dimension_summary : false"/>
+                    <span t-if="isElement and task.has_missing_fields"
+                          class="o_ch_badge_missing"
+                          title="Caractéristiques obligatoires manquantes">incomplet</span>
+                </div>
+
+                <div class="o_ch_col_corps o_ch_cell_corps">
+                    <t t-if="isElement">
+                        <span t-if="task.element_type_id" t-esc="task.element_type_id[1]"/>
+                        <span t-if="task.level_id" class="o_ch_element_level"
+                              t-esc="' · ' + task.level_id[1]"/>
+                        <span t-if="!task.element_type_id and !task.level_id"
+                              class="o_ch_placeholder">—</span>
+                    </t>
+                    <t t-else="">
+                        <span t-if="task.x_corps_metier" t-esc="task.x_corps_metier"/>
+                        <span t-else="" class="o_ch_placeholder">—</span>
+                    </t>
+                </div>
+
+                <div class="o_ch_col_progress o_ch_cell_progress">
+                    <span class="o_ch_bar">
+                        <span class="o_ch_bar_fill"
+                              t-att-class="progressBarClass"
+                              t-attf-style="width: #{roundedProgress}%;"/>
+                    </span>
+                    <span class="o_ch_pct" t-esc="roundedProgress + '%'"/>
+                </div>
+            </div>
+
+            <div t-if="isExpanded" class="o_construction_task_children">
+                <ConstructionTaskNode
+                    t-foreach="childIds" t-as="taskId" t-key="taskId"
+                    store="props.store" taskId="taskId" depth="props.depth + 1"/>
+            </div>
+        </div>
+    </t>
+
+</templates>

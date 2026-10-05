@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+ 
+ 
+
+    <record id="action_construction_composant" model="ir.actions.act_window">
+        <field name="name">Composants</field>
+        <field name="res_model">construction.composant</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+ 
+
+    <record id="action_construction_niveau" model="ir.actions.act_window">
+        <field name="name">Niveaux</field>
+        <field name="res_model">construction.niveau</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+  
+
+    <record id="action_construction_projet" model="ir.actions.act_window">
+        <field name="name">Projets</field>
+        <field name="res_model">construction.projet</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+ `
+
+    <record id="action_construction_type_composant" model="ir.actions.act_window">
+        <field name="name">Types de composant</field>
+        <field name="res_model">construction.type.composant</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- ===== Menus ===== -->
+    <menuitem id="menu_construction_root" name="Construction"/>
+    <menuitem id="menu_construction_projet" name="Projets"
+              parent="menu_construction_root" action="action_construction_projet" sequence="10"/>
+    <menuitem id="menu_construction_niveau" name="Niveaux"
+              parent="menu_construction_root" action="action_construction_niveau" sequence="20"/>
+    <menuitem id="menu_construction_composant" name="Composants"
+              parent="menu_construction_root" action="action_construction_composant" sequence="30"/>
+    <menuitem id="menu_construction_type_composant" name="Types de composant"
+              parent="menu_construction_root" action="action_construction_type_composant" sequence="40"/>
+
+</odoo>

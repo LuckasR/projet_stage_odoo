@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Gabarit de démonstration : Semelle -->
+    <record id="phase_template_semelle" model="construction.phase.template">
+        <field name="name">Semelle</field>
+    </record>
+    <record id="phase_line_semelle_ferraillage" model="construction.phase.template.line">
+        <field name="template_id" ref="phase_template_semelle"/>
+        <field name="sequence">10</field>
+        <field name="name">Ferraillage</field>
+        <field name="phase_type">ferraillage</field>
+        <field name="qty_key">acier_kg</field>
+        <field name="rate_per_hour">25</field>
+    </record>
+    <record id="phase_line_semelle_coffrage" model="construction.phase.template.line">
+        <field name="template_id" ref="phase_template_semelle"/>
+        <field name="sequence">20</field>
+        <field name="name">Coffrage</field>
+        <field name="phase_type">coffrage</field>
+        <field name="qty_key">coffrage_m2</field>
+        <field name="rate_per_hour">4</field>
+        <field name="depends_on_line_id" ref="phase_line_semelle_ferraillage"/>
+    </record>
+    <record id="phase_line_semelle_coulage" model="construction.phase.template.line">
+        <field name="template_id" ref="phase_template_semelle"/>
+        <field name="sequence">30</field>
+        <field name="name">Coulage béton</field>
+        <field name="phase_type">coulage</field>
+        <field name="qty_key">beton_m3</field>
+        <field name="rate_per_hour">1.5</field>
+        <field name="depends_on_line_id" ref="phase_line_semelle_coffrage"/>
+    </record>
+
+    <record id="element_type_semelle" model="construction.element.type">
+        <field name="name">Semelle</field>
+        <field name="code">semelle</field>
+        <field name="work_name">Fondation</field>
+        <field name="phase_template_id" ref="phase_template_semelle"/>
+    </record>
+</odoo>

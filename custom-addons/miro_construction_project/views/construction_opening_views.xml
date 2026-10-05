@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- ============================================================= -->
+    <!-- Vue liste                                                      -->
+    <!-- ============================================================= -->
+    <record id="view_construction_opening_tree" model="ir.ui.view">
+        <field name="name">construction.opening.tree</field>
+        <field name="model">construction.opening</field>
+        <field name="arch" type="xml">
+            <tree string="Ouvertures détectées" decoration-muted="not is_complete">
+                <field name="name"/>
+                <field name="project_id" optional="show"/>
+                <field name="level_id" optional="show"/>
+                <field name="opening_type"/>
+                <field name="wall_position" optional="show"/>
+                <field name="orientation" optional="show"/>
+                <field name="mark" optional="hide"/>
+                <field name="width"/>
+                <field name="thickness"/>
+                <field name="height"/>
+                <field name="sill_height" optional="show"/>
+                <field name="area" sum="Surface totale" optional="show"/>
+                <field name="wall_id" optional="hide"/>
+                <field name="source_view_ids" widget="many2many_tags" optional="show"/>
+                <field name="confidence" optional="hide"/>
+                <field name="is_complete" optional="show"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- Vue formulaire                                                 -->
+    <!-- ============================================================= -->
+    <record id="view_construction_opening_form" model="ir.ui.view">
+        <field name="name">construction.opening.form</field>
+        <field name="model">construction.opening</field>
+        <field name="arch" type="xml">
+            <form string="Ouverture détectée">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_element" type="object"
+                            class="oe_stat_button" icon="fa-cube"
+                            invisible="not element_id">
+                            <span class="o_stat_text">Élément</span>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Nom de l'ouverture"/></h1>
+                    </div>
+
+                    <group>
+                        <group string="Rattachement">
+                            <field name="project_id" readonly="1"/>
+                            <field name="dwg_file_id" readonly="1"/>
+                            <field name="level_id"/>
+                            <field name="wall_id"/>
+                            <field name="match_key" readonly="1"/>
+                            <field name="element_id" readonly="1"/>
+                        </group>
+                        <group string="Classification">
+                            <field name="opening_type"/>
+                            <field name="wall_position"/>
+                            <field name="orientation"/>
+                            <label for="facade_offset" invisible="not orientation"/>
+                            <div invisible="not orientation">
+                                <field name="facade_offset" class="oe_inline"/> m
+                                <span class="text-muted">depuis le bord gauche, vue de l'extérieur</span>
+                            </div>
+                            <field name="mark"/>
+                            <field name="layer" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group>
+                        <group string="Dimensions">
+                            <label for="width"/>
+                            <div><field name="width" class="oe_inline"/> m</div>
+                            <label for="thickness"/>
+                            <div>
+                                <field name="thickness" class="oe_inline"/> m
+                                <span class="text-muted" invisible="thickness">
+                                    — non observée : importez une vue en plan de ce niveau
+                                </span>
+                            </div>
+                            <label for="height"/>
+                            <div>
+                                <field name="height" class="oe_inline"/> m
+                                <span class="text-muted" invisible="height">
+                                    — non observée : importez la façade de ce niveau
+                                </span>
+                            </div>
+                            <label for="sill_height"/>
+                            <div><field name="sill_height" class="oe_inline"/> m</div>
+                            <label for="lintel_height"/>
+                            <div><field name="lintel_height" class="oe_inline"/> m</div>
+                        </group>
+                        <group string="Métré">
+                            <field name="area"/>
+                            <field name="is_complete"/>
+                        </group>
+                    </group>
+
+                    <group string="Traçabilité de la détection">
+                        <group>
+                            <field name="source_view_ids" widget="many2many_tags"/>
+                            <field name="source_file_ids" widget="many2many_tags"/>
+                        </group>
+                        <group>
+                            <field name="detection_method"/>
+                            <field name="confidence"/>
+                        </group>
+                    </group>
+
+                    <group string="Position en plan" name="geometry">
+                        <group>
+                            <field name="start_x"/>
+                            <field name="start_y"/>
+                            <field name="center_x"/>
+                        </group>
+                        <group>
+                            <field name="end_x"/>
+                            <field name="end_y"/>
+                            <field name="center_y"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- Vue recherche                                                  -->
+    <!-- ============================================================= -->
+    <record id="view_construction_opening_search" model="ir.ui.view">
+        <field name="name">construction.opening.search</field>
+        <field name="model">construction.opening</field>
+        <field name="arch" type="xml">
+            <search string="Rechercher une ouverture">
+                <field name="name"/>
+                <field name="mark"/>
+                <field name="project_id"/>
+                <field name="dwg_file_id"/>
+                <field name="level_id"/>
+                <field name="wall_id"/>
+
+                <filter name="filter_windows" string="Fenêtres"
+                    domain="[('opening_type', 'in', ('window', 'french_window', 'bay'))]"/>
+                <filter name="filter_doors" string="Portes"
+                    domain="[('opening_type', 'in', ('door', 'garage_door'))]"/>
+                <filter name="filter_unknown_type" string="Nature inconnue"
+                    domain="[('opening_type', '=', 'unknown')]"/>
+                <separator/>
+                <filter name="filter_exterior" string="Extérieures"
+                    domain="[('wall_position', '=', 'exterior')]"/>
+                <filter name="filter_interior" string="Intérieures"
+                    domain="[('wall_position', '=', 'interior')]"/>
+                <separator/>
+                <!-- Le cas d'usage central : ces ouvertures attendent une
+                     autre vue du même niveau pour être complétées. -->
+                <filter name="filter_no_height" string="Hauteur manquante"
+                    domain="[('height', '=', 0)]"/>
+                <filter name="filter_no_thickness" string="Épaisseur manquante"
+                    domain="[('thickness', '=', 0)]"/>
+                <filter name="filter_complete" string="Complètes"
+                    domain="[('is_complete', '=', True)]"/>
+                <separator/>
+                <filter name="group_project" string="Projet"
+                    context="{'group_by': 'project_id'}"/>
+                <filter name="group_level" string="Niveau"
+                    context="{'group_by': 'level_id'}"/>
+                <filter name="group_type" string="Nature"
+                    context="{'group_by': 'opening_type'}"/>
+                <filter name="group_orientation" string="Façade"
+                    context="{'group_by': 'orientation'}"/>
+                <filter name="group_wall" string="Mur"
+                    context="{'group_by': 'wall_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_construction_opening" model="ir.actions.act_window">
+        <field name="name">Ouvertures détectées</field>
+        <field name="res_model">construction.opening</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_construction_opening_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aucune ouverture détectée pour l'instant</p>
+            <p>
+                Les portes et fenêtres sont détectées à l'import d'un plan
+                architectural, en vue Plan (largeur, épaisseur) ou Façade
+                (hauteur, allège). Chaque plan du même niveau complète les
+                ouvertures déjà connues ; elles passent ensuite par les
+                éléments à valider, comme les murs.
+            </p>
+        </field>
+    </record>
+
+    <menuitem id="menu_construction_opening" name="Ouvertures détectées"
+        parent="menu_construction_root" action="action_construction_opening" sequence="65"/>
+
+    <!-- Le relevé brut des façades garde son menu, sous un nom qui ne prête
+         plus à confusion avec les ouvertures consolidées. -->
+    <record id="menu_construction_facade_opening" model="ir.ui.menu">
+        <field name="name">Ouvertures de façade (relevé)</field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- PLAN DWG — bouton, suivi et liste des ouvertures               -->
+    <!-- ============================================================= -->
+    <record id="view_construction_dwg_files_form_opening" model="ir.ui.view">
+        <field name="name">construction.dwg.files.form.opening</field>
+        <field name="model">construction.dwg.files</field>
+        <field name="inherit_id" ref="view_construction_dwg_files_form"/>
+        <field name="arch" type="xml">
+
+            <button name="action_detect_walls" position="after">
+                <button name="action_detect_openings"
+                        string="Détecter les ouvertures"
+                        type="object"
+                        class="btn-secondary"
+                        icon="fa-columns"
+                        invisible="not dxf_file or opening_detection_state in ('queued', 'in_progress')"/>
+
+                <field name="opening_detection_state" widget="badge"
+                       invisible="opening_detection_state == 'draft'"
+                       decoration-warning="opening_detection_state in ('queued', 'in_progress')"
+                       decoration-success="opening_detection_state == 'done'"
+                       decoration-danger="opening_detection_state == 'failed'"/>
+            </button>
+
+            <xpath expr="//sheet/notebook" position="before">
+                <div class="alert alert-danger" role="alert"
+                     invisible="opening_detection_state != 'failed'">
+                    <field name="opening_detection_error" readonly="1" nolabel="1"/>
+                </div>
+
+                <group string="Détection des ouvertures"
+                       invisible="opening_detection_state == 'draft'">
+                    <field name="opening_count"/>
+                    <field name="opening_detection_job_id" readonly="1"
+                           invisible="not opening_detection_job_id"/>
+                    <button name="action_view_openings" type="object"
+                            string="Voir les ouvertures" class="btn-link"
+                            icon="fa-arrow-right" invisible="not opening_count"/>
+                </group>
+            </xpath>
+
+            <page name="walls" position="after">
+                <page string="Ouvertures détectées" name="openings">
+                    <field name="opening_ids" readonly="1">
+                        <tree create="0" delete="0">
+                            <field name="name"/>
+                            <field name="level_id"/>
+                            <field name="opening_type"/>
+                            <field name="orientation"/>
+                            <field name="width"/>
+                            <field name="thickness"/>
+                            <field name="height"/>
+                            <field name="sill_height"/>
+                            <field name="source_view_ids" widget="many2many_tags"/>
+                        </tree>
+                    </field>
+                </page>
+            </page>
+        </field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- MUR — ouvertures percées dans le mur                           -->
+    <!-- ============================================================= -->
+    <record id="view_construction_wall_form_opening" model="ir.ui.view">
+        <field name="name">construction.wall.form.opening</field>
+        <field name="model">construction.wall</field>
+        <field name="inherit_id" ref="view_construction_wall_form"/>
+        <field name="arch" type="xml">
+            <div name="button_box" position="inside">
+                <button name="action_view_openings" type="object"
+                    class="oe_stat_button" icon="fa-columns"
+                    invisible="not opening_count">
+                    <field name="opening_count" widget="statinfo" string="Ouvertures"/>
+                </button>
+            </div>
+            <field name="volume" position="after">
+                <field name="opening_area" invisible="not opening_count"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- ÉLÉMENT ET BROUILLON — lien vers l'ouverture d'origine         -->
+    <!-- ============================================================= -->
+    <record id="view_construction_element_form_opening" model="ir.ui.view">
+        <field name="name">construction.element.form.opening</field>
+        <field name="model">construction.element</field>
+        <field name="inherit_id" ref="view_construction_element_form"/>
+        <field name="arch" type="xml">
+            <div name="button_box" position="inside">
+                <button name="action_open_opening" type="object"
+                    class="oe_stat_button" icon="fa-columns"
+                    invisible="not opening_id">
+                    <span class="o_stat_text">Ouverture d'origine</span>
+                </button>
+            </div>
+            <field name="wall_id" position="after">
+                <field name="opening_id" invisible="not opening_id"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="view_construction_element_draft_form_opening" model="ir.ui.view">
+        <field name="name">construction.element.draft.form.opening</field>
+        <field name="model">construction.element.draft</field>
+        <field name="inherit_id" ref="view_construction_element_draft_form"/>
+        <field name="arch" type="xml">
+            <field name="wall_id" position="after">
+                <field name="opening_id" invisible="not opening_id"/>
+            </field>
+        </field>
+    </record>
+
+</odoo>

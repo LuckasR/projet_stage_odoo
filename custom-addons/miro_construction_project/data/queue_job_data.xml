@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <record id="channel_construction_wall_detection" model="queue.job.channel">
+        <field name="name">construction_wall_detection</field>
+        <field name="parent_id" ref="queue_job.channel_root"/>
+    </record>
+
+    <record id="job_function_detect_walls" model="queue.job.function">
+        <field name="model_id" ref="miro_construction_project.model_construction_dwg_files"/>
+        <field name="method">_detect_walls_job</field>
+        <field name="channel_id" ref="channel_construction_wall_detection"/>
+        <field name="related_action">{"func_name": "_wall_detection_related_action"}</field>
+    </record>
+
+    <record id="channel_construction_facade_detection" model="queue.job.channel">
+        <field name="name">construction_facade_detection</field>
+        <field name="parent_id" ref="queue_job.channel_root"/>
+    </record>
+
+    <record id="job_function_detect_facades" model="queue.job.function">
+        <field name="model_id" ref="miro_construction_project.model_construction_dwg_files"/>
+        <field name="method">_detect_facades_job</field>
+        <field name="channel_id" ref="channel_construction_facade_detection"/>
+        <field name="related_action">{"func_name": "_facade_detection_related_action"}</field>
+    </record>
+
+    <record id="channel_construction_opening_detection" model="queue.job.channel">
+        <field name="name">construction_opening_detection</field>
+        <field name="parent_id" ref="queue_job.channel_root"/>
+    </record>
+
+    <record id="job_function_detect_openings" model="queue.job.function">
+        <field name="model_id" ref="miro_construction_project.model_construction_dwg_files"/>
+        <field name="method">_detect_openings_job</field>
+        <field name="channel_id" ref="channel_construction_opening_detection"/>
+        <field name="related_action">{"func_name": "_opening_detection_related_action"}</field>
+    </record>
+
+</odoo>

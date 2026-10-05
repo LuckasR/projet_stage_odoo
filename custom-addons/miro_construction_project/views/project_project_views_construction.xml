@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================================================= -->
+    <!-- VUE LISTE : Projets / Chantiers                               -->
+    <!-- ============================================================= -->
+    <record id="view_project_project_construction_tree" model="ir.ui.view">
+        <field name="name">project.project.construction.tree</field>
+        <field name="model">project.project</field>
+        <field name="arch" type="xml">
+            <tree string="Chantiers"
+                decoration-danger="x_status == 'annule' or x_task_en_retard_count &gt; 0"
+                decoration-warning="x_status == 'en_pause'"
+                decoration-success="x_status == 'termine'"
+                decoration-info="x_status == 'en_cours'"
+                decoration-muted="x_status == 'nouveau'">
+
+                <field name="name" string="Nom du chantier" />
+
+                <!-- ⭐ Statut -->
+                <field name="x_status" widget="badge"
+                    decoration-success="x_status == 'termine'"
+                    decoration-info="x_status == 'en_cours'"
+                    decoration-warning="x_status == 'en_pause'"
+                    decoration-danger="x_status == 'annule'"
+                    decoration-muted="x_status == 'nouveau'" />
+
+                <field name="x_type_construction" />
+                <field name="x_phase_projet" />
+                <field name="x_ville_chantier" optional="show" />
+                <field name="x_maitre_ouvrage" optional="hide" />
+                <field name="x_responsable_chantier_id" widget="many2one_avatar_user" />
+                <field name="x_date_debut_travaux" />
+                <field name="x_date_fin_prevue" />
+                <field name="x_surface_totale" sum="Total surface" />
+                <field name="x_budget_total" widget="monetary" sum="Budget total" />
+                <field name="x_cout_reel_total" widget="monetary" sum="Coût réel" />
+                <field name="x_avancement_global" widget="progressbar" />
+                <field name="x_task_count_all" string="Tâches" />
+                <field name="x_task_en_retard_count"
+                    decoration-danger="x_task_en_retard_count &gt; 0" />
+                <field name="currency_id" invisible="1" />
+                <field name="partner_id" optional="hide" />
+                <field name="user_id" optional="hide" />
+            </tree>
+        </field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- VUE FORMULAIRE : Chantier                                     -->
+    <!-- ============================================================= -->
+    <record id="view_project_project_construction_form" model="ir.ui.view">
+        <field name="name">project.project.construction.form</field>
+        <field name="model">project.project</field>
+        <field name="arch" type="xml">
+            <form string="Chantier">
+                <header>
+                    <field name="x_status"
+                        widget="statusbar"
+                        statusbar_visible="nouveau,en_cours,en_pause,termine,annule"
+                        options="{'clickable': '1'}" />
+                </header>
+
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_task_hierarchy"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-sitemap">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">Diagramme</span>
+                                <span class="o_stat_text">des tâches</span>
+                            </div>
+                        </button>
+                        <button name="action_view_tasks_flat"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-tasks">
+                            <field name="x_task_count_all" widget="statinfo" string="Tâches" />
+                        </button>
+                        <button name="action_view_dwg_files"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-file-image-o">
+                            <field name="dxf_file_count" widget="statinfo" string="Plans DWG/DXF" />
+                        </button>
+                    </div>
+
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Nom du chantier" />
+                        </h1>
+                    </div>
+
+                    <group>
+                        <group string="Informations chantier">
+                            <field name="x_type_construction" />
+                            <field name="x_phase_projet" />
+                            <field name="x_responsable_chantier_id"
+                                widget="many2one_avatar_user" />
+                            <field name="x_maitre_ouvrage" />
+                            <field name="x_architecte" />
+                        </group>
+                        <group string="Localisation &amp; dimensions">
+                            <field name="x_adresse_chantier" />
+                            <field name="x_ville_chantier" />
+                            <field name="x_surface_totale" widget="float" />
+                            <field name="x_date_debut_travaux" />
+                            <field name="x_date_fin_prevue" />
+                        </group>
+                    </group>
+
+                    <group>
+                        <group string="Budget &amp; coûts">
+                            <field name="currency_id" invisible="1" />
+                            <field name="x_budget_total" widget="monetary" />
+                            <field name="x_cout_prevue_total" widget="monetary" />
+                            <field name="x_cout_reel_total" widget="monetary" />
+                        </group>
+                        <group string="Avancement">
+                            <field name="x_avancement_global" widget="progressbar" />
+                            <field name="x_task_count_all" />
+                            <field name="x_task_en_retard_count"
+                                decoration-danger="x_task_en_retard_count &gt; 0" />
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Tâches" name="tasks">
+                            <field name="tasks"
+                                context="{'default_project_id': id}">
+                                <tree>
+                                    <field name="name" />
+                                    <field name="user_ids" widget="many2many_avatar_user" />
+                                    <field name="date_deadline" />
+                                    <field name="stage_id" />
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Plans DWG/DXF" name="dwg_files">
+                            <field name="dxf_file_ids" context="{'default_project_id': id}">
+                                <tree decoration-danger="state == 'error'"
+                                      decoration-muted="state == 'draft'"
+                                      decoration-success="state == 'analysed'">
+                                    <field name="filename" string="Fichier" />
+                                    <field name="file" filename="filename" string="Source" />
+                                    <field name="dxf_filename" string="DXF généré" />
+                                    <field name="state" widget="badge"
+                                        decoration-success="state == 'analysed'"
+                                        decoration-info="state == 'imported'"
+                                        decoration-danger="state == 'error'"
+                                        decoration-muted="state == 'draft'" />
+                                    <field name="wall_detection_state" widget="badge"
+                                        decoration-warning="wall_detection_state in ('queued', 'in_progress')"
+                                        decoration-success="wall_detection_state == 'done'"
+                                        decoration-danger="wall_detection_state == 'failed'" />
+                                    <field name="wall_count" string="Murs détectés" />
+                                    <field name="imported_at" />
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- VUE RECHERCHE : avec filtres &amp; group by                     -->
+    <!-- ============================================================= -->
+    <record id="view_project_project_construction_search" model="ir.ui.view">
+        <field name="name">project.project.construction.search</field>
+        <field name="model">project.project</field>
+        <field name="arch" type="xml">
+            <search string="Rechercher un chantier">
+                <field name="name" />
+                <field name="x_ville_chantier" />
+                <field name="x_maitre_ouvrage" />
+                <field name="x_responsable_chantier_id" />
+                <field name="partner_id" />
+
+                <filter name="filter_en_retard" string="Avec tâches en retard"
+                    domain="[('x_task_en_retard_count', '&gt;', 0)]" />
+                <filter name="filter_en_cours" string="En cours"
+                    domain="[('x_avancement_global', '&gt;=', 0),
+                                 ('x_avancement_global', '&lt;', 100)]" />
+                <filter name="filter_termine" string="Terminés"
+                    domain="[('x_avancement_global', '=', 100)]" />
+
+                <separator />
+
+                <filter name="group_type" string="Type de construction"
+                    context="{'group_by': 'x_type_construction'}" />
+                <filter name="group_phase" string="Phase"
+                    context="{'group_by': 'x_phase_projet'}" />
+                <filter name="group_responsable" string="Chef de chantier"
+                    context="{'group_by': 'x_responsable_chantier_id'}" />
+                <filter name="group_ville" string="Ville"
+                    context="{'group_by': 'x_ville_chantier'}" />
+            </search>
+        </field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- ACTION                                                        -->
+    <!-- ============================================================= -->
+    <record id="action_project_project_construction" model="ir.actions.act_window">
+        <field name="name">Chantiers</field>
+        <field name="res_model">project.project</field>
+        <field name="view_mode">tree,form,kanban</field>
+        <field name="view_ids"
+            eval="[(5, 0, 0),
+                      (0, 0, {'view_mode': 'tree',
+                              'view_id': ref('view_project_project_construction_tree')}),
+                      (0, 0, {'view_mode': 'form',
+                              'view_id': ref('view_project_project_construction_form')}),
+                      (0, 0, {'view_mode': 'kanban'})]" />
+        <field name="search_view_id" ref="view_project_project_construction_search" />
+        <field name="context">{'search_default_filter_en_cours': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Créez votre premier chantier
+            </p>
+            <p>
+                Suivez vos projets de construction : phases, budgets,
+                avancement et tâches associées.
+            </p>
+        </field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- MENU                                                          -->
+    <!-- ============================================================= -->
+    <menuitem id="menu_construction_root"
+        name="Construction"
+        sequence="85"
+        web_icon="miro_construction_project,static/description/icon.png" />
+
+    <menuitem id="menu_construction_chantiers"
+        name="Chantiers"
+        parent="menu_construction_root"
+        action="action_project_project_construction"
+        sequence="10" />
+
+</odoo>

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_construction_material_attribute_tree" model="ir.ui.view">
+        <field name="name">construction.material.attribute.tree</field>
+        <field name="model">construction.material.attribute</field>
+        <field name="arch" type="xml">
+            <tree string="Caractéristiques" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="value_type"/>
+                <field name="uom_id"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_construction_material_attribute_form" model="ir.ui.view">
+        <field name="name">construction.material.attribute.form</field>
+        <field name="model">construction.material.attribute</field>
+        <field name="arch" type="xml">
+            <form string="Caractéristique">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="code"/>
+                        </group>
+                        <group>
+                            <field name="value_type"/>
+                            <field name="uom_id"
+                                   invisible="value_type != 'float'"/>
+                        </group>
+                    </group>
+                    <notebook invisible="value_type != 'selection'">
+                        <page string="Options possibles" name="options">
+                            <field name="selection_option_ids">
+                                <tree editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_construction_material_attribute" model="ir.actions.act_window">
+        <field name="name">Caractéristiques</field>
+        <field name="res_model">construction.material.attribute</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Créez une caractéristique
+            </p>
+            <p>
+                Ex : Largeur, Hauteur, Épaisseur, Diamètre, Masse, Volume,
+                Classe de résistance, Granulométrie...
+            </p>
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- Categorie produit dediee "Materiaux" -->
+    <record id="product_category_materiaux" model="product.category">
+        <field name="name">Materiaux</field>
+        <field name="parent_id" ref="product.product_category_all"/>
+    </record>
+
+    <!-- Ajout des champs Miro sur la fiche produit standard -->
+    <record id="view_product_template_form_miro_inherit" model="ir.ui.view">
+        <field name="name">product.template.form.miro.inherit</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <group string="Materiaux (Miro)">
+                    <field name="x_reference_miro"/>
+                    <field name="x_notes_materiaux"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Action : liste des produits de la categorie Materiaux -->
+    <record id="action_miro_materiaux_managements_list" model="ir.actions.act_window">
+        <field name="name">Materiaux</field>
+        <field name="res_model">product.template</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('categ_id', '=', %(miro_materiaux_managements.product_category_materiaux)d)]</field>
+        <field name="context">{'default_categ_id': %(miro_materiaux_managements.product_category_materiaux)d}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Creez votre premier produit materiaux
+            </p>
+        </field>
+    </record>
+
+</odoo>

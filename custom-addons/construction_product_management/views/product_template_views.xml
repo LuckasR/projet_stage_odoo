@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Formulaire produit : ajout d'un onglet "Matériau de construction" -->
+    <record id="view_product_template_form_construction" model="ir.ui.view">
+        <field name="name">product.template.form.construction</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view" />
+        <field name="arch" type="xml">
+
+            <field name="type" position="after">
+                <field name="is_construction_material" />
+            </field>
+
+            <notebook position="inside">
+                <page string="Matériau de construction"
+                    name="construction_material"
+                    invisible="not is_construction_material">
+                    <group>
+                        <group string="Classification">
+                            <field name="construction_material_type_id"
+                                options="{'no_create': False}" />
+                            <field name="construction_category" readonly="1" />
+                        </group>
+                    </group>
+
+                    <separator string="Caractéristiques techniques" />
+                    <field name="characteristic_ids">
+                        <tree editable="bottom">
+                            <field name="attribute_id" />
+                            <field name="uom_id" optional="hide" />
+                            <field name="value_type" column_invisible="1" />
+                            <field name="value_float"
+                                invisible="value_type != 'float'" />
+                            <field name="value_char"
+                                invisible="value_type != 'char'" />
+                            <field name="value_selection_id"
+                                invisible="value_type != 'selection'" />
+                        </tree>
+                    </field>
+
+                    <group string="Notes">
+                        <field name="technical_note" nolabel="1"
+                            placeholder="Notes techniques diverses..." />
+                    </group>
+                </page>
+            </notebook>
+        </field>
+    </record>
+
+    <!-- Vue liste : ajout de colonnes optionnelles -->
+    <record id="view_product_template_tree_construction" model="ir.ui.view">
+        <field name="name">product.template.tree.construction</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_tree_view" />
+        <field name="arch" type="xml">
+            <field name="type" position="after">
+                <field name="construction_category" optional="hide" />
+                <field name="construction_material_type_id" optional="hide" />
+            </field>
+        </field>
+    </record>
+
+    <!-- Vue recherche : filtres et regroupement -->
+    <record id="view_product_template_search_construction" model="ir.ui.view">
+        <field name="name">product.template.search.construction</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_search_view" />
+        <field name="arch" type="xml">
+            <filter name="filter_to_sell" position="after">
+                <separator />
+                <filter string="Matériaux de construction"
+                    name="filter_construction_material"
+                    domain="[('is_construction_material', '=', True)]" />
+            </filter>
+            <filter name="categ_id" position="after">
+                <filter string="Catégorie de matériau" name="group_by_construction_category"
+                    context="{'group_by': 'construction_category'}" />
+                <filter string="Type de matériau" name="group_by_construction_material_type"
+                    context="{'group_by': 'construction_material_type_id'}" />
+            </filter>
+        </field>
+    </record>
+
+    <!-- Action dédiée : liste des matériaux de construction -->
+    <record id="action_construction_material_products" model="ir.actions.act_window">
+        <field name="name">Matériaux de construction</field>
+        <field name="res_model">product.template</field>
+        <field name="view_mode">tree,kanban,form</field>
+        <field name="domain">[('is_construction_material', '=', True)]</field>
+        <field name="context">{'default_is_construction_material': True,
+            'search_default_group_by_construction_category': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Créez votre premier matériau de construction
+            </p>
+            <p>
+                Ciment, sable, gravier, acier... gérez ici tous vos produits
+                de construction avec leurs caractéristiques techniques.
+            </p>
+        </field>
+    </record>
+
+</odoo>

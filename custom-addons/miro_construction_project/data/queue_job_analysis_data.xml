@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- Canal dédié à l'analyse d'éléments et à la génération des phases.
+         Capacité à fixer dans odoo.conf : channels = root:4,root.construction_analysis:1 -->
+    <record id="channel_construction_analysis" model="queue.job.channel">
+        <field name="name">construction_analysis</field>
+        <field name="parent_id" ref="queue_job.channel_root"/>
+    </record>
+
+    <record id="job_function_run_analysis" model="queue.job.function">
+        <field name="model_id" ref="miro_construction_project.model_construction_analysis"/>
+        <field name="method">_job_run_analysis</field>
+        <field name="channel_id" ref="channel_construction_analysis"/>
+    </record>
+
+    <record id="job_function_generate_elements" model="queue.job.function">
+        <field name="model_id" ref="miro_construction_project.model_construction_element_draft"/>
+        <field name="method">_job_generate</field>
+        <field name="channel_id" ref="channel_construction_analysis"/>
+        <field name="retry_pattern" eval="{1: 30, 3: 120}"/>
+    </record>
+
+</odoo>

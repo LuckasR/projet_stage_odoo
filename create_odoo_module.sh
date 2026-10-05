@@ -81,10 +81,19 @@ if [ -d "$MODULE_PATH" ]; then
     exit 1
 fi
 
+# ==========================================
+# Nettoyage automatique en cas d'échec
+# ==========================================
+cleanup_on_error() {
+    print_error "Une erreur est survenue, suppression du module partiellement créé."
+    rm -rf "$MODULE_PATH"
+}
+trap cleanup_on_error ERR
+
 print_info "Création du module : $MODULE_NAME"
 
 # ==========================================
-# Création des dossiers - FIXED VERSION
+# Création des dossiers
 # ==========================================
 mkdir -p "$MODULE_PATH/models"
 mkdir -p "$MODULE_PATH/views"
@@ -148,7 +157,7 @@ from odoo import models, fields, api
 class ${MODULE_NAME^}Model(models.Model):
     _name = '${MODULE_NAME}.model'
     _description = '${MODULE_NAME^} Model'
-    
+
     name = fields.Char(string='Name', required=True)
     active = fields.Boolean(string='Active', default=True)
     description = fields.Text(string='Description')
@@ -169,7 +178,7 @@ from odoo import http
 from odoo.http import request
 
 class ${MODULE_NAME^}Controller(http.Controller):
-    
+
     @http.route('/${MODULE_NAME}/test', type='http', auth='public')
     def test(self, **kwargs):
         return "<h1>Hello ${MODULE_NAME^}</h1>"
@@ -177,6 +186,10 @@ EOF
 
 # ==========================================
 # __manifest__.py
+# Ordre de chargement corrigé :
+# security -> views.xml (crée l'action) -> menu.xml (l'utilise) -> data
+# Assets déclarés via la clé 'assets' (méthode Odoo 15+), plus besoin
+# de templates.xml pour charger le JS/CSS.
 # ==========================================
 AUTHOR="${AUTHOR:-L. M. Rabemiafara, Miro K.E.}"
 CATEGORY="${CATEGORY:-Tools}"
@@ -197,14 +210,19 @@ Module ${MODULE_NAME//_/ }
     'data': [
         'security/security.xml',
         'security/ir.model.access.csv',
-        'views/menu.xml',
         'views/views.xml',
-        'views/templates.xml',
+        'views/menu.xml',
         'data/data.xml',
     ],
     'demo': [
         'demo/demo.xml',
     ],
+    'assets': {
+        'web.assets_backend': [
+            '${MODULE_NAME}/static/src/js/${MODULE_NAME}.js',
+            '${MODULE_NAME}/static/src/css/${MODULE_NAME}.css',
+        ],
+    },
     'installable': True,
     'application': True,
     'auto_install': False,
@@ -213,21 +231,29 @@ EOF
 
 # ==========================================
 # security/security.xml
+# Correction : on crée la catégorie de module avant de la référencer,
+# au lieu de référencer 'base.module_category_<name>' qui n'existe pas.
 # ==========================================
 cat > "$MODULE_PATH/security/security.xml" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
     <data noupdate="0">
+        <!-- Module Category -->
+        <record id="module_category_${MODULE_NAME}" model="ir.module.category">
+            <field name="name">${MODULE_NAME//_/ }</field>
+            <field name="sequence">20</field>
+        </record>
+
         <!-- Security Groups -->
         <record id="group_${MODULE_NAME}_user" model="res.groups">
             <field name="name">${MODULE_NAME//_/ } User</field>
-            <field name="category_id" ref="base.module_category_${MODULE_NAME}"/>
+            <field name="category_id" ref="module_category_${MODULE_NAME}"/>
         </record>
-        
+
         <record id="group_${MODULE_NAME}_manager" model="res.groups">
             <field name="name">${MODULE_NAME//_/ } Manager</field>
             <field name="implied_ids" eval="[(4, ref('group_${MODULE_NAME}_user'))]"/>
-            <field name="category_id" ref="base.module_category_${MODULE_NAME}"/>
+            <field name="category_id" ref="module_category_${MODULE_NAME}"/>
         </record>
     </data>
 </odoo>
@@ -235,38 +261,16 @@ EOF
 
 # ==========================================
 # ir.model.access.csv
+# Accès ouvert à tout utilisateur interne (base.group_user) par défaut,
+# avec les 4 droits (lecture, écriture, création, suppression).
 # ==========================================
 cat > "$MODULE_PATH/security/ir.model.access.csv" <<EOF
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_${MODULE_NAME}_user,${MODULE_NAME}.user,model_${MODULE_NAME}_model,group_${MODULE_NAME}_user,1,0,0,0
-access_${MODULE_NAME}_manager,${MODULE_NAME}.manager,model_${MODULE_NAME}_model,group_${MODULE_NAME}_manager,1,1,1,1
+access_${MODULE_NAME}_user,${MODULE_NAME}.user,model_${MODULE_NAME}_model,base.group_user,1,1,1,1
 EOF
 
 # ==========================================
-# menu.xml
-# ==========================================
-cat > "$MODULE_PATH/views/menu.xml" <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<odoo>
-    <menuitem id="menu_${MODULE_NAME}_root" 
-              name="${MODULE_NAME//_/ }" 
-              sequence="10"/>
-              
-    <menuitem id="menu_${MODULE_NAME}_config" 
-              name="Configuration" 
-              parent="menu_${MODULE_NAME}_root" 
-              sequence="10"/>
-              
-    <menuitem id="menu_${MODULE_NAME}_list" 
-              name="${MODULE_NAME//_/ }" 
-              parent="menu_${MODULE_NAME}_root" 
-              action="action_${MODULE_NAME}_list" 
-              sequence="20"/>
-</odoo>
-EOF
-
-# ==========================================
-# views/views.xml
+# views/views.xml (chargé avant menu.xml)
 # ==========================================
 cat > "$MODULE_PATH/views/views.xml" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -282,7 +286,7 @@ cat > "$MODULE_PATH/views/views.xml" <<EOF
             </p>
         </field>
     </record>
-    
+
     <!-- Tree View -->
     <record id="view_${MODULE_NAME}_tree" model="ir.ui.view">
         <field name="name">${MODULE_NAME}.tree</field>
@@ -294,7 +298,7 @@ cat > "$MODULE_PATH/views/views.xml" <<EOF
             </tree>
         </field>
     </record>
-    
+
     <!-- Form View -->
     <record id="view_${MODULE_NAME}_form" model="ir.ui.view">
         <field name="name">${MODULE_NAME}.form</field>
@@ -315,17 +319,37 @@ cat > "$MODULE_PATH/views/views.xml" <<EOF
 EOF
 
 # ==========================================
+# views/menu.xml (chargé après views.xml, car il utilise l'action)
+# ==========================================
+cat > "$MODULE_PATH/views/menu.xml" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <menuitem id="menu_${MODULE_NAME}_root"
+              name="${MODULE_NAME//_/ }"
+              sequence="10"/>
+
+    <menuitem id="menu_${MODULE_NAME}_config"
+              name="Configuration"
+              parent="menu_${MODULE_NAME}_root"
+              sequence="10"/>
+
+    <menuitem id="menu_${MODULE_NAME}_list"
+              name="${MODULE_NAME//_/ }"
+              parent="menu_${MODULE_NAME}_root"
+              action="action_${MODULE_NAME}_list"
+              sequence="20"/>
+</odoo>
+EOF
+
+# ==========================================
 # views/templates.xml
+# Conservé pour d'éventuels templates QWeb (portail, rapports, etc.)
+# mais ne charge plus le JS/CSS : c'est géré par 'assets' dans le manifest.
 # ==========================================
 cat > "$MODULE_PATH/views/templates.xml" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-    <template id="assets_backend" name="${MODULE_NAME} assets" inherit_id="web.assets_backend">
-        <xpath expr="." position="inside">
-            <script type="text/javascript" src="/${MODULE_NAME}/static/src/js/${MODULE_NAME}.js"/>
-            <link rel="stylesheet" type="text/css" href="/${MODULE_NAME}/static/src/css/${MODULE_NAME}.css"/>
-        </xpath>
-    </template>
+    <!-- Vos templates QWeb ici -->
 </odoo>
 EOF
 
@@ -382,14 +406,12 @@ LGPL-3
 EOF
 
 # ==========================================
-# Static JS
+# Static JS (module ES6 natif, remplace odoo.define obsolète)
 # ==========================================
 cat > "$MODULE_PATH/static/src/js/${MODULE_NAME}.js" <<EOF
-odoo.define('${MODULE_NAME}.main', function (require) {
-    "use strict";
-    
-    console.log('${MODULE_NAME} loaded');
-});
+/** @odoo-module **/
+
+console.log('${MODULE_NAME} loaded');
 EOF
 
 # ==========================================
@@ -402,6 +424,7 @@ EOF
 # ==========================================
 # Final message
 # ==========================================
+trap - ERR
 echo ""
 echo "=========================================="
 print_success "✅ Module créé avec succès !"

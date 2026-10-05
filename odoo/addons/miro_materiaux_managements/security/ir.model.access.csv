@@ -1,0 +1,2 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_miro_materiaux_managements_user,miro_materiaux_managements.user,model_miro_materiaux_managements_model,base.group_user,1,1,1,1

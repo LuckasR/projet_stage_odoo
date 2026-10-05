@@ -1,0 +1,363 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- ============================================================= -->
+    <!-- Vue liste                                                      -->
+    <!-- ============================================================= -->
+    <record id="view_construction_dwg_files_list" model="ir.ui.view">
+        <field name="name">construction.dwg.files.list</field>
+        <field name="model">construction.dwg.files</field>
+        <field name="arch" type="xml">
+            <tree string="Fichiers DWG">
+                <field name="filename" />
+                <field name="project_id" />
+                <field name="plan_type_ids" widget="many2many_tags"
+                    options="{'color_field': 'color'}" />
+                <field name="level_ids" widget="many2many_tags"
+                    options="{'color_field': 'color'}" />
+                <field name="view_ids" widget="many2many_tags"
+                    options="{'color_field': 'color'}" />
+                <field name="file" filename="filename" />
+                <field name="dxf_filename" />
+                <field name="dxf_file" filename="dxf_filename" />
+                <field name="state" />
+                <field name="wall_detection_state" widget="badge"
+                    decoration-warning="wall_detection_state in ('queued', 'in_progress')"
+                    decoration-success="wall_detection_state == 'done'"
+                    decoration-danger="wall_detection_state == 'failed'" />
+                <field name="imported_at" />
+            </tree>
+        </field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- Vue formulaire (unique)                                        -->
+    <!-- ============================================================= -->
+    <record id="view_construction_dwg_files_form" model="ir.ui.view">
+        <field name="name">construction.dwg.files.form</field>
+        <field name="model">construction.dwg.files</field>
+        <field name="arch" type="xml">
+            <form string="Fichier DWG">
+                <header>
+                    <button name="action_process_file"
+                        string="Traiter / Convertir"
+                        type="object"
+                        class="oe_highlight"
+                        invisible="state not in ('draft', 'error')" />
+
+                    <!-- Un menu au lieu d'un bouton par visualiseur : les entrées
+                         viennent de construction.dwg.files._viewer_menu_items(),
+                         complété par chaque module (murs, fondations, ouvertures...). -->
+                    <widget name="construction_viewer_menu" invisible="not dxf_file"/>
+
+                    <button name="action_detect_walls"
+                        string="Détecter les murs"
+                        type="object"
+                        class="btn-secondary"
+                        icon="fa-search"
+                        invisible="not dxf_file or wall_detection_state in ('queued', 'in_progress')" />
+
+                    <field name="wall_detection_state" widget="badge"
+                        invisible="wall_detection_state == 'draft'"
+                        decoration-warning="wall_detection_state in ('queued', 'in_progress')"
+                        decoration-success="wall_detection_state == 'done'"
+                        decoration-danger="wall_detection_state == 'failed'" />
+                </header>
+
+                <sheet>
+                    <group>
+                        <group string="Fichier source">
+                            <field name="project_id" />
+                            <field name="filename" />
+                            <field name="file" filename="filename" />
+                        </group>
+
+                        <group string="Fichier DXF généré">
+                            <field name="dxf_filename" readonly="1" />
+                            <field name="dxf_file" filename="dxf_filename" readonly="1" />
+                        </group>
+                    </group>
+
+                    <group string="Classement du plan">
+                        <group>
+                            <field name="plan_type_ids"
+                                widget="many2many_tags"
+                                required="1"
+                                options="{'color_field': 'color', 'no_create_edit': False}"
+                                placeholder="Architectural, Coffrage, Fondation..." />
+                        </group>
+
+                        <group>
+                            <field name="level_ids"
+                                widget="many2many_tags"
+                                required="1"
+                                options="{'color_field': 'color', 'no_create_edit': False}"
+                                placeholder="RDC, R+1, Sous-sol..." />
+                        </group>
+
+                        <group>
+                            <field name="view_ids"
+                                widget="many2many_tags"
+                                required="1"
+                                options="{'color_field': 'color', 'no_create_edit': False}"
+                                placeholder="Plan, Coupe, Façade..." />
+                        </group>
+                    </group>
+                    <group string="Détection des murs">
+                        <field name="merge_overlapping_walls" />
+                    </group>
+                    <div class="alert alert-danger" role="alert"
+                        invisible="wall_detection_state != 'failed'">
+                        <field name="wall_detection_error" readonly="1" nolabel="1" />
+                    </div>
+
+                    <group>
+                        <field name="state" readonly="1" />
+                        <field name="imported_at" readonly="1" />
+                    </group>
+
+                    <group string="Détection des murs" invisible="wall_detection_state == 'draft'">
+                        <field name="wall_count" />
+                        <field name="wall_detection_job_id" readonly="1"
+                            invisible="not wall_detection_job_id" />
+                    </group>
+
+                    <notebook>
+                        <page string="Métadonnées DXF" name="metadata">
+                            <field name="metadata_id">
+                                <tree>
+                                    <field name="version_name" />
+                                    <field name="units_name" />
+                                    <field name="dxf_creation_date" />
+                                    <field name="dxf_update_date" />
+                                    <field name="project_name" />
+                                    <field name="nb_layers" />
+                                    <field name="nb_blocks" />
+                                    <field name="nb_entities_modelspace" />
+                                    <field name="file_size_bytes" />
+                                </tree>
+                                <form>
+                                    <group>
+                                        <group string="Version / Unités">
+                                            <field name="version_code" />
+                                            <field name="version_name" />
+                                            <field name="units_code" />
+                                            <field name="units_name" />
+                                        </group>
+                                        <group string="Dates">
+                                            <field name="dxf_creation_date" />
+                                            <field name="dxf_update_date" />
+                                            <field name="extracted_at" />
+                                        </group>
+                                    </group>
+                                    <group>
+                                        <group string="Projet">
+                                            <field name="project_name" />
+                                            <field name="custom_properties" />
+                                        </group>
+                                        <group string="Fichier">
+                                            <field name="file_size_bytes" />
+                                        </group>
+                                    </group>
+                                    <group string="Géométrie">
+                                        <group string="Point d'insertion">
+                                            <field name="insertion_base_x" />
+                                            <field name="insertion_base_y" />
+                                            <field name="insertion_base_z" />
+                                        </group>
+                                        <group string="Limites min">
+                                            <field name="ext_min_x" />
+                                            <field name="ext_min_y" />
+                                            <field name="ext_min_z" />
+                                        </group>
+                                        <group string="Limites max">
+                                            <field name="ext_max_x" />
+                                            <field name="ext_max_y" />
+                                            <field name="ext_max_z" />
+                                        </group>
+                                    </group>
+                                    <group string="Statistiques">
+                                        <field name="nb_layers" />
+                                        <field name="nb_blocks" />
+                                        <field name="nb_entities_modelspace" />
+                                        <field name="nb_text_styles" />
+                                        <field name="nb_linetypes" />
+                                    </group>
+                                </form>
+                            </field>
+                        </page>
+
+                        <page string="Calques" name="layers">
+                            <field name="layer_ids">
+                                <tree editable="bottom" create="0" delete="0">
+                                    <field name="name" />
+                                    <field name="color" />
+                                    <field name="linetype" />
+                                    <field name="lineweight" />
+                                    <field name="visible" widget="boolean_toggle" />
+                                    <field name="entity_count" />
+                                </tree>
+                            </field>
+                        </page>
+
+                        <page string="Blocs" name="blocks">
+                            <field name="block_ids">
+                                <tree create="0" delete="0" default_group_by="block_name">
+                                    <field name="block_name" />
+                                    <field name="layer" />
+                                    <field name="pos_x" />
+                                    <field name="pos_y" />
+                                    <field name="rotation" />
+                                    <field name="handle" />
+                                </tree>
+                            </field>
+                        </page>
+
+                        <page string="Entités" name="entities">
+                            <field name="entity_ids">
+                                <tree create="0" delete="0" default_group_by="entity_type">
+                                    <field name="entity_type" />
+                                    <field name="category" />
+                                    <field name="layer" />
+                                    <field name="pos_x" />
+                                    <field name="pos_y" />
+                                    <field name="handle" />
+                                </tree>
+                            </field>
+                        </page>
+
+                        <page string="Annotations" name="annotations">
+                            <field name="annotation_ids">
+                                <tree create="0" delete="0" default_group_by="annotation_type">
+                                    <field name="annotation_type" />
+                                    <field name="layer" />
+                                    <field name="text_content" />
+                                    <field name="dimension_measurement" optional="hide" />
+                                    <field name="pos_x" />
+                                    <field name="pos_y" />
+                                </tree>
+                            </field>
+                        </page>
+
+                        <page string="Systèmes de coordonnées" name="coordinate_systems">
+                            <field name="coordinate_system_ids">
+                                <tree create="0" delete="0">
+                                    <field name="name" />
+                                    <field name="is_world_ucs" />
+                                    <field name="is_geolocated" />
+                                    <field name="origin_x" />
+                                    <field name="origin_y" />
+                                    <field name="angle_base" />
+                                </tree>
+                                <form>
+                                    <group>
+                                        <group string="Origine">
+                                            <field name="origin_x" />
+                                            <field name="origin_y" />
+                                            <field name="origin_z" />
+                                        </group>
+                                        <group string="Angles">
+                                            <field name="angle_base" />
+                                            <field name="angle_direction" />
+                                            <field name="measurement_system" />
+                                        </group>
+                                    </group>
+                                    <group string="Géoréférencement" invisible="not is_geolocated">
+                                        <field name="is_geolocated" />
+                                        <field name="coordinate_system_name" />
+                                        <field name="geo_reference_point_x" />
+                                        <field name="geo_reference_point_y" />
+                                    </group>
+                                </form>
+                            </field>
+                        </page>
+
+                        <page string="Murs détectés" name="walls">
+                            <field name="wall_ids" readonly="1">
+                                <tree create="0" delete="0">
+                                    <field name="name" />
+                                    <field name="level_id" />
+                                    <field name="wall_type" />
+                                    <field name="orientation" />
+                                    <field name="length" sum="Longueur totale" />
+                                    <field name="thickness" />
+                                    <field name="height" />
+                                    <field name="source_view_ids" widget="many2many_tags" />
+                                    <field name="confidence" />
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- Vue recherche                                                  -->
+    <!-- ============================================================= -->
+    <record id="view_construction_dwg_files_search" model="ir.ui.view">
+        <field name="name">construction.dwg.files.search</field>
+        <field name="model">construction.dwg.files</field>
+        <field name="arch" type="xml">
+            <search string="Rechercher un plan">
+                <field name="filename" />
+                <field name="project_id" />
+                <field name="plan_type_ids" />
+                <field name="level_ids" />
+                <field name="view_ids" />
+
+                <filter name="filter_draft" string="Brouillon"
+                    domain="[('state', '=', 'draft')]" />
+                <filter name="filter_imported" string="Importé"
+                    domain="[('state', '=', 'imported')]" />
+                <filter name="filter_analysed" string="Analysé"
+                    domain="[('state', '=', 'analysed')]" />
+
+                <separator />
+
+                <filter name="filter_walls_done" string="Murs détectés"
+                    domain="[('wall_detection_state', '=', 'done')]" />
+                <filter name="filter_walls_pending" string="Détection en attente"
+                    domain="[('wall_detection_state', 'in', ('queued', 'in_progress'))]" />
+                <filter name="filter_walls_failed" string="Détection échouée"
+                    domain="[('wall_detection_state', '=', 'failed')]" />
+
+                <separator />
+
+                <filter name="group_project" string="Projet"
+                    context="{'group_by': 'project_id'}" />
+                <filter name="group_plan_type" string="Type de plan"
+                    context="{'group_by': 'plan_type_ids'}" />
+                <filter name="group_level" string="Niveau"
+                    context="{'group_by': 'level_ids'}" />
+                <filter name="group_view" string="Type de vue"
+                    context="{'group_by': 'view_ids'}" />
+                <filter name="group_state" string="État"
+                    context="{'group_by': 'state'}" />
+                <filter name="group_wall_detection_state" string="État détection murs"
+                    context="{'group_by': 'wall_detection_state'}" />
+            </search>
+        </field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- Action fenêtre                                                 -->
+    <!-- ============================================================= -->
+    <record id="action_construction_dwg_files" model="ir.actions.act_window">
+        <field name="name">Fichiers DWG</field>
+        <field name="res_model">construction.dwg.files</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_construction_dwg_files_search" />
+        <field name="context">{'search_default_group_project': 1}</field>
+    </record>
+
+    <!-- Menu vers l'action, rattaché au menu principal "Construction"
+         (défini dans menu_views.xml) pour rester dans la même application -->
+    <menuitem id="menu_construction_dwg_files"
+        name="Plans DWG/DXF"
+        parent="miro_construction_project.menu_construction_root"
+        action="action_construction_dwg_files"
+        sequence="50" />
+
+</odoo>

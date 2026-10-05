@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Formulaire tâche : ajout des infos chantier + accès au diagramme -->
+    <record id="view_project_task_form_construction" model="ir.ui.view">
+        <field name="name">project.task.form.construction</field>
+        <field name="model">project.task</field>
+        <field name="inherit_id" ref="project.view_task_form2"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
+                <button name="action_view_hierarchy_from_task" type="object"
+                        class="oe_stat_button" icon="fa-sitemap">
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Voir le</span>
+                        <span class="o_stat_text">diagramme</span>
+                    </div>
+                </button>
+                <button name="action_view_children_tasks" type="object"
+                        class="oe_stat_button" icon="fa-sitemap"
+                        invisible="not x_sous_taches_count_total">
+                    <field name="x_sous_taches_count_total" widget="statinfo" string="Sous-tâches"/>
+                </button>
+                <button name="action_open_incidents" type="object"
+                        class="oe_stat_button" icon="fa-exclamation-triangle">
+                    <field name="x_incident_count" widget="statinfo" string="Incidents"/>
+                </button>
+            </xpath>
+
+            <xpath expr="//field[@name='parent_id']" position="after">
+                <field name="x_niveau_hierarchie"/>
+            </xpath>
+
+            <xpath expr="//notebook" position="inside">
+                <page string="Suivi de chantier" name="construction_suivi">
+                    <group>
+                        <group string="Organisation">
+                            <field name="x_corps_metier"/>
+                            <field name="x_responsable_technique_id"/>
+                            <field name="x_niveau_priorite_chantier"/>
+                        </group>
+                        <group string="Planning">
+                            <field name="x_date_debut_prevue"/>
+                            <field name="x_date_fin_prevue"/>
+                            <field name="x_duree_prevue_jours"/>
+                            <field name="x_est_en_retard"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Avancement">
+                            <field name="x_avancement_manuel" widget="progressbar"
+                                   invisible="child_ids"/>
+                            <field name="x_avancement_global" widget="progressbar"
+                                   readonly="1"/>
+                        </group>
+                        <group string="Coûts">
+                            <field name="x_cout_prevue"/>
+                            <field name="x_cout_reel"/>
+                        </group>
+                    </group>
+                    <group string="Incidents / problèmes rencontrés">
+                        <field name="x_incident_ids" nolabel="1">
+                            <tree editable="bottom">
+                                <field name="name"/>
+                                <field name="date_incident"/>
+                                <field name="gravite" widget="badge"
+                                       decoration-danger="gravite == 'critique'"
+                                       decoration-warning="gravite == 'haute'"/>
+                                <field name="etat" widget="badge"
+                                       decoration-success="etat == 'resolu'"/>
+                                <field name="responsable_id"/>
+                            </tree>
+                        </field>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Liste plate de toutes les tâches / sous-tâches d'un projet -->
+    <record id="view_project_task_list_construction" model="ir.ui.view">
+        <field name="name">project.task.list.construction</field>
+        <field name="model">project.task</field>
+        <field name="arch" type="xml">
+            <tree string="Tâches"
+                  decoration-danger="x_est_en_retard"
+                  decoration-muted="x_avancement_global == 100">
+                <field name="x_niveau_hierarchie" optional="hide"/>
+                <field name="name"/>
+                <field name="parent_id" optional="show"/>
+                <field name="stage_id"/>
+                <field name="x_corps_metier" optional="show"/>
+                <field name="x_responsable_technique_id" optional="show"/>
+                <field name="date_deadline"/>
+                <field name="x_est_en_retard" invisible="1"/>
+                <field name="x_cout_prevue" optional="hide" sum="Total"/>
+                <field name="x_cout_reel" optional="hide" sum="Total"/>
+                <field name="x_avancement_global" widget="progressbar"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_project_task_list_construction" model="ir.actions.act_window">
+        <field name="name">Tâches du projet</field>
+        <field name="res_model">project.task</field>
+        <field name="view_mode">tree,form</field>
+        <field name="view_id" ref="view_project_task_list_construction"/>
+    </record>
+
+</odoo>

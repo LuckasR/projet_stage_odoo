@@ -1,0 +1,23 @@
+{
+  "analysis_id": 1,
+  "schema_version": 1,
+  "plan_revision": "A",
+  "elements": [
+    {
+      "key": "S1",
+      "type": "semelle",
+      "quantities": {"beton_m3": 1.8, "acier_kg": 145, "coffrage_m2": 6.4},
+      "dimensions": {"l": 1.2, "w": 1.2, "h": 0.5},
+      "confidence": 0.93,
+      "source": {"page": 1, "bbox": [120, 340, 180, 400]}
+    },
+    {
+      "key": "S2",
+      "type": "semelle",
+      "quantities": {"beton_m3": 2.1, "acier_kg": 170, "coffrage_m2": 7.2},
+      "dimensions": {"l": 1.4, "w": 1.2, "h": 0.5},
+      "confidence": 0.71,
+      "source": {"page": 1, "bbox": [220, 340, 290, 400]}
+    }
+  ]
+}

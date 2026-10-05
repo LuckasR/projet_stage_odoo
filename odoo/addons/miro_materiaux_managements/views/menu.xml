@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <menuitem id="menu_miro_materiaux_managements_root"
+              name="Materiaux"
+              sequence="10"/>
+
+    <menuitem id="menu_miro_materiaux_managements_list"
+              name="Produits Materiaux"
+              parent="menu_miro_materiaux_managements_root"
+              action="action_miro_materiaux_managements_list"
+              sequence="10"/>
+
+</odoo>

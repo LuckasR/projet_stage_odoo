@@ -1,0 +1,640 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================================================= -->
+    <!-- GABARITS DE PHASES                                            -->
+    <!-- ============================================================= -->
+    <record id="view_construction_phase_template_tree" model="ir.ui.view">
+        <field name="name">construction.phase.template.tree</field>
+        <field name="model">construction.phase.template</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="element_type_count"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_construction_phase_template_form" model="ir.ui.view">
+        <field name="name">construction.phase.template.form</field>
+        <field name="model">construction.phase.template</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="active"/>
+                    </group>
+                    <div class="alert alert-info" role="alert"
+                        invisible="element_type_count &lt; 2">
+                        Ce gabarit est partagé par <field name="element_type_count"
+                        class="oe_inline" readonly="1"/> types d'éléments : modifier
+                        une phase la modifie pour chacun d'eux.
+                    </div>
+                    <notebook>
+                        <page string="Phases" name="phases">
+                    <field name="line_ids">
+                        <tree editable="bottom">
+                            <field name="sequence" widget="handle"/>
+                            <field name="name"/>
+                            <field name="phase_type"/>
+                            <field name="depends_on_line_id"/>
+                            <field name="qty_key"/>
+                            <field name="rate_per_hour"/>
+                            <field name="fixed_hours"/>
+                            <field name="template_id" column_invisible="1"/>
+                        </tree>
+                    </field>
+                        </page>
+                        <page string="Types d'éléments" name="element_types">
+                            <field name="element_type_ids" readonly="1">
+                                <tree>
+                                    <field name="name"/>
+                                    <field name="code"/>
+                                    <field name="work_name"/>
+                                </tree>
+                            </field>
+                            <p class="text-muted">
+                                Le gabarit se choisit sur le type d'élément
+                                (Configuration &gt; Types d'éléments) : cette liste
+                                montre les types qui l'utilisent.
+                            </p>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_construction_phase_template" model="ir.actions.act_window">
+        <field name="name">Gabarits de phases</field>
+        <field name="res_model">construction.phase.template</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- TYPES D'ÉLÉMENTS                                              -->
+    <!-- ============================================================= -->
+    <record id="view_construction_element_type_tree" model="ir.ui.view">
+        <field name="name">construction.element.type.tree</field>
+        <field name="model">construction.element.type</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="work_name"/>
+                <field name="phase_template_id"/>
+                <field name="plan_type_ids" widget="many2many_tags"/>
+                <field name="dxf_block_keyword"/>
+                <field name="dxf_layer_keyword"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_construction_element_type_form" model="ir.ui.view">
+        <field name="name">construction.element.type.form</field>
+        <field name="model">construction.element.type</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group string="Règles métier">
+                            <field name="name"/>
+                            <field name="code"/>
+                            <field name="work_name"/>
+                            <field name="phase_template_id"/>
+                            <field name="plan_type_ids" widget="many2many_tags"/>
+                            <field name="ouvrage_per_level"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Détection dans le plan DXF">
+                            <field name="dxf_block_keyword"/>
+                            <field name="dxf_layer_keyword"/>
+                            <field name="steel_ratio_kg_m3"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Caractéristiques attendues" name="fields">
+                            <field name="field_ids">
+                                <tree editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name"/>
+                                    <field name="code"/>
+                                    <field name="nature"/>
+                                    <field name="uom"/>
+                                    <field name="required"/>
+                                    <field name="default_value"/>
+                                </tree>
+                            </field>
+                            <p class="text-muted">
+                                Une caractéristique <b>obligatoire</b> bloque la validation
+                                du brouillon tant qu'elle est vide. Sa <b>valeur par défaut</b>
+                                est appliquée par « Calculer les métrés » quand le plan ne
+                                l'a pas donnée — c'est ainsi qu'on renseigne une hauteur
+                                que la vue en plan ne montre jamais.
+                            </p>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_construction_element_type" model="ir.actions.act_window">
+        <field name="name">Types d'éléments</field>
+        <field name="res_model">construction.element.type</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- ÉLÉMENTS DE CONSTRUCTION                                      -->
+    <!-- ============================================================= -->
+    <record id="view_construction_element_tree" model="ir.ui.view">
+        <field name="name">construction.element.tree</field>
+        <field name="model">construction.element</field>
+        <field name="arch" type="xml">
+            <tree decoration-warning="has_missing_fields">
+                <field name="key"/>
+                <field name="name"/>
+                <field name="element_type_id"/>
+                <field name="ouvrage_task_id"/>
+                <field name="level_id"/>
+                <field name="project_id"/>
+                <field name="dim_l" optional="show"/>
+                <field name="dim_w" optional="show"/>
+                <field name="dim_h" optional="show"/>
+                <field name="dimension_summary" optional="hide"/>
+                <field name="has_missing_fields" optional="hide"/>
+                <field name="qty_beton_m3" optional="show"/>
+                <field name="qty_acier_kg" optional="show"/>
+                <field name="qty_coffrage_m2" optional="show"/>
+                <field name="qty_surface_m2" optional="show"/>
+                <field name="task_count"/>
+                <field name="progress" widget="progressbar"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_construction_element_form" model="ir.ui.view">
+        <field name="name">construction.element.form</field>
+        <field name="model">construction.element</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_generate_tasks" type="object"
+                        string="Générer les phases" class="btn-secondary"
+                        invisible="not element_type_id or not ouvrage_task_id"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_tasks" type="object"
+                            class="oe_stat_button" icon="fa-tasks">
+                            <field name="task_count" widget="statinfo" string="Phases"/>
+                        </button>
+                        <button name="action_open_wall" type="object"
+                            class="oe_stat_button" icon="fa-th-large"
+                            invisible="not wall_id">
+                            <span class="o_stat_text">Mur d'origine</span>
+                        </button>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="key"/>
+                            <field name="element_type_id"/>
+                            <field name="ouvrage_task_id"/>
+                            <field name="level_id"/>
+                            <field name="project_id"/>
+                        </group>
+                        <group>
+                            <field name="progress" widget="progressbar"/>
+                            <field name="source_file_id"/>
+                            <field name="wall_id" invisible="not wall_id"/>
+                            <field name="source_page"/>
+                            <field name="confidence"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <field name="has_missing_fields" invisible="1"/>
+                    <div class="alert alert-warning" role="alert"
+                        invisible="not has_missing_fields">
+                        Caractéristiques obligatoires manquantes pour ce type d'ouvrage :
+                        <field name="missing_field_ids" widget="many2many_tags" nolabel="1"
+                            readonly="1"/>
+                    </div>
+
+                    <notebook>
+                        <page string="Représentation" name="sketch">
+                            <field name="sketch_svg" nolabel="1" readonly="1"/>
+                            <p class="text-muted">
+                                Schéma dessiné à l'échelle des dimensions de l'élément
+                                (onglet « Caractéristiques ») : il se met à jour dès
+                                qu'une cote est corrigée.
+                            </p>
+                        </page>
+                        <page string="Caractéristiques" name="characteristics">
+                            <field name="value_ids" nolabel="1"
+                                options="{'no_create': True, 'no_open': True}">
+                                <tree editable="bottom" create="false" delete="false"
+                                      decoration-warning="is_missing">
+                                    <field name="sequence" column_invisible="1"/>
+                                    <field name="name" readonly="1"/>
+                                    <field name="code" readonly="1" optional="hide"/>
+                                    <field name="nature" readonly="1"/>
+                                    <field name="uom" readonly="1"/>
+                                    <field name="required" readonly="1"/>
+                                    <field name="value"/>
+                                    <field name="is_missing" column_invisible="1"/>
+                                </tree>
+                            </field>
+                            <p class="text-muted">
+                                Ces lignes sont la copie de ce que déclare le type
+                                d'élément (Configuration &gt; Types d'éléments) : on ne
+                                peut ni en ajouter ni en retirer ici, seule la valeur
+                                se saisit. Ajouter une caractéristique au type la fait
+                                apparaître sur tous les ouvrages de ce type.
+                            </p>
+                        </page>
+                        <page string="Phases" name="phases">
+                            <field name="task_ids">
+                                <tree>
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name"/>
+                                    <field name="phase_type"/>
+                                    <field name="allocated_hours" optional="show"/>
+                                    <field name="x_avancement_global" widget="progressbar"/>
+                                    <field name="state"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_construction_element_search" model="ir.ui.view">
+        <field name="name">construction.element.search</field>
+        <field name="model">construction.element</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="key"/>
+                <field name="name"/>
+                <field name="element_type_id"/>
+                <field name="project_id"/>
+                <filter name="filter_incomplete" string="Caractéristiques manquantes"
+                    domain="[('has_missing_fields', '=', True)]"/>
+                <group expand="0" string="Regrouper par">
+                    <filter name="group_project" string="Projet" context="{'group_by': 'project_id'}"/>
+                    <filter name="group_ouvrage" string="Ouvrage" context="{'group_by': 'ouvrage_task_id'}"/>
+                    <filter name="group_type" string="Type" context="{'group_by': 'element_type_id'}"/>
+                    <filter name="group_level" string="Niveau" context="{'group_by': 'level_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_construction_element" model="ir.actions.act_window">
+        <field name="name">Éléments de construction</field>
+        <field name="res_model">construction.element</field>
+        <field name="view_mode">tree,form</field>
+        <field name="context">{'search_default_group_ouvrage': 1}</field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- BROUILLONS (revue humaine)                                    -->
+    <!-- ============================================================= -->
+    <record id="view_construction_element_draft_tree" model="ir.ui.view">
+        <field name="name">construction.element.draft.tree</field>
+        <field name="model">construction.element.draft</field>
+        <field name="arch" type="xml">
+            <tree decoration-warning="confidence &lt; 0.8 and state == 'pending'"
+                  decoration-muted="state in ('rejected', 'generated')"
+                  decoration-success="state == 'validated'">
+                <header>
+                    <button name="action_validate" type="object" string="Valider"/>
+                    <button name="action_reject" type="object" string="Rejeter"/>
+                    <button name="action_reset" type="object" string="Remettre à valider"/>
+                    <button name="action_compute_quantities" type="object"
+                        string="Calculer les métrés"/>
+                    <button name="action_generate" type="object" string="Générer"/>
+                </header>
+                <field name="analysis_id" optional="hide"/>
+                <field name="key"/>
+                <field name="type_code" optional="hide"/>
+                <field name="type_id"/>
+                <field name="level_id"/>
+                <field name="dim_l" sum="Longueur totale"/>
+                <field name="dim_w"/>
+                <field name="dim_h"/>
+                <field name="qty_beton_m3"/>
+                <field name="qty_acier_kg"/>
+                <field name="qty_coffrage_m2"/>
+                <field name="qty_surface_m2"/>
+                <field name="confidence"/>
+                <field name="change_type" widget="badge"
+                    decoration-info="change_type == 'new'"
+                    decoration-warning="change_type == 'modified'"/>
+                <field name="issue"/>
+                <field name="state" widget="badge"
+                    decoration-success="state in ('validated', 'generated')"
+                    decoration-danger="state == 'rejected'"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_construction_element_draft_form" model="ir.ui.view">
+        <field name="name">construction.element.draft.form</field>
+        <field name="model">construction.element.draft</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_validate" type="object" string="Valider"
+                        class="oe_highlight" invisible="state not in ('pending', 'rejected')"/>
+                    <button name="action_reject" type="object" string="Rejeter"
+                        invisible="state not in ('pending', 'validated')"/>
+                    <button name="action_reset" type="object" string="Remettre à valider"
+                        invisible="state not in ('validated', 'rejected')"/>
+                    <button name="action_compute_quantities" type="object"
+                        string="Calculer les métrés"
+                        invisible="state in ('rejected', 'generated')"/>
+                    <field name="state" widget="statusbar"
+                        statusbar_visible="pending,validated,generated"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="analysis_id"/>
+                            <field name="key"/>
+                            <field name="type_code"/>
+                            <field name="type_id"/>
+                            <field name="level_id"/>
+                            <field name="change_type"/>
+                            <field name="element_id"/>
+                            <field name="wall_id" invisible="not wall_id"/>
+                        </group>
+                        <group>
+                            <field name="confidence"/>
+                            <field name="issue"/>
+                            <field name="source_page"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Dimensions relevées sur le plan">
+                            <field name="dim_l"/>
+                            <field name="dim_w"/>
+                            <field name="dim_h"/>
+                            <div colspan="2" class="text-muted" invisible="dim_h">
+                                La hauteur n'est pas lisible sur une vue en plan.
+                                Saisissez-la, puis cliquez sur « Calculer les métrés ».
+                            </div>
+                        </group>
+                        <group string="Quantités (modifiables avant validation)">
+                            <field name="qty_beton_m3"/>
+                            <field name="qty_acier_kg"/>
+                            <field name="qty_coffrage_m2"/>
+                            <field name="qty_surface_m2"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_construction_element_draft_search" model="ir.ui.view">
+        <field name="name">construction.element.draft.search</field>
+        <field name="model">construction.element.draft</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="key"/>
+                <field name="type_id"/>
+                <field name="analysis_id"/>
+                <filter name="filter_pending" string="À valider" domain="[('state', '=', 'pending')]"/>
+                <filter name="filter_validated" string="Validés" domain="[('state', '=', 'validated')]"/>
+                <filter name="filter_low" string="Confiance faible (&lt; 0.8)"
+                    domain="[('confidence', '&lt;', 0.8), ('state', '=', 'pending')]"/>
+                <filter name="filter_issue" string="Avec anomalie" domain="[('issue', '!=', False)]"/>
+                <group expand="0" string="Regrouper par">
+                    <filter name="group_analysis" string="Analyse" context="{'group_by': 'analysis_id'}"/>
+                    <filter name="group_state" string="État" context="{'group_by': 'state'}"/>
+                    <filter name="group_change" string="Évolution" context="{'group_by': 'change_type'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_construction_element_draft" model="ir.actions.act_window">
+        <field name="name">Éléments à valider</field>
+        <field name="res_model">construction.element.draft</field>
+        <field name="view_mode">tree,form</field>
+        <field name="context">{'search_default_filter_pending': 1}</field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- ANALYSES                                                      -->
+    <!-- ============================================================= -->
+    <record id="view_construction_analysis_tree" model="ir.ui.view">
+        <field name="name">construction.analysis.tree</field>
+        <field name="model">construction.analysis</field>
+        <field name="arch" type="xml">
+            <tree decoration-danger="state == 'failed'" decoration-success="state == 'done'"
+                  decoration-warning="state == 'running'">
+                <field name="name"/>
+                <field name="project_id"/>
+                <field name="engine"/>
+                <field name="started_at"/>
+                <field name="finished_at"/>
+                <field name="draft_count"/>
+                <field name="state" widget="badge"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_construction_analysis_form" model="ir.ui.view">
+        <field name="name">construction.analysis.form</field>
+        <field name="model">construction.analysis</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_start" type="object" string="Lancer l'analyse"
+                        class="oe_highlight" invisible="state != 'draft'"/>
+                    <button name="action_retry" type="object" string="Relancer"
+                        invisible="state != 'failed'"/>
+                    <button name="action_validate_confident" type="object"
+                        string="Valider les brouillons fiables (≥ 0.9)"
+                        invisible="state != 'done'"/>
+                    <button name="action_generate" type="object" string="Générer éléments et phases"
+                        class="oe_highlight" invisible="state != 'done'"
+                        confirm="Générer les éléments et phases pour tous les brouillons validés ?"/>
+                    <field name="state" widget="statusbar"
+                        statusbar_visible="draft,running,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_drafts" type="object"
+                            class="oe_stat_button" icon="fa-list">
+                            <field name="draft_count" widget="statinfo" string="Brouillons"/>
+                        </button>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="file_id"/>
+                            <field name="project_id"/>
+                            <field name="revision"/>
+                            <field name="engine"/>
+                        </group>
+                        <group>
+                            <field name="started_at"/>
+                            <field name="finished_at"/>
+                        </group>
+                    </group>
+                    <group invisible="not error_log">
+                        <field name="error_log" widget="text" colspan="2"/>
+                    </group>
+                    <notebook>
+                        <page string="JSON de test" name="manual_json">
+                            <p class="text-muted">
+                                Si ce champ est rempli, l'analyse utilise ce JSON au lieu de
+                                lire les blocs du plan.
+                            </p>
+                            <field name="manual_json" nolabel="1"/>
+                        </page>
+                        <page string="Dernier résultat" name="result_json">
+                            <field name="result_json" nolabel="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_construction_analysis" model="ir.actions.act_window">
+        <field name="name">Analyses de plan</field>
+        <field name="res_model">construction.analysis</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- PLAN DWG : bouton + onglet analyses (héritage de ta vue)      -->
+    <!-- ============================================================= -->
+    <record id="view_construction_dwg_files_form_analysis" model="ir.ui.view">
+        <field name="name">construction.dwg.files.form.analysis</field>
+        <field name="model">construction.dwg.files</field>
+        <field name="inherit_id" ref="view_construction_dwg_files_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='action_detect_walls']" position="after">
+                <button name="action_run_typed_analyses" type="object"
+                    string="Analyser selon le type de plan" class="btn-primary" icon="fa-magic"
+                    invisible="not dxf_file or not plan_type_ids"/>
+                <field name="element_analysis_available" invisible="1"/>
+                <button name="action_analyze_elements" type="object"
+                    string="Forcer l'analyse d'éléments" class="btn-secondary" icon="fa-cubes"
+                    invisible="not element_analysis_available"/>
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page string="Analyses éléments" name="element_analyses">
+                    <field name="analysis_ids">
+                        <tree>
+                            <field name="name"/>
+                            <field name="started_at"/>
+                            <field name="draft_count"/>
+                            <field name="state" widget="badge"/>
+                        </tree>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- TYPES DE PLAN (analyse associée) & NIVEAUX                    -->
+    <!-- ============================================================= -->
+    <record id="view_construction_plan_type_tree" model="ir.ui.view">
+        <field name="name">construction.plan.type.tree.analyzer</field>
+        <field name="model">construction.plan.type</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="analyzer"/>
+                <field name="description" optional="show"/>
+                <field name="active" optional="hide"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_construction_plan_type" model="ir.actions.act_window">
+        <field name="name">Types de plan</field>
+        <field name="res_model">construction.plan.type</field>
+        <field name="view_mode">tree</field>
+    </record>
+
+    <record id="view_construction_plan_level_tree" model="ir.ui.view">
+        <field name="name">construction.plan.level.tree</field>
+        <field name="model">construction.plan.level</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="elevation"/>
+                <field name="active" optional="hide"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_construction_plan_level" model="ir.actions.act_window">
+        <field name="name">Niveaux</field>
+        <field name="res_model">construction.plan.level</field>
+        <field name="view_mode">tree</field>
+    </record>
+
+    <record id="view_construction_plan_view_tree" model="ir.ui.view">
+        <field name="name">construction.plan.view.tree</field>
+        <field name="model">construction.plan.view</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="active" optional="hide"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_construction_plan_view" model="ir.actions.act_window">
+        <field name="name">Types de vue</field>
+        <field name="res_model">construction.plan.view</field>
+        <field name="view_mode">tree</field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- MENUS                                                         -->
+    <!-- ============================================================= -->
+    <menuitem id="menu_construction_elements" name="Éléments"
+        parent="menu_construction_root" action="action_construction_element" sequence="60"/>
+    <menuitem id="menu_construction_analysis" name="Analyses de plan"
+        parent="menu_construction_root" action="action_construction_analysis" sequence="70"/>
+    <menuitem id="menu_construction_drafts" name="Éléments à valider"
+        parent="menu_construction_root" action="action_construction_element_draft" sequence="75"/>
+    <menuitem id="menu_construction_config" name="Configuration"
+        parent="menu_construction_root" sequence="90"/>
+    <menuitem id="menu_construction_element_type" name="Types d'éléments"
+        parent="menu_construction_config" action="action_construction_element_type" sequence="10"/>
+    <menuitem id="menu_construction_phase_template" name="Gabarits de phases"
+        parent="menu_construction_config" action="action_construction_phase_template" sequence="20"/>
+    <menuitem id="menu_construction_plan_type" name="Types de plan"
+        parent="menu_construction_config" action="action_construction_plan_type" sequence="30"/>
+    <menuitem id="menu_construction_plan_level" name="Niveaux"
+        parent="menu_construction_config" action="action_construction_plan_level" sequence="40"/>
+    <menuitem id="menu_construction_plan_view" name="Types de vue"
+        parent="menu_construction_config" action="action_construction_plan_view" sequence="50"/>
+
+</odoo>

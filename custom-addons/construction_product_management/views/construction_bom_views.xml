@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<odoo>
+
+    <!-- =========================================================
+         VUE LISTE : BOM
+         ========================================================= -->
+
+    <record id="view_construction_bom_tree" model="ir.ui.view">
+        <field name="name">construction.bom.tree</field>
+        <field name="model">construction.bom</field>
+        <field name="arch" type="xml">
+
+            <tree string="Nomenclatures">
+
+                <field name="code"/>
+                <field name="name"/>
+                <field name="quantity"/>
+                <field name="unit_id"/>
+                <field name="active"/>
+
+            </tree>
+
+        </field>
+    </record>
+
+
+    <!-- =========================================================
+         VUE FORMULAIRE : BOM
+         ========================================================= -->
+
+    <record id="view_construction_bom_form" model="ir.ui.view">
+        <field name="name">construction.bom.form</field>
+        <field name="model">construction.bom</field>
+        <field name="arch" type="xml">
+
+            <form string="Nomenclature">
+
+                <sheet>
+
+                    <!-- En-tête -->
+
+                    <div class="oe_title">
+
+                        <label for="name"
+                               class="oe_edit_only"/>
+
+                        <h1>
+                            <field name="name"
+                                   placeholder="Ex. Béton armé 1 m³"/>
+                        </h1>
+
+                    </div>
+
+
+                    <!-- Informations générales -->
+
+                    <group>
+
+                        <group>
+
+                            <field name="code"/>
+
+                            <field name="unit_id"/>
+
+                            <field name="quantity"/>
+
+                        </group>
+
+                        <group>
+
+                            <field name="active"/>
+
+                        </group>
+
+                    </group>
+
+
+                    <!-- =================================================
+                         COMPOSANTS
+                         ================================================= -->
+
+                    <notebook>
+
+                        <page string="Composants">
+
+                            <field name="line_ids">
+
+                                <tree editable="bottom">
+
+                                    <field name="sequence"
+                                           widget="handle"/>
+
+                                    <field name="component_id"/>
+
+                                    <field name="quantity"/>
+
+                                    <field name="unit_id"/>
+
+                                    <field name="coefficient"/>
+
+                                    <field name="notes"/>
+
+                                </tree>
+
+                            </field>
+
+                        </page>
+
+
+                        <!-- Notes -->
+
+                        <page string="Notes">
+
+                            <field name="notes"
+                                   placeholder="Notes concernant cette nomenclature..."/>
+
+                        </page>
+
+                    </notebook>
+
+                </sheet>
+
+            </form>
+
+        </field>
+    </record>
+
+
+    <!-- =========================================================
+         VUE RECHERCHE
+         ========================================================= -->
+
+    <record id="view_construction_bom_search" model="ir.ui.view">
+        <field name="name">construction.bom.search</field>
+        <field name="model">construction.bom</field>
+        <field name="arch" type="xml">
+
+            <search string="Rechercher une nomenclature">
+
+                <field name="name"/>
+                <field name="code"/>
+                <field name="unit_id"/>
+
+                <separator/>
+
+                <filter
+                    name="active"
+                    string="Actives"
+                    domain="[('active', '=', True)]"/>
+
+                <filter
+                    name="inactive"
+                    string="Archivées"
+                    domain="[('active', '=', False)]"/>
+
+                <group string="Grouper par">
+
+                    <filter
+                        name="group_unit"
+                        string="Unité"
+                        context="{'group_by': 'unit_id'}"/>
+
+                </group>
+
+            </search>
+
+        </field>
+    </record>
+
+
+    <!-- =========================================================
+         ACTION
+         ========================================================= -->
+
+    <record id="action_construction_bom" model="ir.actions.act_window">
+
+        <field name="name">Nomenclatures</field>
+
+        <field name="res_model">construction.bom</field>
+
+        <field name="view_mode">tree,form</field>
+
+        <field name="search_view_id"
+               ref="view_construction_bom_search"/>
+
+        <field name="context">
+            {
+                'search_default_active': 1
+            }
+        </field>
+
+    </record>
+
+
+    <!-- =========================================================
+         MENU
+         ========================================================= -->
+
+    <menuitem
+        id="menu_construction_bom"
+        name="Nomenclatures"
+        action="action_construction_bom"
+        sequence="30"/>
+
+</odoo>

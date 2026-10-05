@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        Action client basée sur un composant OWL maison (voir
+        static/src/task_hierarchy/). Fonctionne en Community comme en
+        Enterprise, contrairement à la vue de type "hierarchy" qui n'existe
+        que dans certains modules Enterprise.
+    -->
+    <record id="action_project_task_hierarchy" model="ir.actions.client">
+        <field name="name">Diagramme des tâches</field>
+        <field name="tag">miro_construction_project.task_hierarchy</field>
+    </record>
+
+</odoo>

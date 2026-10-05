@@ -1,0 +1,9 @@
+<!-- data/ir_config_parameter.xml -->
+<odoo noupdate="1">
+    <!-- Valeur par défaut : à adapter par l'administrateur selon l'environnement
+         de déploiement (Paramètres > Technique > Paramètres système). -->
+    <record id="config_oda_path" model="ir.config_parameter">
+        <field name="key">construction_dwg.oda_paths</field>
+        <field name="value">/opt/oda/ODAFileConverter</field>
+    </record>
+</odoo>

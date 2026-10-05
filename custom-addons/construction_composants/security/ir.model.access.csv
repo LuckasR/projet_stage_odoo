@@ -1,0 +1,8 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_construction_projet,construction.projet,model_construction_projet,base.group_user,1,1,1,1
+access_construction_niveau,construction.niveau,model_construction_niveau,base.group_user,1,1,1,1
+access_construction_type_composant,construction.type.composant,model_construction_type_composant,base.group_user,1,1,1,1
+access_construction_type_composant_attribut,construction.type.composant.attribut,model_construction_type_composant_attribut,base.group_user,1,1,1,1
+access_construction_composant,construction.composant,model_construction_composant,base.group_user,1,1,1,1
+access_construction_composant_dimension,construction.composant.dimension,model_construction_composant_dimension,base.group_user,1,1,1,1
+access_construction_composant_face,construction.composant.face,model_construction_composant_face,base.group_user,1,1,1,1

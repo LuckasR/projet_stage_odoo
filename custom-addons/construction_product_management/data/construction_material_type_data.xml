@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- Ciments -->
+    <record id="material_type_ciment_cpj_325" model="construction.material.type">
+        <field name="name">Ciment CPJ 32.5</field>
+        <field name="category">ciment</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="material_type_ciment_cpj_425" model="construction.material.type">
+        <field name="name">Ciment CPJ 42.5</field>
+        <field name="category">ciment</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <!-- Sables -->
+    <record id="material_type_sable_riviere" model="construction.material.type">
+        <field name="name">Sable de rivière 0/4</field>
+        <field name="category">sable</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="material_type_sable_concasse" model="construction.material.type">
+        <field name="name">Sable concassé 0/4</field>
+        <field name="category">sable</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <!-- Graviers -->
+    <record id="material_type_gravier_4_8" model="construction.material.type">
+        <field name="name">Gravier 4/8</field>
+        <field name="category">gravier</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="material_type_gravier_8_15" model="construction.material.type">
+        <field name="name">Gravier 8/15</field>
+        <field name="category">gravier</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <!-- Acier -->
+    <record id="material_type_acier_fe400" model="construction.material.type">
+        <field name="name">Fer à béton Fe E400</field>
+        <field name="category">acier</field>
+        <field name="sequence">10</field>
+    </record>
+
+    <!-- Autres -->
+    <record id="material_type_brique_creuse" model="construction.material.type">
+        <field name="name">Brique creuse</field>
+        <field name="category">brique</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="material_type_parpaing_15" model="construction.material.type">
+        <field name="name">Parpaing 15x20x40</field>
+        <field name="category">parpaing</field>
+        <field name="sequence">10</field>
+    </record>
+
+</odoo>
