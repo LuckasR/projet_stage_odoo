@@ -12,3 +12,4 @@ from . import construction_plan_type_ext
 from . import construction_file_ext
 from . import construction_file_facade
 from . import construction_file_opening
+from . import construction_scene_3d

@@ -201,6 +201,12 @@ class ConstructionDwgFileOpening(models.Model):
         analyse -> brouillons -> éléments -> phases. Sans ouverture à
         valider, aucune analyse n'est créée (elle échouerait aussitôt)."""
         self.ensure_one()
+        if not self.is_execution_plan:
+            # Plan de référence (architecture) : les ouvertures restent
+            # détectées, mais ne deviennent pas des tâches.
+            _logger.info("%s : plan de référence, ouvertures non soumises à "
+                         "validation", self.filename)
+            return False
         if self.analysis_ids.filtered(
                 lambda a: a.state == "running" and a.engine == "openings"):
             return False

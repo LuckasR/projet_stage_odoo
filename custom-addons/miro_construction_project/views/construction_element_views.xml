@@ -198,6 +198,11 @@
                             invisible="not wall_id">
                             <span class="o_stat_text">Mur d'origine</span>
                         </button>
+                        <button name="action_view_wall_openings" type="object"
+                            class="oe_stat_button" icon="fa-columns"
+                            invisible="not wall_id">
+                            <field name="wall_opening_count" widget="statinfo" string="Ouvertures"/>
+                        </button>
                     </div>
                     <group>
                         <group>
@@ -214,6 +219,9 @@
                             <field name="wall_id" invisible="not wall_id"/>
                             <field name="source_page"/>
                             <field name="confidence"/>
+                            <field name="reinforcement" invisible="not reinforcement"/>
+                            <field name="tremie_summary" invisible="not tremie_summary"/>
+                            <field name="opening_summary" invisible="not opening_summary"/>
                             <field name="active"/>
                         </group>
                     </group>
@@ -338,6 +346,9 @@
                     decoration-info="change_type == 'new'"
                     decoration-warning="change_type == 'modified'"/>
                 <field name="issue"/>
+                <field name="reinforcement" optional="hide"/>
+                <field name="tremie_summary" optional="show"/>
+                <field name="opening_summary" optional="show"/>
                 <field name="state" widget="badge"
                     decoration-success="state in ('validated', 'generated')"
                     decoration-danger="state == 'rejected'"/>
@@ -378,6 +389,7 @@
                         <group>
                             <field name="confidence"/>
                             <field name="issue"/>
+                            <field name="reinforcement"/>
                             <field name="source_page"/>
                         </group>
                     </group>
@@ -398,6 +410,16 @@
                             <field name="qty_surface_m2"/>
                         </group>
                     </group>
+                    <div class="alert alert-info" role="alert" invisible="not tremie_summary">
+                        <strong>Trémies : </strong><field name="tremie_summary" nolabel="1"/>.
+                        Leur surface est déjà retirée de la surface, du béton et du coffrage.
+                    </div>
+                    <div class="alert alert-info" role="alert" invisible="not opening_summary">
+                        <strong>Ouvertures du mur : </strong><field name="opening_summary" nolabel="1"/>.
+                        Leur surface est retirée de la surface et du volume du mur.
+                    </div>
+                    <separator string="Représentation"/>
+                    <field name="sketch_svg" nolabel="1" readonly="1"/>
                 </sheet>
             </form>
         </field>
@@ -490,10 +512,32 @@
                             <field name="finished_at"/>
                         </group>
                     </group>
+                    <div class="alert alert-success" role="status"
+                        invisible="engine != 'details' or state != 'done'">
+                        Plan de détail lu : il ne crée pas de brouillon, il complète ceux
+                        du coffrage et des fondations du projet —
+                        <field name="completed_draft_count" class="fw-bold"/> brouillon(s)
+                        complété(s). Voir l'onglet « Profil structurel ».
+                    </div>
+                    <div class="alert alert-warning" role="alert" invisible="not plan_warnings">
+                        <strong>Anomalies signalées par le plan</strong> (l'analyse a réussi,
+                        c'est le projet qui est à revoir) :
+                        <field name="plan_warnings" widget="text" nolabel="1"/>
+                    </div>
                     <group invisible="not error_log">
                         <field name="error_log" widget="text" colspan="2"/>
                     </group>
                     <notebook>
+                        <page string="Profil structurel" name="profile"
+                            invisible="engine != 'details'">
+                            <p class="text-muted">
+                                Relevé sur les coupes et détails. Ce plan ne crée aucun
+                                brouillon : il complète les hauteurs, épaisseurs, sections
+                                et le ferraillage des brouillons en attente du projet
+                                (coffrage, fondation), y compris ceux importés plus tard.
+                            </p>
+                            <field name="profile_summary" nolabel="1"/>
+                        </page>
                         <page string="JSON de test" name="manual_json">
                             <p class="text-muted">
                                 Si ce champ est rempli, l'analyse utilise ce JSON au lieu de
@@ -564,6 +608,7 @@
                 <field name="code"/>
                 <field name="name"/>
                 <field name="analyzer"/>
+                <field name="plan_family"/>
                 <field name="description" optional="show"/>
                 <field name="active" optional="hide"/>
             </tree>

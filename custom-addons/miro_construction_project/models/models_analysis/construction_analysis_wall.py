@@ -66,8 +66,13 @@ class ConstructionAnalysisWall(models.Model):
         quantities = {}
 
         if wall.height:
-            quantities['surface_m2'] = round(wall.area, 3)
-            quantities['beton_m3'] = round(wall.volume, 3)
+            # Surface NETTE : les ouvertures percées dans le mur sont déduites.
+            quantities['surface_m2'] = round(wall.net_area, 3)
+            quantities['beton_m3'] = round(wall.net_volume, 3)
+            if wall.openings_without_height:
+                issues.append(_(
+                    "%d ouverture(s) sans hauteur : leur surface n'est pas "
+                    "encore déduite du mur") % wall.openings_without_height)
         else:
             issues.append(_(
                 "Hauteur inconnue : importez une vue en façade ou en coupe de "
@@ -81,6 +86,8 @@ class ConstructionAnalysisWall(models.Model):
             dimensions['ep'] = round(wall.thickness, 3)
         if wall.height:
             dimensions['h'] = round(wall.height, 3)
+        if wall.opening_area:
+            dimensions['ouvertures_m2'] = round(wall.opening_area, 3)
 
         # La confiance des murs est notée sur 100, celle des brouillons sur 1.
         confidence = min(max((wall.confidence or 0.0) / 100.0, 0.0), 0.95)

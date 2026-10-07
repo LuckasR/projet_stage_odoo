@@ -3,7 +3,8 @@ import logging
 from odoo import Command, _, api, fields, models
 from odoo.exceptions import ValidationError
 
-from ..service.element_sketch import render_element_sketch
+from ..service.element_sketch import (
+    opening_summary, render_element_sketch, tremie_summary)
 from .models_analysis.construction_element_type import UOM_SELECTION
 
 _logger = logging.getLogger(__name__)
@@ -82,10 +83,19 @@ class ConstructionElement(models.Model):
     # Schéma coté (vues en plan / coupe / élévation selon le type), redessiné
     # à chaque lecture depuis les dimensions : jamais stocké, donc toujours à
     # jour après correction d'une cote.
+    # Trémies (vides) d'une dalle : leur surface est déjà déduite des métrés,
+    # ce résumé et le schéma les rendent visibles.
+    tremie_summary = fields.Char("Trémies", compute='_compute_tremie_summary')
+    # Ouvertures percées dans le mur : leur surface est déduite du métré.
+    opening_summary = fields.Char("Ouvertures", compute='_compute_sketch_svg')
+    wall_opening_count = fields.Integer(
+        "Nb d'ouvertures", compute='_compute_wall_opening_count')
     sketch_svg = fields.Html(
         "Représentation", compute='_compute_sketch_svg', sanitize=False)
 
     # --- Quantités ------------------------------------------------------
+    reinforcement = fields.Char(
+        "Ferraillage", help="Ferraillage type relevé sur le plan de détail.")
     qty_beton_m3 = fields.Float("Béton (m³)")
     qty_acier_kg = fields.Float("Acier (kg)")
     qty_coffrage_m2 = fields.Float("Coffrage (m²)")
@@ -261,6 +271,25 @@ class ConstructionElement(models.Model):
             'view_mode': 'form',
         }
 
+    @api.depends('wall_id.opening_ids')
+    def _compute_wall_opening_count(self):
+        for rec in self:
+            rec.wall_opening_count = len(rec.wall_id.opening_ids)
+
+    def action_view_wall_openings(self):
+        """Ouvertures percées dans le mur de cet élément."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _("Ouvertures de %s") % (self.key or self.name),
+            'res_model': 'construction.opening',
+            'view_mode': 'tree,form',
+            'domain': [('wall_id', '=', self.wall_id.id)],
+            'context': {'default_wall_id': self.wall_id.id,
+                        'default_level_id': self.wall_id.level_id.id,
+                        'default_dwg_file_id': self.wall_id.dwg_file_id.id},
+        }
+
     @api.model_create_multi
     def create(self, vals_list):
         elements = super().create(vals_list)
@@ -303,13 +332,23 @@ class ConstructionElement(models.Model):
             rec.dimension_summary = " · ".join(parts)
 
     @api.depends('dimensions', 'dim_l', 'dim_w', 'dim_h',
-                 'element_type_id.code', 'key', 'name')
+                 'element_type_id.code', 'key', 'name', 'wall_id.opening_ids.width', 'wall_id.opening_ids.height',
+                 'wall_id.opening_ids.sill_height', 'wall_id.opening_ids.opening_type',
+                 'wall_id.opening_ids.center_x', 'wall_id.opening_ids.center_y')
     def _compute_sketch_svg(self):
         for rec in self:
+            openings = rec.wall_id._opening_layout() if rec.wall_id else []
+            rec.opening_summary = opening_summary(openings) or False
             rec.sketch_svg = render_element_sketch(
                 rec.element_type_id.code,
-                {'l': rec.dim_l, 'w': rec.dim_w, 'h': rec.dim_h},
-                label=rec.key or rec.name or "")
+                {'l': rec.dim_l, 'w': rec.dim_w, 'h': rec.dim_h,
+                 'tremies': (rec.dimensions or {}).get('tremies') or []},
+                label=rec.key or rec.name or "", openings=openings)
+
+    @api.depends('dimensions')
+    def _compute_tremie_summary(self):
+        for rec in self:
+            rec.tremie_summary = tremie_summary(rec.dimensions) or False
 
     @api.constrains('key', 'project_id', 'level_id')
     def _check_key_unique(self):

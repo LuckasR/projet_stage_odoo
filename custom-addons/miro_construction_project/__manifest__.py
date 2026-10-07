@@ -40,6 +40,7 @@ spécifiques de la gestion de chantiers de construction :
         'data/queue_job_analysis_data.xml',
         'data/construction_phase_template_data.xml',
         'data/construction_opening_data.xml',
+        'data/construction_formwork_data.xml',
         'views/project_task_hierarchy_action.xml',
         'views/project_project_views_construction.xml', 
         'views/project_task_views.xml',

@@ -3,6 +3,9 @@ from odoo.exceptions import UserError, ValidationError
 
 from odoo.addons.queue_job.job import identity_exact
 
+from ...service.element_sketch import (
+    opening_summary, render_element_sketch, tremie_summary)
+
 QTY_KEYS = ('beton_m3', 'acier_kg', 'coffrage_m2', 'surface_m2')
 GENERATE_CHUNK_SIZE = 50  # éléments par job de génération
 
@@ -53,6 +56,16 @@ class ConstructionElementDraft(models.Model):
         'construction.opening', string="Ouverture d'origine", readonly=True,
         index=True, ondelete='set null')
 
+    tremie_summary = fields.Char("Trémies", compute='_compute_sketch')
+    opening_summary = fields.Char("Ouvertures", compute='_compute_sketch')
+    sketch_svg = fields.Html(
+        "Représentation", compute='_compute_sketch', sanitize=False,
+        help="Schéma coté de l'ouvrage détecté (trémies d'une dalle comprises).")
+
+    # Ferraillage type de l'ouvrage, lu sur le plan de détail (tableau
+    # « FERRAILLAGE TYPE » ou légende « Poutre : 4 HA14 ... »).
+    reinforcement = fields.Char("Ferraillage")
+
     # Quantités éditables dans la vue de revue (stockées dans le JSON)
     qty_beton_m3 = fields.Float(compute='_compute_qty', inverse='_inverse_qty')
     qty_acier_kg = fields.Float(compute='_compute_qty', inverse='_inverse_qty')
@@ -82,6 +95,21 @@ class ConstructionElementDraft(models.Model):
                     ('key', '=', rec.key)]):
                 raise ValidationError(_(
                     "La clé « %s » existe déjà dans l'analyse pour ce niveau.") % rec.key)
+
+    @api.depends('dimensions', 'type_id.code', 'type_code', 'key', 'wall_id.opening_ids.width', 'wall_id.opening_ids.height',
+                 'wall_id.opening_ids.sill_height', 'wall_id.opening_ids.opening_type',
+                 'wall_id.opening_ids.center_x', 'wall_id.opening_ids.center_y')
+    def _compute_sketch(self):
+        for rec in self:
+            dims = rec.dimensions or {}
+            openings = rec.wall_id._opening_layout() if rec.wall_id else []
+            rec.tremie_summary = tremie_summary(dims) or False
+            rec.opening_summary = opening_summary(openings) or False
+            rec.sketch_svg = render_element_sketch(
+                rec.type_id.code or rec.type_code,
+                {'l': dims.get('l', 0.0), 'w': dims.get('w', dims.get('ep', 0.0)),
+                 'h': dims.get('h', 0.0), 'tremies': dims.get('tremies') or []},
+                label=rec.key or "", openings=openings)
 
     @api.depends('quantities')
     def _compute_qty(self):
@@ -160,35 +188,9 @@ class ConstructionElementDraft(models.Model):
 
         Une vue en plan ne montre pas la hauteur des ouvrages : le moteur
         laisse donc les métrés vides et signale l'anomalie. Les valeurs par
-        défaut du type sont d'abord appliquées, puis les formules habituelles
-        — béton = L×l×h, coffrage = 2(L+l)×h, acier = béton × ratio du type —
-        sans écraser un métré déjà saisi à la main."""
-        self._apply_type_defaults()
-        computed = self.browse()
-        for rec in self:
-            if rec.opening_id:
-                # Une baie ne se chiffre ni en béton ni en coffrage : son
-                # métré est sa surface (largeur × hauteur).
-                if rec.dim_l and rec.dim_h:
-                    qty = dict(rec.quantities or {})
-                    if not qty.get('surface_m2'):
-                        qty['surface_m2'] = round(rec.dim_l * rec.dim_h, 3)
-                    rec.quantities = qty
-                    computed |= rec
-                continue
-            if not (rec.dim_l and rec.dim_w and rec.dim_h):
-                continue
-            qty = dict(rec.quantities or {})
-            if not qty.get('beton_m3'):
-                qty['beton_m3'] = round(rec.dim_l * rec.dim_w * rec.dim_h, 3)
-            if not qty.get('coffrage_m2'):
-                qty['coffrage_m2'] = round(
-                    2 * (rec.dim_l + rec.dim_w) * rec.dim_h, 3)
-            ratio = rec.type_id.steel_ratio_kg_m3
-            if ratio and not qty.get('acier_kg'):
-                qty['acier_kg'] = round(qty['beton_m3'] * ratio, 1)
-            rec.quantities = qty
-            computed |= rec
+        défaut du type sont d'abord appliquées, puis les formules du type
+        (cf. `_compute_quantities`), sans écraser un métré saisi à la main."""
+        computed = self._compute_quantities()
 
         message = (_("Métrés calculés sur %s ouvrage(s).") % len(computed)
                    if computed else
@@ -200,6 +202,67 @@ class ConstructionElementDraft(models.Model):
                        'sticky': False,
                        'type': 'success' if computed else 'warning'},
         }
+
+    def _compute_quantities(self, apply_defaults=True):
+        """Métrés manquants, selon la nature de l'ouvrage :
+
+          - baie         surface = L × h
+          - dalle        surface nette (trémies déduites) ; béton = surface × ép. ;
+                         coffrage = sous-face
+          - poutre       béton = L × l × h ; coffrage = fond + 2 joues = (2h + l) × L
+          - mur          surface = (L − baies) × h ; volume = surface × ép. ;
+                         pas de coffrage (maçonnerie)
+          - autres       béton = L × l × h ; coffrage = 2(L + l) × h
+
+        puis acier = béton × ratio du type. Retourne les brouillons chiffrés.
+
+        `apply_defaults=False` chiffre seulement ce que le plan a donné, sans
+        combler une cote manquante par la valeur par défaut du type : c'est
+        le cas d'un chiffrage automatique, qui ne doit pas masquer une
+        hauteur non relevée."""
+        if apply_defaults:
+            self._apply_type_defaults()
+        computed = self.browse()
+        for rec in self:
+            qty = dict(rec.quantities or {})
+            code = rec.type_id.code or rec.type_code
+            l, w, h = rec.dim_l, rec.dim_w, rec.dim_h
+            if rec.opening_id:
+                # Une baie ne se chiffre ni en béton ni en coffrage : son
+                # métré est sa surface (largeur × hauteur).
+                if l and h:
+                    if not qty.get('surface_m2'):
+                        qty['surface_m2'] = round(l * h, 3)
+                    rec.quantities = qty
+                    computed |= rec
+                continue
+            if code == 'dalle':
+                surface = qty.get('surface_m2') or (l * w)
+                if not (surface and h):
+                    continue
+                values = {'surface_m2': surface, 'beton_m3': surface * h,
+                          'coffrage_m2': surface}
+            elif code == 'mur':
+                if not (l and w and h):
+                    continue
+                openings = (rec.dimensions or {}).get('ouvertures_m') or 0.0
+                surface = max(l - openings, 0.0) * h
+                values = {'surface_m2': surface, 'beton_m3': surface * w}
+            else:
+                if not (l and w and h):
+                    continue
+                coffrage = ((2 * h + w) * l if code == 'poutre'
+                            else 2 * (l + w) * h)
+                values = {'beton_m3': l * w * h, 'coffrage_m2': coffrage}
+            for key, value in values.items():
+                if not qty.get(key):
+                    qty[key] = round(value, 3)
+            ratio = rec.type_id.steel_ratio_kg_m3
+            if ratio and not qty.get('acier_kg'):
+                qty['acier_kg'] = round(qty['beton_m3'] * ratio, 1)
+            rec.quantities = qty
+            computed |= rec
+        return computed
 
     @api.constrains('state', 'type_id')
     def _check_type_when_validated(self):
@@ -264,6 +327,7 @@ class ConstructionElementDraft(models.Model):
             'source_bbox': list(self.source_bbox or []),
             'wall_id': self.wall_id.id,
             'opening_id': self.opening_id.id,
+            'reinforcement': self.reinforcement,
         }
         for k in QTY_KEYS:
             vals['qty_%s' % k] = q.get(k, 0.0)
@@ -296,6 +360,14 @@ class ConstructionElementDraft(models.Model):
         drafts = self.filtered(lambda d: d.state == 'validated')
         if not drafts:
             raise UserError(_("Aucun brouillon validé à générer."))
+        reference = drafts.filtered(lambda d: not d.analysis_id.file_id.is_execution_plan)
+        if reference:
+            raise UserError(_(
+                "Ces brouillons viennent d'un plan de référence (architecture) : "
+                "seuls les plans d'exécution (fondation, coffrage, détails) "
+                "génèrent des tâches et des phases. Rejetez-les, ou classez le "
+                "plan dans un type de famille « Exécution ».\n\n%s")
+                % ", ".join(reference.mapped('key')))
         for draft in drafts:
             if not draft.analysis_id.project_id:
                 raise UserError(_("Le plan n'est rattaché à aucun projet."))
