@@ -13,12 +13,36 @@ class ConstructionPlanType(models.Model):
          ('walls', "Détection de murs"),
          ('elements', "Éléments de construction (blocs DXF)"),
          ('footings', "Fondations (semelles, longrines)"),
-         ('facade', "Façades (ouvertures, niveaux, cotes)")],
+         ('facade', "Façades (ouvertures, niveaux, cotes)"),
+         ('formwork', "Coffrage (poteaux, poutres, dalles, murs)"),
+         ('details', "Coupes et détails (hauteurs, sections, ferraillage)")],
         string="Analyse automatique",
         help="Analyse lancée à l'import d'un plan de ce type. Un plan qui cumule plusieurs "
              "types lance l'union de leurs analyses (sans doublon).\n"
              "Pour ajouter une analyse : selection_add ici + méthode "
              "_enqueue_analysis_<code>() sur construction.dwg.files.")
+
+    plan_family = fields.Selection(
+        [('reference', "Référence (architecture)"),
+         ('execution', "Exécution (structure)")],
+        string="Famille de plan", default="reference",
+        help="Seuls les plans d'EXÉCUTION (fondation, coffrage, détails...) "
+             "créent des éléments, des tâches et des phases.\n"
+             "Un plan de référence (architecture, façade) reste analysé — murs, "
+             "ouvertures, façades et hauteurs alimentent le visualiseur et "
+             "complètent les autres plans — mais ne génère aucune tâche.")
+
+    # Familles livrées : renseignées seulement tant que l'utilisateur n'a rien
+    # choisi (cf. _set_default_analyzers).
+    _EXECUTION_CODES = ('FOND', 'COFF', 'DETAIL', 'STRUC', 'FERR')
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if 'plan_family' not in vals and (vals.get('code') or '').strip().upper() \
+                    in self._EXECUTION_CODES:
+                vals['plan_family'] = 'execution'
+        return super().create(vals_list)
 
     # Analyse livrée par une version antérieure et devenue inopérante. Le
     # moteur « blocs » ne peut plus rien trouver sur un plan de fondation :
@@ -26,17 +50,30 @@ class ConstructionPlanType(models.Model):
     # géométrie (cf. _clean_geometric_element_types), donc plus aucun type
     # d'élément n'a de mot-clé DXF à y chercher. Un plan FOND resté sur
     # « elements » ne lançait donc plus AUCUNE analyse.
-    _STALE_ANALYZERS = {'FOND': ('elements', 'footings')}
+    # Même chose pour le coffrage : ses poteaux, poutres et dalles sont
+    # dessinés en géométrie (S-POT, S-POU, S-DAL), jamais en blocs.
+    _STALE_ANALYZERS = {'FOND': ('elements', 'footings'),
+                        'COFF': ('elements', 'formwork')}
 
     @api.model
     def _set_default_analyzers(self):
         """Renseigne les analyses par défaut sur les types existants. Ne modifie jamais
         une valeur déjà choisie (y compris « Aucune analyse »), à l'exception
         des valeurs livrées devenues inopérantes (cf. _STALE_ANALYZERS)."""
-        defaults = {'ARCH': 'walls', 'FOND': 'footings', 'COFF': 'elements'}
+        defaults = {'ARCH': 'walls', 'FOND': 'footings', 'COFF': 'formwork',
+                    'DETAIL': 'details'}
         for code, analyzer in defaults.items():
             self.search([('code', '=', code), ('analyzer', '=', False)]).write(
                 {'analyzer': analyzer})
+
+        # Un type livré « exécution » n'est corrigé qu'à sa première mise à
+        # jour : ensuite, le choix de l'utilisateur prime.
+        param = self.env['ir.config_parameter'].sudo()
+        if not param.get_param('miro_construction_project.plan_family_initialized'):
+            execution = self.search([('code', 'in', self._EXECUTION_CODES)])
+            if execution:
+                execution.write({'plan_family': 'execution'})
+                param.set_param('miro_construction_project.plan_family_initialized', '1')
 
         for code, (stale, corrected) in self._STALE_ANALYZERS.items():
             obsolete = self.search([('code', '=', code), ('analyzer', '=', stale)])

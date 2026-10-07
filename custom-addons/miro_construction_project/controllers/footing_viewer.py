@@ -37,7 +37,14 @@ TYPE_COLORS = {
     'poteau': '#6a1b9a',
     'semelle_filante': '#2e7d32',
     'longrine': '#e65100',
+    'poutre': '#00838f',
+    'dalle': '#5d4037',
+    'mur': '#455a64',
 }
+# Ouvrages surfaciques : contour plein, trémies dessinées en vides, et placés
+# SOUS les autres ouvrages pour ne pas les masquer.
+AREA_TYPES = ('dalle',)
+TREMIE_COLOR = '#c62828'
 DEFAULT_COLOR = '#455a64'
 
 
@@ -89,6 +96,9 @@ class ConstructionFootingViewerController(http.Controller):
             "qty_beton_m3": round(element.qty_beton_m3, 3),
             "qty_acier_kg": round(element.qty_acier_kg, 1),
             "qty_coffrage_m2": round(element.qty_coffrage_m2, 3),
+            "qty_surface_m2": round(element.qty_surface_m2, 3),
+            "tremies": [t for t in (element.dimensions or {}).get("tremies") or []
+                        if len(t.get("bbox") or []) == 4],
             "confidence": round(element.confidence * 100, 0),
             "has_missing_fields": element.has_missing_fields,
         }
@@ -126,8 +136,9 @@ class ConstructionFootingViewerController(http.Controller):
         def py(y):
             return (max_y - y) * scale  # DXF: Y vers le haut ; SVG: Y vers le bas
 
-        parts = []
-        for e in element_data:
+        parts, overlays = [], []
+        ordered = sorted(element_data, key=lambda e: e["type_code"] not in AREA_TYPES)
+        for e in ordered:
             color = TYPE_COLORS.get(e["type_code"], DEFAULT_COLOR)
             missing_marker = " ⚠" if e["has_missing_fields"] else ""
             tooltip = (
@@ -143,7 +154,26 @@ class ConstructionFootingViewerController(http.Controller):
                 f'data-missing="{"1" if e["has_missing_fields"] else "0"}"'
             )
 
-            if e["type_code"] in POINT_TYPES:
+            if e["tremies"]:
+                tooltip += "\nSurface nette %s m² (trémies déduites : %s m²)" % (
+                    e["qty_surface_m2"], round(sum(t.get("area", 0.0) for t in e["tremies"]), 2))
+
+            if e["type_code"] in AREA_TYPES:
+                x, y = px(e["minx"]), py(e["maxy"])
+                w = max(px(e["maxx"]) - px(e["minx"]), 2)
+                h = max(py(e["miny"]) - py(e["maxy"]), 2)
+                shape = (
+                    f'<rect x="{x:.2f}" y="{y:.2f}" width="{w:.2f}" height="{h:.2f}" '
+                    f'fill="{color}" fill-opacity="0.10" stroke="{color}" '
+                    f'stroke-width="1.5" class="footing-shape" data-id="{e["id"]}">'
+                    f'<title>{html_lib.escape(tooltip)}</title></rect>'
+                )
+                # Trémies par-dessus tout le reste : sinon les poutres qui les
+                # bordent en masquent le contour et le repère.
+                overlays.append(
+                    f'<g class="footing-group" {group_attrs}>'
+                    f'{self._tremies_svg(e["tremies"], px, py)}</g>')
+            elif e["type_code"] in POINT_TYPES:
                 x, y = px(e["minx"]), py(e["maxy"])
                 w = max(px(e["maxx"]) - px(e["minx"]), 2)
                 h = max(py(e["miny"]) - py(e["maxy"]), 2)
@@ -164,7 +194,26 @@ class ConstructionFootingViewerController(http.Controller):
                 )
 
             parts.append(f'<g class="footing-group" {group_attrs}>{shape}</g>')
-        return "\n".join(parts)
+        return "\n".join(parts + overlays)
+
+    @staticmethod
+    def _tremies_svg(tremies, px, py):
+        """Trémies d'une dalle : vides blancs barrés d'une croix, repérés."""
+        out = []
+        for i, t in enumerate(tremies, 1):
+            minx, miny, maxx, maxy = t["bbox"]
+            x1, y1, x2, y2 = px(minx), py(maxy), px(maxx), py(miny)
+            label = "Trémie T%d : %.2f × %.2f m — %.2f m² déduits" % (
+                i, t.get("w", 0.0), t.get("h", 0.0), t.get("area", 0.0))
+            out.append(
+                f'<g class="tremie"><title>{html_lib.escape(label)}</title>'
+                f'<rect x="{x1:.2f}" y="{y1:.2f}" width="{x2 - x1:.2f}" height="{y2 - y1:.2f}" '
+                f'fill="#ffffff" stroke="{TREMIE_COLOR}" stroke-width="1.5" stroke-dasharray="6 3"/>'
+                f'<line x1="{x1:.2f}" y1="{y1:.2f}" x2="{x2:.2f}" y2="{y2:.2f}" stroke="{TREMIE_COLOR}" stroke-width="1.5"/>'
+                f'<line x1="{x2:.2f}" y1="{y1:.2f}" x2="{x1:.2f}" y2="{y2:.2f}" stroke="{TREMIE_COLOR}" stroke-width="1.5"/>'
+                f'<text x="{(x1 + x2) / 2:.2f}" y="{y1 + 24:.2f}" text-anchor="middle" '
+                f'font-size="18" font-weight="600" fill="{TREMIE_COLOR}">T{i}</text></g>')
+        return "".join(out)
 
     def _render_page(self, dwg_file, element_data, total_elements):
         min_x, min_y, max_x, max_y = self._compute_bounds(element_data)
@@ -190,6 +239,10 @@ class ConstructionFootingViewerController(http.Controller):
             f'<div><span class="swatch" style="background:{color}"></span> {html_lib.escape(code)}</div>'
             for code, color in TYPE_COLORS.items() if code in types
         )
+        if any(e["tremies"] for e in element_data):
+            legend_items += (
+                f'<div><span class="swatch" style="background:#fff;'
+                f'border:1px dashed {TREMIE_COLOR}"></span> trémie (vide déduit)</div>')
 
         title = html_lib.escape(dwg_file.filename or f"Fichier #{dwg_file.id}")
 
@@ -197,7 +250,7 @@ class ConstructionFootingViewerController(http.Controller):
 <html lang="fr">
 <head>
 <meta charset="utf-8"/>
-<title>Éléments de fondation — {title}</title>
+<title>Éléments structurels — {title}</title>
 <style>
     html, body {{ margin: 0; padding: 0; height: 100%; font-family: -apple-system, "Segoe UI", sans-serif; background: #f4f4f4; }}
     #toolbar {{
@@ -233,7 +286,7 @@ class ConstructionFootingViewerController(http.Controller):
 <body>
 
 <div id="toolbar">
-    <h1>🏗️ Fondations — {title}</h1>
+    <h1>🏗️ Éléments structurels — {title}</h1>
     <span class="stat">{stats['shown']} / {stats['total']} éléments</span>
     <span class="stat blue">{stats['beton']} m³ de béton</span>
     <span class="stat red">{stats['missing']} incomplet(s)</span>

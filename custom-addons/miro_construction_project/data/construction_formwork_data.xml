@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Ouvrages produits par l'analyse « Coffrage » (calques S-POU, S-DAL).
+         Le poteau (S-POT) et le mur (S-REF) réutilisent les types existants.
+         Comme pour les fondations : PAS de mot-clé DXF, ces ouvrages sont
+         reconnus par leur géométrie. -->
+
+    <!-- Poutre : le coffrage (fond de moule) précède le ferraillage, posé
+         dans le moule. -->
+    <record id="phase_template_poutre" model="construction.phase.template">
+        <field name="name">Poutre</field>
+    </record>
+    <record id="phase_line_poutre_coffrage" model="construction.phase.template.line">
+        <field name="template_id" ref="phase_template_poutre"/>
+        <field name="sequence">10</field>
+        <field name="name">Coffrage</field>
+        <field name="phase_type">coffrage</field>
+        <field name="qty_key">coffrage_m2</field>
+        <field name="rate_per_hour">2.5</field>
+    </record>
+    <record id="phase_line_poutre_ferraillage" model="construction.phase.template.line">
+        <field name="template_id" ref="phase_template_poutre"/>
+        <field name="sequence">20</field>
+        <field name="name">Ferraillage</field>
+        <field name="phase_type">ferraillage</field>
+        <field name="qty_key">acier_kg</field>
+        <field name="rate_per_hour">20</field>
+        <field name="depends_on_line_id" ref="phase_line_poutre_coffrage"/>
+    </record>
+    <record id="phase_line_poutre_coulage" model="construction.phase.template.line">
+        <field name="template_id" ref="phase_template_poutre"/>
+        <field name="sequence">30</field>
+        <field name="name">Coulage béton</field>
+        <field name="phase_type">coulage</field>
+        <field name="qty_key">beton_m3</field>
+        <field name="rate_per_hour">1.5</field>
+        <field name="depends_on_line_id" ref="phase_line_poutre_ferraillage"/>
+    </record>
+    <record id="phase_line_poutre_decoffrage" model="construction.phase.template.line">
+        <field name="template_id" ref="phase_template_poutre"/>
+        <field name="sequence">40</field>
+        <field name="name">Décoffrage</field>
+        <field name="phase_type">decoffrage</field>
+        <field name="qty_key">coffrage_m2</field>
+        <field name="rate_per_hour">8</field>
+        <field name="depends_on_line_id" ref="phase_line_poutre_coulage"/>
+    </record>
+
+    <!-- Dalle : étaiement et coffrage de la sous-face (ou pose des
+         poutrelles et entrevous), treillis, coulage, puis décoffrage. -->
+    <record id="phase_template_dalle" model="construction.phase.template">
+        <field name="name">Dalle / plancher</field>
+    </record>
+    <record id="phase_line_dalle_coffrage" model="construction.phase.template.line">
+        <field name="template_id" ref="phase_template_dalle"/>
+        <field name="sequence">10</field>
+        <field name="name">Étaiement et coffrage</field>
+        <field name="phase_type">coffrage</field>
+        <field name="qty_key">coffrage_m2</field>
+        <field name="rate_per_hour">5</field>
+    </record>
+    <record id="phase_line_dalle_ferraillage" model="construction.phase.template.line">
+        <field name="template_id" ref="phase_template_dalle"/>
+        <field name="sequence">20</field>
+        <field name="name">Ferraillage</field>
+        <field name="phase_type">ferraillage</field>
+        <field name="qty_key">acier_kg</field>
+        <field name="rate_per_hour">30</field>
+        <field name="depends_on_line_id" ref="phase_line_dalle_coffrage"/>
+    </record>
+    <record id="phase_line_dalle_coulage" model="construction.phase.template.line">
+        <field name="template_id" ref="phase_template_dalle"/>
+        <field name="sequence">30</field>
+        <field name="name">Coulage béton</field>
+        <field name="phase_type">coulage</field>
+        <field name="qty_key">beton_m3</field>
+        <field name="rate_per_hour">3</field>
+        <field name="depends_on_line_id" ref="phase_line_dalle_ferraillage"/>
+    </record>
+    <record id="phase_line_dalle_decoffrage" model="construction.phase.template.line">
+        <field name="template_id" ref="phase_template_dalle"/>
+        <field name="sequence">40</field>
+        <field name="name">Décoffrage</field>
+        <field name="phase_type">decoffrage</field>
+        <field name="qty_key">coffrage_m2</field>
+        <field name="rate_per_hour">10</field>
+        <field name="depends_on_line_id" ref="phase_line_dalle_coulage"/>
+    </record>
+
+    <!-- Même ouvrage que les poteaux (« Structure - <niveau> ») : poteaux,
+         poutres et plancher d'un niveau se suivent ensemble. -->
+    <record id="element_type_poutre" model="construction.element.type">
+        <field name="name">Poutre</field>
+        <field name="code">poutre</field>
+        <field name="work_name">Structure</field>
+        <field name="phase_template_id" ref="phase_template_poutre"/>
+        <field name="ouvrage_per_level" eval="True"/>
+        <field name="steel_ratio_kg_m3">110</field>
+    </record>
+    <record id="element_type_dalle" model="construction.element.type">
+        <field name="name">Dalle</field>
+        <field name="code">dalle</field>
+        <field name="work_name">Structure</field>
+        <field name="phase_template_id" ref="phase_template_dalle"/>
+        <field name="ouvrage_per_level" eval="True"/>
+        <field name="steel_ratio_kg_m3">50</field>
+    </record>
+
+    <!-- Poutre : portée lue en plan, entre axes d'appui ; hauteur lue dans la
+         nomenclature du coffrage (« 30x40 ») ou sur le plan de détail. -->
+    <record id="field_poutre_l" model="construction.element.type.field">
+        <field name="type_id" ref="element_type_poutre"/>
+        <field name="sequence">10</field>
+        <field name="name">Portée</field>
+        <field name="code">l</field>
+        <field name="uom">m</field>
+        <field name="required" eval="True"/>
+    </record>
+    <record id="field_poutre_w" model="construction.element.type.field">
+        <field name="type_id" ref="element_type_poutre"/>
+        <field name="sequence">20</field>
+        <field name="name">Largeur</field>
+        <field name="code">w</field>
+        <field name="uom">m</field>
+        <field name="required" eval="True"/>
+    </record>
+    <record id="field_poutre_h" model="construction.element.type.field">
+        <field name="type_id" ref="element_type_poutre"/>
+        <field name="sequence">30</field>
+        <field name="name">Hauteur totale</field>
+        <field name="code">h</field>
+        <field name="uom">m</field>
+        <field name="required" eval="True"/>
+    </record>
+
+    <!-- Dalle : la surface est NETTE (trémies déduites), c'est elle qui
+         chiffre béton et coffrage ; longueur et largeur ne sont que
+         l'encombrement. Épaisseur : repère du coffrage (« ep. 20 cm ») ou
+         coupe du plan de détail. -->
+    <record id="field_dalle_l" model="construction.element.type.field">
+        <field name="type_id" ref="element_type_dalle"/>
+        <field name="sequence">10</field>
+        <field name="name">Longueur hors tout</field>
+        <field name="code">l</field>
+        <field name="uom">m</field>
+    </record>
+    <record id="field_dalle_w" model="construction.element.type.field">
+        <field name="type_id" ref="element_type_dalle"/>
+        <field name="sequence">20</field>
+        <field name="name">Largeur hors tout</field>
+        <field name="code">w</field>
+        <field name="uom">m</field>
+    </record>
+    <record id="field_dalle_h" model="construction.element.type.field">
+        <field name="type_id" ref="element_type_dalle"/>
+        <field name="sequence">30</field>
+        <field name="name">Épaisseur</field>
+        <field name="code">h</field>
+        <field name="uom">m</field>
+        <field name="required" eval="True"/>
+    </record>
+    <record id="field_dalle_surface" model="construction.element.type.field">
+        <field name="type_id" ref="element_type_dalle"/>
+        <field name="sequence">40</field>
+        <field name="name">Surface nette</field>
+        <field name="code">surface_m2</field>
+        <field name="nature">quantity</field>
+        <field name="uom">m2</field>
+        <field name="required" eval="True"/>
+    </record>
+    <!-- Surface des trémies (vides) déduite : visible dans les
+         caractéristiques de la dalle, à côté de la surface nette. -->
+    <record id="field_dalle_tremie" model="construction.element.type.field">
+        <field name="type_id" ref="element_type_dalle"/>
+        <field name="sequence">35</field>
+        <field name="name">Trémies déduites</field>
+        <field name="code">tremie_m2</field>
+        <field name="uom">m2</field>
+    </record>
+</odoo>

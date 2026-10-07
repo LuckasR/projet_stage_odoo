@@ -7,6 +7,15 @@ _logger = logging.getLogger(__name__)
 
 # Champs de l'ouverture qui alimentent les cotes et métrés de son élément.
 SYNC_FIELDS = {"width", "thickness", "height", "sill_height", "opening_type"}
+# Champs qui changent la surface déduite du mur porteur, ou son dessin.
+WALL_SYNC_FIELDS = {"width", "height", "sill_height", "opening_type", "wall_id",
+                    "center_x", "center_y", "active"}
+
+# Hauteur et allège dessinées pour une ouverture dont la hauteur n'est pas
+# encore connue (schéma seulement, jamais déduites du mur).
+DRAWING_DEFAULTS = {"door": (0.0, 2.10), "garage_door": (0.0, 2.10),
+                    "french_window": (0.0, 2.15), "window": (0.90, 1.25),
+                    "bay": (0.0, 2.10)}
 
 
 class ConstructionOpening(models.Model):
@@ -187,10 +196,27 @@ class ConstructionOpening(models.Model):
     # =========================
     # SYNCHRONISATION OUVERTURE -> ÉLÉMENT
     # =========================
+    @api.model_create_multi
+    def create(self, vals_list):
+        openings = super().create(vals_list)
+        openings.wall_id._sync_elements()
+        return openings
+
     def write(self, vals):
+        old_walls = self.wall_id if "wall_id" in vals else self.env["construction.wall"]
         res = super().write(vals)
         if SYNC_FIELDS & set(vals):
             self._sync_elements()
+        if WALL_SYNC_FIELDS & set(vals):
+            # La surface déduite du mur change : son brouillon, son élément
+            # et l'ancien mur porteur sont recalculés.
+            (old_walls | self.wall_id)._sync_elements()
+        return res
+
+    def unlink(self):
+        walls = self.wall_id
+        res = super().unlink()
+        walls.exists()._sync_elements()
         return res
 
     def _sync_elements(self):
@@ -370,12 +396,57 @@ class ConstructionWall(models.Model):
     opening_area = fields.Float(
         "Surface des ouvertures (m²)", compute="_compute_opening_stats",
         help="Surface des portes et fenêtres percées dans ce mur.")
+    openings_without_height = fields.Integer(
+        "Ouvertures sans hauteur", compute="_compute_opening_stats",
+        help="Leur surface n'est pas encore déduite du mur.")
+    net_area = fields.Float(
+        "Surface nette (m²)", compute="_compute_opening_stats",
+        help="Surface du mur moins celle de ses ouvertures : c'est elle qui "
+             "chiffre le mur.")
+    net_volume = fields.Float(
+        "Volume net (m³)", compute="_compute_opening_stats")
 
-    @api.depends("opening_ids", "opening_ids.area")
+    @api.depends("opening_ids", "opening_ids.area", "opening_ids.height",
+                 "area", "thickness")
     def _compute_opening_stats(self):
         for wall in self:
             wall.opening_count = len(wall.opening_ids)
             wall.opening_area = sum(wall.opening_ids.mapped("area"))
+            wall.openings_without_height = len(
+                wall.opening_ids.filtered(lambda o: o.width and not o.height))
+            wall.net_area = max((wall.area or 0.0) - wall.opening_area, 0.0)
+            wall.net_volume = wall.net_area * (wall.thickness or 0.0)
+
+    def _opening_layout(self):
+        """Ouvertures du mur pour son schéma, le long de son axe :
+        [{offset, width, sill, height, kind, label, known}], en mètres depuis
+        le début du mur. Une hauteur inconnue est dessinée à une valeur de
+        convention (`known` = False), jamais déduite."""
+        self.ensure_one()
+        dx, dy = self.end_x - self.start_x, self.end_y - self.start_y
+        axis = (dx * dx + dy * dy) ** 0.5
+        if not axis:
+            return []
+        ux, uy = dx / axis, dy / axis
+        # Coordonnées du dessin -> mètres, par la longueur du mur
+        factor = (self.length / axis) if self.length else 1.0
+        layout = []
+        for opening in self.opening_ids.filtered("width"):
+            if not (opening.center_x or opening.center_y):
+                continue
+            along = ((opening.center_x - self.start_x) * ux
+                     + (opening.center_y - self.start_y) * uy) * factor
+            sill, height = DRAWING_DEFAULTS.get(opening.opening_type, (0.0, 2.10))
+            layout.append({
+                "offset": round(along - opening.width / 2.0, 3),
+                "width": opening.width,
+                "sill": opening.sill_height if opening.height else sill,
+                "height": opening.height or height,
+                "kind": opening.opening_type,
+                "label": opening.mark or "",
+                "known": bool(opening.height),
+            })
+        return sorted(layout, key=lambda o: o["offset"])
 
     def write(self, vals):
         res = super().write(vals)

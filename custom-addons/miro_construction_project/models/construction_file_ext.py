@@ -17,6 +17,16 @@ class ConstructionDwgFile(models.Model):
         help="Au moins un type d'élément est configuré pour les types de plan de ce "
              "fichier. Sinon, l'analyse d'éléments ne pourrait rien trouver.")
 
+    is_execution_plan = fields.Boolean(
+        "Plan d'exécution", compute='_compute_is_execution_plan',
+        help="Au moins un type de plan du fichier est de la famille "
+             "« Exécution » : ses ouvrages deviennent éléments, tâches et phases.")
+
+    @api.depends('plan_type_ids.plan_family')
+    def _compute_is_execution_plan(self):
+        for rec in self:
+            rec.is_execution_plan = 'execution' in rec.plan_type_ids.mapped('plan_family')
+
     def _compute_analysis_count(self):
         for rec in self:
             rec.analysis_count = len(rec.analysis_ids)
@@ -107,6 +117,12 @@ class ConstructionDwgFile(models.Model):
         une erreur là où il n'y a qu'un plan sans mur (un plan de fondation,
         par exemple, n'en porte aucun)."""
         self.ensure_one()
+        if not self.is_execution_plan:
+            # Plan de référence (architecture) : les murs restent détectés et
+            # complètent les autres plans, mais ne deviennent pas des tâches.
+            _logger.info("%s : plan de référence, murs non soumis à validation",
+                         self.filename)
+            return False
         if self.analysis_ids.filtered(
                 lambda a: a.state == 'running' and a.engine == 'walls'):
             return False
@@ -138,6 +154,30 @@ class ConstructionDwgFile(models.Model):
             'file_id': self.id,
             'revision': self.filename,
             'engine': 'footings',
+        })
+        analysis.action_start()
+        return analysis
+
+    def _enqueue_analysis_formwork(self):
+        """Analyse « Coffrage » : poteaux, poutres, dalles et murs lus dans la
+        géométrie des calques S-POT, S-POU, S-DAL/S-TREMIE et S-REF."""
+        return self._enqueue_engine_analysis('formwork')
+
+    def _enqueue_analysis_details(self):
+        """Analyse « Coupes et détails » : profil structurel (hauteurs
+        d'étage, épaisseurs, sections, ferraillage) qui complète les
+        brouillons des autres plans d'exécution du projet."""
+        return self._enqueue_engine_analysis('details')
+
+    def _enqueue_engine_analysis(self, engine):
+        self.ensure_one()
+        if self.analysis_ids.filtered(
+                lambda a: a.state == 'running' and a.engine == engine):
+            return False
+        analysis = self.env['construction.analysis'].create({
+            'file_id': self.id,
+            'revision': self.filename,
+            'engine': engine,
         })
         analysis.action_start()
         return analysis
@@ -208,7 +248,7 @@ class ConstructionDwgFile(models.Model):
 
     def _viewer_menu_items(self):
         items = super()._viewer_menu_items()
-        items.append({"key": "footings", "label": _("Fondations"), "icon": "fa-th",
+        items.append({"key": "footings", "label": _("Éléments structurels"), "icon": "fa-th",
                       "method": "action_view_footings_visual", "sequence": 30})
         return items
 

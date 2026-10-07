@@ -84,6 +84,7 @@ export class ProjectTaskHierarchy extends Component {
 
     setup() {
         this.orm = useService("orm");
+        this.action = useService("action");
 
         this.store = useState({
             tasksById: {},
@@ -285,6 +286,17 @@ export class ProjectTaskHierarchy extends Component {
 
     collapseAll() {
         this.store.expanded = {};
+    }
+
+    /** Maquette 3D du projet, reconstruite à partir de ses éléments de
+     *  construction (cf. controllers/viewer_3d.py). */
+    openViewer3D() {
+        if (!this.projectId) return;
+        this.action.doAction({
+            type: "ir.actions.act_url",
+            url: `/construction/3d/${this.projectId}`,
+            target: "new",
+        });
     }
 }
 

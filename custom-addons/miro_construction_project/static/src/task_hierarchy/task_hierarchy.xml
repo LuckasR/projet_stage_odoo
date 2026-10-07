@@ -39,6 +39,14 @@
                             <span>Replier</span>
                         </button>
                     </div>
+
+                    <div class="o_ch_btn_group" t-if="projectId">
+                        <button class="o_ch_btn" t-on-click="openViewer3D"
+                                title="Maquette 3D construite à partir des éléments de construction">
+                            <i class="fa fa-cube"/>
+                            <span>Visualisation 3D</span>
+                        </button>
+                    </div>
                 </div>
             </header>
 
