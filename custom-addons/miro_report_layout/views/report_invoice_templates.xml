@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Facture : on HABILLE le modèle natif plutôt que de le remplacer.
+         Ses blocs (taxes, paiements, échéances, QR code) et leurs noms
+         restent en place : les autres modules qui les modifient continuent
+         de les trouver. -->
+    <template id="report_invoice_document_miro" inherit_id="account.report_invoice_document">
+
+        <!-- Numéro de la pièce mis en valeur dans le titre -->
+        <xpath expr="//h2/span[@t-field='o.name']" position="attributes">
+            <attribute name="class" add="miro-doc-number" separator=" "/>
+        </xpath>
+
+        <!-- Montant en toutes lettres, formule d'usage -->
+        <xpath expr="//p[@t-if='o.company_id.display_invoice_amount_total_words']" position="replace">
+            <div class="miro-amount-words" t-if="o.company_id.display_invoice_amount_total_words">
+                <strong t-if="o.move_type in ('out_refund', 'in_refund')">Arrêté le présent avoir à la somme de</strong>
+                <strong t-else="">Arrêtée la présente facture à la somme de</strong>
+                <span t-field="o.amount_total_words"/>
+            </div>
+        </xpath>
+
+        <!-- Coordonnées bancaires : à gauche des totaux, où la place est libre -->
+        <xpath expr="//div[@id='payment_term']/div[1]" position="before">
+            <t t-set="miro_bank" t-value="o.partner_bank_id or o.company_id.partner_id.bank_ids[:1]"/>
+            <div class="miro-bank" t-if="o.move_type in ('out_invoice', 'out_refund') and miro_bank">
+                <div class="miro-bank-title">COORDONNÉES BANCAIRES</div>
+                <div t-if="miro_bank.bank_id">Banque : <strong t-esc="miro_bank.bank_id.name"/></div>
+                <div>Titulaire : <t t-esc="miro_bank.acc_holder_name or o.company_id.name"/></div>
+                <div>N° de compte : <strong t-esc="miro_bank.acc_number"/></div>
+                <div t-if="miro_bank.bank_id.bic">Code SWIFT / BIC : <t t-esc="miro_bank.bank_id.bic"/></div>
+                <div t-if="o.payment_reference">Référence à rappeler : <strong t-esc="o.payment_reference"/></div>
+            </div>
+        </xpath>
+
+        <!-- Cachet et signature, à droite sous les totaux -->
+        <xpath expr="//div[@id='payment_term']" position="after">
+            <table class="miro-bottom" t-if="o.move_type in ('out_invoice', 'out_refund')">
+                <tr>
+                    <td style="width: 58%;"/>
+                    <td style="width: 42%;">
+                        <div class="miro-signature">
+                            <div class="miro-signature-title">CACHET ET SIGNATURE</div>
+                            <div>Pour <t t-esc="o.company_id.name"/></div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </xpath>
+    </template>
+</odoo>

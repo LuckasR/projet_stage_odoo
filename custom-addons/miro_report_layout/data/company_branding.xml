@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- À l'installation : mise en page Miro, couleurs et nom par défaut
+         (sans écraser ce qui a déjà été personnalisé). -->
+    <function model="res.company" name="_miro_apply_branding"/>
+</odoo>

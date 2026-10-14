@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- =================================================================
+         Mise en page externe « Miro Construction »
+         Même structure que les mises en page natives (header / article /
+         footer) : tous les documents qui appellent web.external_layout
+         l'utilisent dès qu'elle est choisie pour la société.
+         Tableaux en <table> plutôt qu'en grille flex : wkhtmltopdf ne lit
+         pas correctement le flexbox.
+         ================================================================= -->
+    <template id="external_layout_miro">
+        <t t-set="miro_primary" t-value="company.primary_color or '#1B2A41'"/>
+        <t t-set="miro_secondary" t-value="company.secondary_color or '#E8A317'"/>
+
+        <!-- En-tête -->
+        <div t-attf-class="header o_company_#{company.id}_layout o_miro_header" t-att-style="report_header_style">
+            <table class="miro-header-table">
+                <tr>
+                    <td class="miro-brand">
+                        <!-- Sans vrai logo (image « Your logo » d'usine), le nom en lettrage -->
+                        <img t-if="company.logo and not company.uses_default_logo" t-att-src="image_data_uri(company.logo)"
+                             class="miro-logo" alt="Logo"/>
+                        <div t-else="" class="miro-wordmark">
+                            <t t-set="miro_words" t-value="(company.name or '').split(' ', 1)"/>
+                            <span class="miro-wordmark-main" t-esc="miro_words[0]"/>
+                            <span t-if="len(miro_words) &gt; 1" class="miro-wordmark-sub" t-esc="miro_words[1]"/>
+                        </div>
+                        <div t-if="company.report_header" class="miro-tagline" t-field="company.report_header"/>
+                    </td>
+                    <td class="miro-company-info">
+                        <div class="miro-company-name" t-esc="company.name"/>
+                        <div t-if="company.street" t-esc="company.street"/>
+                        <div t-if="company.street2" t-esc="company.street2"/>
+                        <div t-if="company.city or company.zip">
+                            <t t-esc="company.zip"/> <t t-esc="company.city"/>
+                            <t t-if="company.country_id">— <t t-esc="company.country_id.name"/></t>
+                        </div>
+                        <div>
+                            <t t-if="company.phone">Tél. <t t-esc="company.phone"/></t>
+                            <t t-if="company.phone and company.email"> · </t>
+                            <t t-if="company.email" t-esc="company.email"/>
+                        </div>
+                        <div t-if="company.website" t-esc="company.website"/>
+                    </td>
+                </tr>
+            </table>
+            <div class="miro-header-rule">
+                <div class="miro-rule-primary" t-attf-style="background-color: #{miro_primary};"/>
+                <div class="miro-rule-secondary" t-attf-style="background-color: #{miro_secondary};"/>
+            </div>
+        </div>
+
+        <!-- Corps du document -->
+        <div t-attf-class="article o_report_layout_miro o_company_#{company.id}_layout"
+             t-att-data-oe-model="o and o._name" t-att-data-oe-id="o and o.id"
+             t-att-data-oe-lang="o and o.env.context.get('lang')">
+            <div class="miro-address-zone">
+                <t t-call="web.address_layout"/>
+            </div>
+            <t t-out="0"/>
+        </div>
+
+        <!-- Pied de page : mentions légales, contacts, pagination -->
+        <div t-attf-class="footer o_company_#{company.id}_layout o_miro_footer">
+            <div class="miro-footer-rule" t-attf-style="background-color: #{miro_primary};"/>
+            <table class="miro-footer-table">
+                <tr>
+                    <td class="miro-footer-legal">
+                        <strong t-esc="company.name"/>
+                        <div>
+                            <t t-if="forced_vat or company.vat">
+                                NIF : <t t-esc="forced_vat or company.vat"/>
+                            </t>
+                            <t t-if="company.miro_stat"> · STAT : <t t-esc="company.miro_stat"/></t>
+                            <t t-if="company.company_registry"> · RCS : <t t-esc="company.company_registry"/></t>
+                        </div>
+                    </td>
+                    <td class="miro-footer-contact">
+                        <div t-if="company.phone">Tél. <t t-esc="company.phone"/></div>
+                        <div t-if="company.email" t-esc="company.email"/>
+                        <div t-if="company.website" t-esc="company.website"/>
+                    </td>
+                    <td class="miro-footer-page">
+                        <div t-if="report_type == 'pdf'">
+                            Page <span class="page"/> / <span class="topage"/>
+                        </div>
+                        <div t-if="report_type == 'pdf' and display_name_in_footer" class="miro-footer-docname">
+                            <span t-out="o.name"/>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div t-if="company.report_footer" class="miro-footer-custom" t-field="company.report_footer"/>
+        </div>
+    </template>
+
+    <!-- =================================================================
+         Couleurs de la société (générées par Odoo pour chaque société à
+         partir de ses couleurs primaire / secondaire) : branche ajoutée à la
+         feuille de style des rapports, comme pour les mises en page natives.
+         ================================================================= -->
+    <template id="styles_company_report_miro" inherit_id="web.styles_company_report">
+        <xpath expr="//t[@t-elif=&quot;layout == 'web.external_layout_standard'&quot;]" position="after">
+            <t t-elif="layout == 'miro_report_layout.external_layout_miro'">
+                &amp;.o_miro_header {
+                    .miro-wordmark-main, .miro-company-name {
+                        color: <t t-esc='primary'/>;
+                    }
+                    .miro-wordmark-sub {
+                        color: <t t-esc='secondary'/>;
+                    }
+                }
+                &amp;.o_report_layout_miro {
+                    h1, h2, h3 {
+                        color: <t t-esc='primary'/>;
+                    }
+                    h2 .miro-doc-number {
+                        color: <t t-esc='secondary'/>;
+                    }
+                    .address [name="address"], .address [name="information_block"] {
+                        border-left: 4px solid <t t-esc='secondary'/>;
+                    }
+                    .address [name="address"]::before, .address [name="information_block"]::before {
+                        color: <t t-esc='primary'/>;
+                    }
+                    #informations > div {
+                        border-top: 3px solid <t t-esc='secondary'/>;
+                    }
+                    #informations strong {
+                        color: <t t-esc='primary'/>;
+                    }
+                    table.o_main_table, table.table {
+                        thead tr th {
+                            background-color: <t t-esc='primary'/> !important;
+                            color: #ffffff !important;
+                        }
+                    }
+                    table.o_main_table tbody tr.o_line_section td {
+                        background-color: rgba(<t t-esc='primary'/>, 0.10);
+                        color: <t t-esc='primary'/>;
+                        border-left: 4px solid <t t-esc='secondary'/>;
+                    }
+                    table.o_main_table tbody tr.is-subtotal td {
+                        color: <t t-esc='primary'/>;
+                    }
+                    #total table, .totals_taxes_company_currency table {
+                        tr.o_total td {
+                            background-color: <t t-esc='primary'/>;
+                            color: #ffffff;
+                            strong, span {
+                                color: #ffffff !important;
+                            }
+                        }
+                        tr.o_subtotal td {
+                            border-top: 2px solid <t t-esc='secondary'/>;
+                        }
+                    }
+                    .miro-amount-words strong, .miro-bank-title, .miro-signature-title {
+                        color: <t t-esc='primary'/>;
+                    }
+                    .miro-amount-words, .miro-bank {
+                        border-left: 4px solid <t t-esc='secondary'/>;
+                    }
+                }
+                &amp;.o_miro_footer {
+                    .miro-footer-legal strong {
+                        color: <t t-esc='primary'/>;
+                    }
+                    .miro-footer-page {
+                        color: <t t-esc='primary'/>;
+                    }
+                }
+            </t>
+        </xpath>
+    </template>
+
+</odoo>
