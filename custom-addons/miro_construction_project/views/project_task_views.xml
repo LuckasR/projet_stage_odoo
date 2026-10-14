@@ -30,7 +30,10 @@
                 <field name="x_niveau_hierarchie"/>
             </xpath>
 
-            <xpath expr="//notebook" position="inside">
+            <!-- Avant la description : sur une tâche de chantier, c'est le
+                 suivi qu'on vient consulter (les matériaux de la phase, s'il y
+                 en a, se placent devant, cf. miro_construction_bom). -->
+            <xpath expr="//page[@name='description_page']" position="before">
                 <page string="Suivi de chantier" name="construction_suivi">
                     <group>
                         <group string="Organisation">
@@ -47,7 +50,10 @@
                     </group>
                     <group>
                         <group string="Avancement">
+                            <!-- progressbar est en lecture seule sans « editable » :
+                                 un clic sur la barre permet alors de saisir le %. -->
                             <field name="x_avancement_manuel" widget="progressbar"
+                                   options="{'editable': true}"
                                    invisible="child_ids"/>
                             <field name="x_avancement_global" widget="progressbar"
                                    readonly="1"/>

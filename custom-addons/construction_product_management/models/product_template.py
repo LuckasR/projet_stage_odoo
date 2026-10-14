@@ -25,6 +25,14 @@ class ProductTemplate(models.Model):
         readonly=True,
     )
 
+    material_category_id = fields.Many2one(
+        'construction.material.category', string="Besoin couvert",
+        ondelete='restrict', index=True,
+        help="Catégorie de matériau (besoin générique) que ce produit "
+             "satisfait : une ligne de nomenclature « Ciment » peut être "
+             "servie par tout produit de cette catégorie ou de ses "
+             "sous-catégories.")
+
     # --- Caractéristiques techniques dynamiques ----------------------------
     characteristic_ids = fields.One2many(
         'construction.material.characteristic',
@@ -51,6 +59,8 @@ class ProductTemplate(models.Model):
         de caractéristiques correspondant au type de matériau choisi."""
         if self.construction_material_type_id and not self.is_construction_material:
             self.is_construction_material = True
+        if self.construction_material_type_id.material_category_id:
+            self.material_category_id = self.construction_material_type_id.material_category_id
         self._sync_characteristics()
 
     @api.onchange('is_construction_material')

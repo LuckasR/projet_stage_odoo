@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Catégories de matériaux : le référentiel des besoins génériques
+         (ciment, sable, acier...) que visent les nomenclatures. -->
+    <record id="view_construction_material_category_tree" model="ir.ui.view">
+        <field name="name">construction.material.category.tree</field>
+        <field name="model">construction.material.category</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="sequence" widget="handle"/>
+                <field name="display_name" string="Catégorie"/>
+                <field name="code"/>
+                <field name="product_count"/>
+                <field name="active" column_invisible="1"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_construction_material_category_form" model="ir.ui.view">
+        <field name="name">construction.material.category.form</field>
+        <field name="model">construction.material.category</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="code"/>
+                            <field name="parent_id"/>
+                        </group>
+                        <group>
+                            <field name="product_count"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Produits" name="products">
+                            <field name="product_tmpl_ids" readonly="1">
+                                <tree>
+                                    <field name="name"/>
+                                    <field name="uom_id"/>
+                                    <field name="standard_price"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Sous-catégories" name="children">
+                            <field name="child_ids" readonly="1">
+                                <tree>
+                                    <field name="name"/>
+                                    <field name="code"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Description" name="description">
+                            <field name="description" nolabel="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_construction_material_category_search" model="ir.ui.view">
+        <field name="name">construction.material.category.search</field>
+        <field name="model">construction.material.category</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="parent_id"/>
+                <filter string="Archivées" name="inactive" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Regrouper par">
+                    <filter string="Catégorie parente" name="group_parent"
+                        context="{'group_by': 'parent_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_construction_material_category" model="ir.actions.act_window">
+        <field name="name">Catégories de matériaux</field>
+        <field name="res_model">construction.material.category</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+</odoo>

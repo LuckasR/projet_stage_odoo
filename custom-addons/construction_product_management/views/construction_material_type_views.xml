@@ -33,6 +33,7 @@
                     <group>
                         <field name="name"/>
                         <field name="category"/>
+                        <field name="material_category_id"/>
                         <field name="active" invisible="1"/>
                     </group>
                     <group string="Caractéristiques applicables">

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Rattache types et produits à la catégorie de matériau correspondant à
+         leur ancienne valeur fixe (ciment, sable...). Idempotent. -->
+    <function model="construction.material.category" name="_backfill_material_categories"/>
+</odoo>

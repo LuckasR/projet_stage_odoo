@@ -3,6 +3,8 @@ import logging
 
 from odoo import _, api, models
 
+from ..service.footing_detection_service import is_ground_slab
+
 _logger = logging.getLogger(__name__)
 
 # $INSUNITS -> mètres (cf. construction_analysis_footing)
@@ -192,6 +194,15 @@ class ProjectProject3D(models.Model):
         s = self._unit_scale(element)
         minx, miny, maxx, maxy = (v * s for v in bbox)
         storey = self._storey(element.level_id, profile)
+        if is_ground_slab(element.key):
+            # Dallage sur terre-plein : sous le sol fini du rez-de-chaussée
+            ground = (profile or {}).get('ground_slab') or {}
+            top = ground.get('top', storey['floor'])
+            h = element.dim_h or ground.get('thickness') or 0.12
+            shape = {'kind': 'slab',
+                     'outline': [[minx, miny], [maxx, miny], [maxx, maxy], [minx, maxy]],
+                     'holes': [], 'z0': top - h, 'z1': top}
+            return self._base_item(element, 'dalle', shape, not element.dim_h)
         h = element.dim_h or storey['slab_top'] - storey['ceiling']
         holes = []
         for t in (element.dimensions or {}).get('tremies') or []:

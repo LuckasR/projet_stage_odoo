@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Nomenclatures par défaut (béton, armatures, coffrage, maçonnerie),
+         rattachées aux phases qui n'en ont pas encore. Idempotent : ne
+         remplace jamais un choix existant. -->
+    <function model="mrp.bom" name="_install_default_boms"/>
+</odoo>

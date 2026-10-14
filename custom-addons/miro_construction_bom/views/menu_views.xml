@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_construction_material_need" name="Besoins matériaux"
+        parent="miro_construction_project.menu_construction_root"
+        action="action_construction_material_need" sequence="80"/>
+    <menuitem id="menu_construction_mrp_bom" name="Nomenclatures"
+        parent="miro_construction_project.menu_construction_config"
+        action="action_construction_mrp_bom" sequence="25"/>
+</odoo>

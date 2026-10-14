@@ -28,10 +28,11 @@ Fonctionnalités :
     'data': [
         'security/ir.model.access.csv',
         'data/construction_material_type_data.xml',
+        'data/construction_material_category_backfill.xml',
         'views/product_template_views.xml',
         'views/construction_material_type_views.xml',
         'views/construction_material_attribute_views.xml',
-        'views/construction_bom_views.xml',
+        'views/construction_material_category_views.xml',
         'views/menu_views.xml',
     ],
     'installable': True,

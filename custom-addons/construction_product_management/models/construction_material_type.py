@@ -32,6 +32,13 @@ class ConstructionMaterialType(models.Model):
         required=True,
         default='autre',
     )
+    # Référentiel unique du besoin générique : la liste « category » ci-dessus
+    # est conservée pour compatibilité, la catégorie de matériau prime.
+    material_category_id = fields.Many2one(
+        'construction.material.category', string="Catégorie de matériau",
+        ondelete='restrict', index=True,
+        help="Besoin générique (ciment, sable, acier...) que satisfont les "
+             "produits de ce type. C'est lui que visent les nomenclatures.")
     active = fields.Boolean(default=True)
     description = fields.Text(string="Description")
     product_tmpl_ids = fields.One2many(
@@ -52,6 +59,12 @@ class ConstructionMaterialType(models.Model):
         ('name_category_uniq', 'unique(name, category)',
          "Ce type de matériau existe déjà pour cette catégorie."),
     ]
+
+    @api.onchange('category')
+    def _onchange_category(self):
+        if self.category and not self.material_category_id:
+            self.material_category_id = self.env['construction.material.category'] \
+                ._for_legacy_code(self.category, create=False)
 
     @api.depends('product_tmpl_ids')
     def _compute_product_count(self):
