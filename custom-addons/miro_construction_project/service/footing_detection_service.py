@@ -35,6 +35,12 @@ Ce que la vue en plan NE donne PAS : la hauteur (ou l'ancrage) de l'ouvrage.
 Elle n'est donc jamais inventée — les métrés béton/coffrage restent à
 compléter à la validation, et l'anomalie est signalée sur le brouillon.
 
+Le plan de fondation porte aussi l'EMPRISE du bâtiment, d'où se déduit le
+dallage du rez-de-chaussée (dallage sur terre-plein) : un brouillon
+« DALLAGE » est toujours produit, avec sa surface au nu intérieur des murs
+quand l'emprise est lisible, sans surface sinon — le plan de coupes la
+complète alors (cf. `detect_ground_slab`).
+
 Le résultat est produit au format attendu par `construction.analysis`
 (cf. `_analyze_plan`) : il alimente les brouillons d'éléments, que
 l'utilisateur valide avant création des éléments et des phases.
@@ -48,8 +54,12 @@ from __future__ import annotations
 import json
 import logging
 import re
+import statistics
 from dataclasses import dataclass, asdict
 from typing import Dict, List, Optional, Tuple
+
+from shapely.geometry import MultiPoint, MultiPolygon, Polygon
+from shapely.ops import unary_union
 
 try:
     from .plan_analysis import VIEW_PLAN, DxfPlanReader, PlanContext, normalize_text
@@ -138,6 +148,28 @@ TYPE_LABEL_PREFIXES = {
 # et de mêmes dimensions sont le même ouvrage dessiné deux fois.
 DEDUP_TOLERANCE = 0.05
 
+# --- Dallage du rez-de-chaussée --------------------------------------------
+TYPE_SLAB = "dalle"
+# Repère du brouillon : c'est lui qui distingue le dallage sur terre-plein
+# du plancher haut du même niveau (cf. is_ground_slab).
+GROUND_SLAB_KEY = "DALLAGE"
+# Fond de plan des murs du rez-de-chaussée, repris sur le plan de fondation
+WALL_REF_LAYER = "S-REF"
+MIN_WALL_WIDTH = 0.05
+MAX_WALL_WIDTH = 0.60
+# Les murs sont interrompus par les baies, les longrines par les semelles :
+# on referme l'emprise par-dessus les coupures jusqu'à cette largeur (m).
+FOOTPRINT_GAP = 3.00
+# En deçà, ce n'est pas l'emprise d'un bâtiment (m²)
+MIN_FOOTPRINT_AREA = 4.0
+# Épaisseur des murs extérieurs supposée quand le plan ne les montre pas (m)
+DEFAULT_WALL_THICKNESS = 0.20
+
+
+def is_ground_slab(key) -> bool:
+    """Le brouillon / l'élément est-il le dallage sur terre-plein ?"""
+    return (key or "").strip().upper().startswith(GROUND_SLAB_KEY)
+
 
 # ============================================================
 # STRUCTURE DE DONNÉES
@@ -190,6 +222,50 @@ class DetectedFooting:
             "issue": self.issue or False,
             "source": {"page": 1, "bbox": list(self.bbox)},
         }
+
+
+@dataclass
+class DetectedGroundSlab:
+    """Dallage du rez-de-chaussée, au nu intérieur des murs extérieurs.
+
+    `area` reste None quand l'emprise n'a pas été trouvée : le brouillon est
+    créé quand même, le plan de coupes ou la validation le complète."""
+
+    level: Optional[str]
+    source: Optional[str] = None          # d'où vient l'emprise (libellé)
+    area: Optional[float] = None          # m², nu intérieur
+    length: Optional[float] = None        # m, plus grand côté du nu intérieur
+    width: Optional[float] = None
+    outer_length: Optional[float] = None  # m, emprise extérieure lue
+    outer_width: Optional[float] = None
+    wall_thickness: Optional[float] = None
+    wall_thickness_assumed: bool = False
+    bbox: Tuple[float, ...] = ()          # nu intérieur, unités du dessin
+    confidence: float = 0.0
+
+    def to_analysis_item(self) -> dict:
+        if self.area:
+            issues = ["Dallage : emprise %s, %.2f x %.2f m ; surface au nu intérieur "
+                      "des murs (%.2f m%s)" % (
+                          self.source, self.outer_length, self.outer_width,
+                          self.wall_thickness,
+                          ", supposés" if self.wall_thickness_assumed else "")]
+        else:
+            issues = ["Emprise du bâtiment introuvable sur le plan de fondation : "
+                      "surface reprise des coupes, ou à saisir"]
+        issues.append("Épaisseur du dallage : reprise du plan de coupes, ou à saisir")
+        item = {
+            "key": GROUND_SLAB_KEY,
+            "type": TYPE_SLAB,
+            "level": self.level or False,
+            "quantities": {"surface_m2": round(self.area, 3)} if self.area else {},
+            "dimensions": ({"l": round(self.length, 3), "w": round(self.width, 3)}
+                           if self.area else {}),
+            "confidence": round(self.confidence, 2),
+            "issue": " ; ".join(issues),
+            "source": {"page": 1, "bbox": list(self.bbox)},
+        }
+        return item
 
 
 # ============================================================
@@ -250,12 +326,119 @@ class FootingDetectionService(DxfPlanReader):
         logger.info("Détection terminée : %d ouvrages de fondation", len(footings))
         return footings
 
-    def to_analysis_result(self, footings: List[DetectedFooting]) -> dict:
+    def to_analysis_result(self, footings: List[DetectedFooting],
+                           ground_slab: Optional[DetectedGroundSlab] = None) -> dict:
         """Résultat complet au format `construction.analysis`."""
-        return {
-            "schema_version": 1,
-            "elements": [f.to_analysis_item() for f in footings],
-        }
+        elements = [f.to_analysis_item() for f in footings]
+        if ground_slab:
+            elements.append(ground_slab.to_analysis_item())
+        return {"schema_version": 1, "elements": elements}
+
+    # ========================================================
+    # DALLAGE DU REZ-DE-CHAUSSÉE — emprise du bâtiment
+    # ========================================================
+
+    def detect_ground_slab(self, footings: List[DetectedFooting]) -> DetectedGroundSlab:
+        """Dallage sur terre-plein : L x l de la maison, au nu intérieur des
+        murs extérieurs. L'emprise est cherchée, dans l'ordre, sur :
+
+          1. les murs (S-REF)         leur nu extérieur, épaisseur lue ;
+          2. les longrines (S-LON)    elles courent sous les murs ;
+          3. les semelles filantes    idem, plus larges que le mur ;
+          4. poteaux / semelles       enveloppe de leurs centres (axes).
+
+        La surface est celle du contour réel (une maison en L n'est pas son
+        rectangle englobant). Rien de lisible : surface vide, le plan de
+        coupes la complète."""
+        slab = DetectedGroundSlab(level=self.context.level_label)
+
+        walls = self._band_footprint(WALL_REF_LAYER, MIN_WALL_WIDTH, MAX_WALL_WIDTH)
+        wall_thickness = walls[1] if walls else None
+        candidates = [
+            ("des murs (%s)" % WALL_REF_LAYER, walls, 0.75),
+            ("des longrines (%s)" % TIE_BEAM_LAYER, self._band_footprint(
+                TIE_BEAM_LAYER, MIN_TIE_BEAM_WIDTH, MAX_TIE_BEAM_WIDTH), 0.70),
+            ("des semelles filantes (%s)" % STRIP_FOOTING_LAYER, self._band_footprint(
+                STRIP_FOOTING_LAYER, MIN_STRIP_WIDTH, MAX_STRIP_WIDTH), 0.65),
+            ("des poteaux et semelles isolées (axes)", self._point_footprint(footings), 0.45),
+        ]
+        for label, found, confidence in candidates:
+            if not found:
+                continue
+            outer, band = found
+            thickness = wall_thickness or DEFAULT_WALL_THICKNESS
+            # Axe de l'ouvrage sous les murs, puis nu intérieur du mur posé
+            # dessus : pour les murs eux-mêmes, cela revient à retirer leur
+            # épaisseur.
+            inner = outer.buffer(-(band + thickness) / 2.0 / self.unit_scale, join_style=2)
+            if inner.is_empty or inner.area * self.unit_scale ** 2 < MIN_FOOTPRINT_AREA:
+                continue
+            s = self.unit_scale
+            minx, miny, maxx, maxy = inner.bounds
+            ominx, ominy, omaxx, omaxy = outer.bounds
+            slab.source = label
+            slab.area = inner.area * s * s
+            slab.length, slab.width = sorted(((maxx - minx) * s, (maxy - miny) * s), reverse=True)
+            slab.outer_length, slab.outer_width = sorted(
+                ((omaxx - ominx) * s, (omaxy - ominy) * s), reverse=True)
+            slab.wall_thickness = thickness
+            slab.wall_thickness_assumed = not wall_thickness
+            slab.bbox = (minx, miny, maxx, maxy)
+            slab.confidence = confidence
+            logger.info("Dallage : emprise %s, %.2f m² au nu intérieur", label, slab.area)
+            return slab
+
+        logger.info("Dallage : emprise du bâtiment introuvable sur ce plan")
+        return slab
+
+    def _band_footprint(self, layer: str, min_width: float, max_width: float
+                        ) -> Optional[Tuple[Polygon, float]]:
+        """(contour extérieur, largeur de l'ouvrage en m) des ouvrages
+        linéaires d'un calque, réunis et refermés par-dessus leurs coupures."""
+        s = self.unit_scale
+        shapes = [Polygon(o.points).buffer(0)
+                  for o in self.collect_closed_outlines([layer], include_blocks=True)
+                  if len(o.points) >= 3]
+        pairs = self.find_parallel_pairs(
+            self.collect_segments([layer], include_blocks=True),
+            min_width=min_width / s, max_width=max_width / s,
+            min_length=MIN_LINEAR_LENGTH / s, angle_tolerance=PARALLEL_ANGLE_TOLERANCE)
+        shapes += [p.axis.buffer(p.width / 2.0, cap_style=2, join_style=2) for p in pairs]
+        if not pairs or not shapes:
+            return None
+
+        outer = self._outer_contour(shapes)
+        if outer is None:
+            return None
+        # Largeur des ouvrages du pourtour, pas des refends intérieurs
+        widths = [p.width * s for p in pairs if p.axis.distance(outer.exterior) <= p.width]
+        return outer, statistics.median(widths or [p.width * s for p in pairs])
+
+    def _point_footprint(self, footings: List[DetectedFooting]
+                         ) -> Optional[Tuple[Polygon, float]]:
+        """Enveloppe des centres des poteaux (à défaut des semelles isolées) :
+        les axes du bâtiment, d'où une largeur d'ouvrage nulle."""
+        for type_code in (TYPE_COLUMN, TYPE_ISOLATED):
+            points = [(f.center_x, f.center_y) for f in footings if f.type_code == type_code]
+            if len(points) >= 3:
+                hull = MultiPoint(points).convex_hull
+                if hull.geom_type == "Polygon":
+                    return hull, 0.0
+        return None
+
+    def _outer_contour(self, shapes) -> Optional[Polygon]:
+        """Contour extérieur de la plus grande pièce, une fois les coupures
+        (baies, semelles entre longrines) refermées."""
+        gap = FOOTPRINT_GAP / 2.0 / self.unit_scale
+        merged = unary_union(shapes).buffer(gap, join_style=2).buffer(-gap, join_style=2)
+        pieces = list(merged.geoms) if isinstance(merged, MultiPolygon) else [merged]
+        pieces = [p for p in pieces if not p.is_empty]
+        if not pieces:
+            return None
+        outer = Polygon(max(pieces, key=lambda p: p.area).exterior)
+        if outer.area * self.unit_scale ** 2 < MIN_FOOTPRINT_AREA:
+            return None
+        return outer
 
     # ========================================================
     # OUVRAGES PONCTUELS — contours fermés (S-SEM, S-POT)
@@ -557,6 +740,12 @@ if __name__ == "__main__":
     print(f"\n=== {len(detected)} ouvrages de fondation détectés ===")
     for f in detected:
         print(f"  {f.key:16s} {f.type_code:16s} [{f.layer:10s}] "
-              f"L={f.length:6.2f}m  l={f.width:5.2f}m  "
+              f"L={f.length:6.2f}m  l={(f.width or 0.0):5.2f}m  "
               f"repère={'plan' if f.label_found else 'généré'}  "
               f"conf={f.confidence:.2f}")
+    ground = service.detect_ground_slab(detected)
+    if ground.area:
+        print(f"  DALLAGE : emprise {ground.source} {ground.outer_length:.2f} x "
+              f"{ground.outer_width:.2f} m -> {ground.area:.2f} m² au nu intérieur")
+    else:
+        print("  DALLAGE : emprise introuvable (surface à reprendre des coupes)")

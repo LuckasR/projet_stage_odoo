@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_project_form_materials" model="ir.ui.view">
+        <field name="name">project.project.form.materials</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="project.edit_project"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_refresh_material_needs" type="object"
+                    string="Recalculer les besoins" class="btn-secondary"/>
+                <button name="action_create_material_purchases" type="object"
+                    string="Demandes de prix matériaux" class="btn-secondary"/>
+            </xpath>
+            <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
+                <button name="action_view_material_needs" type="object"
+                    class="oe_stat_button" icon="fa-cubes">
+                    <div class="o_stat_info">
+                        <span class="o_stat_value"><field name="material_need_count"/></span>
+                        <span class="o_stat_text">Besoins matériaux</span>
+                    </div>
+                </button>
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page string="Matériaux" name="materials">
+                    <group>
+                        <field name="material_planned_cost" widget="monetary"
+                            options="{'currency_field': 'currency_id'}"/>
+                    </group>
+                    <p class="text-muted">
+                        Produit retenu pour chaque besoin générique de ce chantier. Il
+                        s'applique aux besoins pas encore commandés, y compris ceux des
+                        sous-catégories.
+                    </p>
+                    <field name="material_choice_ids">
+                        <tree editable="bottom">
+                            <field name="category_id"/>
+                            <field name="product_id"/>
+                        </tree>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_task_form_materials" model="ir.ui.view">
+        <field name="name">project.task.form.materials</field>
+        <field name="model">project.task</field>
+        <field name="inherit_id" ref="project.view_task_form2"/>
+        <field name="arch" type="xml">
+            <!-- Premier onglet, devant le suivi de chantier : sur une phase,
+                 ce sont les matériaux qu'on vient voir ; Odoo ouvre la fiche
+                 sur le premier onglet visible. -->
+            <xpath expr="//page[@name='construction_suivi']" position="before">
+                <page string="Matériaux" name="materials" invisible="not material_need_ids">
+                    <div class="mb-2">
+                        <button name="action_declare_consumption" type="object"
+                            string="Déclarer la consommation" class="btn-primary"/>
+                        <button name="action_refresh_material_needs" type="object"
+                            string="Recalculer" class="btn-secondary ms-2"
+                            confirm="Recalculer les besoins de cette phase, même commencée ? Les besoins déjà commandés ou consommés ne sont pas modifiés."/>
+                    </div>
+                    <field name="material_need_ids" readonly="1">
+                        <tree decoration-danger="qty_gap &gt; 0">
+                            <field name="category_id"/>
+                            <field name="product_id"/>
+                            <field name="product_qty"/>
+                            <field name="product_uom_id"/>
+                            <field name="qty_consumed"/>
+                            <field name="qty_gap"/>
+                            <field name="state" widget="badge"/>
+                        </tree>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

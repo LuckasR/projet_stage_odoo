@@ -197,6 +197,11 @@ class DetailAnalysisService(ExecutionPlanReader):
             type_code: {dim: self._mode(values) for dim, values in dims.items()}
             for type_code, dims in readings.items()}
 
+        if profile.get("ground_slab"):
+            spans = self._ground_slab_spans(sections, profile["ground_slab"]["top"])
+            if spans:
+                profile["ground_slab"]["spans"] = spans
+
         profile["openings"] = self._section_openings(sections, profile.get("storeys") or [])
         profile["reinforcement"] = self._reinforcement()
         profile["warnings"] = self._warnings()
@@ -359,6 +364,26 @@ class DetailAnalysisService(ExecutionPlanReader):
             })
         logger.info("%d ouverture(s) lue(s) dans les coupes", len(found))
         return found
+
+    def _ground_slab_spans(self, sections: List[SectionView], top: float) -> Dict[str, float]:
+        """Longueur du dallage dans chaque coupe, rangée selon le sens du
+        plan qu'elle traverse : une coupe menée à Y constant (« A-A, Y =
+        2.20 ») montre l'étendue en X. Deux coupes perpendiculaires donnent
+        donc le L x l de la maison ; sans le tableau des coupes, on ne sait
+        pas dans quel sens chacune est prise et l'on ne donne rien."""
+        if not sections:
+            return {}
+        self._name_sections(sections)
+        cuts = self._cut_positions()
+        spans: Dict[str, float] = {}
+        for outline in self.collect_closed_outlines([SLAB_LAYER]):
+            view = next((v for v in sections if v.contains(outline)), None)
+            cut = cuts.get(view.name or "") if view else None
+            if not cut or abs(view.elevation(outline.maxy) - top) > 0.03:
+                continue
+            axis = "x" if cut[0] == "Y" else "y"
+            spans[axis] = max(spans.get(axis, 0.0), round(outline.width * view.a, 3))
+        return spans
 
     def _section_slabs(self, sections: List[SectionView]) -> List[Tuple[float, float, float]]:
         """(altitude basse, altitude haute, épaisseur) de chaque plancher coupé."""

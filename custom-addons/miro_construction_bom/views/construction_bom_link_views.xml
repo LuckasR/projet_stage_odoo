@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Gabarit de phases : nomenclature de chaque phase -->
+    <record id="view_phase_template_form_bom" model="ir.ui.view">
+        <field name="name">construction.phase.template.form.bom</field>
+        <field name="model">construction.phase.template</field>
+        <field name="inherit_id" ref="miro_construction_project.view_construction_phase_template_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='qty_key']" position="after">
+                <field name="bom_id"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Type d'élément : nomenclatures propres au type -->
+    <record id="view_element_type_form_bom" model="ir.ui.view">
+        <field name="name">construction.element.type.form.bom</field>
+        <field name="model">construction.element.type</field>
+        <field name="inherit_id" ref="miro_construction_project.view_construction_element_type_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Nomenclatures" name="boms" invisible="not phase_template_id">
+                    <p class="text-muted">
+                        Par défaut, chaque phase utilise la nomenclature de son gabarit.
+                        Indiquez-en une autre ici pour ce type seulement (ex. : béton C20/25
+                        pour les semelles, C25/30 pour les poteaux).
+                    </p>
+                    <field name="bom_override_ids">
+                        <tree editable="bottom">
+                            <field name="phase_line_id"/>
+                            <field name="bom_id"/>
+                        </tree>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Nomenclature native : recette de chantier, besoins, recalcul -->
+    <record id="view_mrp_bom_form_construction" model="ir.ui.view">
+        <field name="name">mrp.bom.form.construction</field>
+        <field name="model">mrp.bom</field>
+        <field name="inherit_id" ref="mrp.mrp_bom_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="before">
+                <header invisible="not construction_ok">
+                    <button name="action_refresh_needs" type="object"
+                        string="Recalculer les besoins" class="btn-secondary"
+                        help="Applique la nomenclature modifiée aux phases non commencées."/>
+                </header>
+            </xpath>
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_needs" type="object" class="oe_stat_button"
+                    icon="fa-cubes" invisible="not construction_ok">
+                    <field name="need_count" widget="statinfo" string="Besoins"/>
+                </button>
+            </xpath>
+            <xpath expr="//field[@name='code']" position="after">
+                <field name="construction_ok"/>
+            </xpath>
+            <xpath expr="//field[@name='bom_line_ids']/tree/field[@name='product_uom_id']" position="after">
+                <field name="material_category_id" optional="show"/>
+                <field name="coefficient" optional="show"/>
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page string="Phases" name="construction_phases" invisible="not construction_ok">
+                    <field name="phase_line_ids" readonly="1">
+                        <tree>
+                            <field name="template_id"/>
+                            <field name="name"/>
+                            <field name="qty_key"/>
+                        </tree>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Recettes de chantier : les nomenclatures natives qui en sont -->
+    <record id="action_construction_mrp_bom" model="ir.actions.act_window">
+        <field name="name">Nomenclatures de chantier</field>
+        <field name="res_model">mrp.bom</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('construction_ok', '=', True)]</field>
+        <field name="context">{'default_construction_ok': True, 'default_type': 'normal'}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Créer une recette de chantier</p>
+            <p>Matériaux consommés pour UNE unité d'ouvrage (1 m³ de béton coulé,
+               1 kg d'acier posé, 1 m² coffré), à rattacher aux phases des gabarits.</p>
+        </field>
+    </record>
+</odoo>

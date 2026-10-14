@@ -5,6 +5,7 @@ from odoo.addons.queue_job.job import identity_exact
 
 from ...service.element_sketch import (
     opening_summary, render_element_sketch, tremie_summary)
+from ...service.footing_detection_service import is_ground_slab
 
 QTY_KEYS = ('beton_m3', 'acier_kg', 'coffrage_m2', 'surface_m2')
 GENERATE_CHUNK_SIZE = 50  # éléments par job de génération
@@ -208,7 +209,8 @@ class ConstructionElementDraft(models.Model):
 
           - baie         surface = L × h
           - dalle        surface nette (trémies déduites) ; béton = surface × ép. ;
-                         coffrage = sous-face
+                         coffrage = sous-face (aucun pour le dallage sur
+                         terre-plein, coulé sur le sol)
           - poutre       béton = L × l × h ; coffrage = fond + 2 joues = (2h + l) × L
           - mur          surface = (L − baies) × h ; volume = surface × ép. ;
                          pas de coffrage (maçonnerie)
@@ -240,8 +242,9 @@ class ConstructionElementDraft(models.Model):
                 surface = qty.get('surface_m2') or (l * w)
                 if not (surface and h):
                     continue
-                values = {'surface_m2': surface, 'beton_m3': surface * h,
-                          'coffrage_m2': surface}
+                values = {'surface_m2': surface, 'beton_m3': surface * h}
+                if not is_ground_slab(rec.key):
+                    values['coffrage_m2'] = surface
             elif code == 'mur':
                 if not (l and w and h):
                     continue

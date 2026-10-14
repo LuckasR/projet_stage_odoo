@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Emplacement virtuel où sortent les matériaux mis en œuvre sur le
+         chantier : une consommation est un mouvement stock -> chantier. -->
+    <record id="stock_location_site_consumption" model="stock.location">
+        <field name="name">Consommation chantier</field>
+        <field name="location_id" ref="stock.stock_location_locations_virtual"/>
+        <field name="usage">production</field>
+    </record>
+</odoo>

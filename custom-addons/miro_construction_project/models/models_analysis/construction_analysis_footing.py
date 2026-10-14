@@ -53,7 +53,9 @@ class ConstructionAnalysisFooting(models.Model):
                 "%s, et que le plan est classé en vue « Plan ».")
                 % ", ".join(FOOTING_LAYERS))
 
-        return service.to_analysis_result(footings)
+        # Le dallage du RDC est toujours proposé : sans emprise lisible, sa
+        # surface reste vide et le plan de coupes la complète.
+        return service.to_analysis_result(footings, service.detect_ground_slab(footings))
 
     def _footing_service(self, dwg):
         """Instancie le service sur une copie temporaire du DXF, avec le

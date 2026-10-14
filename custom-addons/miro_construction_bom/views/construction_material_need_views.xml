@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_construction_material_need_tree" model="ir.ui.view">
+        <field name="name">construction.material.need.tree</field>
+        <field name="model">construction.material.need</field>
+        <field name="arch" type="xml">
+            <tree decoration-danger="qty_gap &gt; 0" decoration-muted="state == 'consumed'"
+                  decoration-warning="state == 'no_product'" create="false">
+                <field name="project_id" optional="hide"/>
+                <field name="ouvrage_task_id" optional="hide"/>
+                <field name="level_id" optional="hide"/>
+                <field name="element_id"/>
+                <field name="task_id"/>
+                <field name="category_id"/>
+                <field name="product_id"/>
+                <field name="base_qty" optional="hide"/>
+                <field name="base_uom_id" optional="hide"/>
+                <field name="product_qty" sum="Besoin"/>
+                <field name="product_uom_id"/>
+                <field name="qty_ordered" sum="Commandé" optional="show"/>
+                <field name="qty_received" sum="Reçu" optional="hide"/>
+                <field name="qty_consumed" sum="Consommé" optional="show"/>
+                <field name="qty_gap" sum="Écart" optional="show"/>
+                <field name="planned_cost" sum="Coût prévu" optional="show"/>
+                <field name="purchase_id" optional="hide"/>
+                <field name="state" widget="badge"
+                    decoration-warning="state == 'no_product'"
+                    decoration-info="state in ('to_order', 'ordered')"
+                    decoration-success="state in ('received', 'consumed')"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_construction_material_need_pivot" model="ir.ui.view">
+        <field name="name">construction.material.need.pivot</field>
+        <field name="model">construction.material.need</field>
+        <field name="arch" type="xml">
+            <pivot string="Besoins matériaux" sample="1">
+                <field name="category_id" type="row"/>
+                <field name="level_id" type="col"/>
+                <field name="product_qty" type="measure"/>
+                <field name="qty_consumed" type="measure"/>
+                <field name="planned_cost" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_construction_material_need_form" model="ir.ui.view">
+        <field name="name">construction.material.need.form</field>
+        <field name="model">construction.material.need</field>
+        <field name="arch" type="xml">
+            <form create="false">
+                <header>
+                    <field name="state" widget="statusbar"
+                        statusbar_visible="to_order,ordered,received,consumed"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Origine">
+                            <field name="project_id"/>
+                            <field name="ouvrage_task_id"/>
+                            <field name="element_id"/>
+                            <field name="task_id"/>
+                            <field name="level_id"/>
+                            <field name="bom_id"/>
+                            <field name="bom_line_id"/>
+                        </group>
+                        <group string="Matériau">
+                            <field name="category_id"/>
+                            <field name="product_id"/>
+                            <label for="base_qty"/>
+                            <div class="o_row">
+                                <field name="base_qty"/> <field name="base_uom_id" nolabel="1"/>
+                            </div>
+                            <label for="quantity"/>
+                            <div class="o_row">
+                                <field name="quantity"/> <field name="uom_id" nolabel="1"/>
+                            </div>
+                            <field name="product_qty"/>
+                            <field name="planned_cost"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Achat">
+                            <field name="purchase_id"/>
+                            <field name="qty_ordered"/>
+                            <field name="qty_received"/>
+                        </group>
+                        <group string="Consommation">
+                            <field name="qty_consumed"/>
+                            <field name="qty_remaining"/>
+                            <field name="qty_gap"/>
+                        </group>
+                    </group>
+                    <field name="move_ids" readonly="1">
+                        <tree>
+                            <field name="date"/>
+                            <field name="product_id"/>
+                            <field name="quantity"/>
+                            <field name="product_uom"/>
+                            <field name="location_id"/>
+                            <field name="state"/>
+                        </tree>
+                    </field>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_construction_material_need_search" model="ir.ui.view">
+        <field name="name">construction.material.need.search</field>
+        <field name="model">construction.material.need</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="project_id"/>
+                <field name="element_id"/>
+                <field name="category_id"/>
+                <field name="product_id"/>
+                <filter string="Produit à choisir" name="no_product" domain="[('state', '=', 'no_product')]"/>
+                <filter string="À commander" name="to_order" domain="[('state', '=', 'to_order')]"/>
+                <filter string="Commandés" name="ordered" domain="[('state', 'in', ('ordered', 'received'))]"/>
+                <filter string="Surconsommation" name="overrun" domain="[('qty_gap', '&gt;', 0)]"/>
+                <group expand="0" string="Regrouper par">
+                    <filter string="Projet" name="group_project" context="{'group_by': 'project_id'}"/>
+                    <filter string="Ouvrage" name="group_ouvrage" context="{'group_by': 'ouvrage_task_id'}"/>
+                    <filter string="Niveau" name="group_level" context="{'group_by': 'level_id'}"/>
+                    <filter string="Élément" name="group_element" context="{'group_by': 'element_id'}"/>
+                    <filter string="Matériau" name="group_category" context="{'group_by': 'category_id'}"/>
+                    <filter string="Produit" name="group_product" context="{'group_by': 'product_id'}"/>
+                    <filter string="État" name="group_state" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_construction_material_need" model="ir.actions.act_window">
+        <field name="name">Besoins matériaux</field>
+        <field name="res_model">construction.material.need</field>
+        <field name="view_mode">tree,pivot,form</field>
+        <field name="context">{'search_default_group_project': 1, 'search_default_group_category': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aucun besoin matériau</p>
+            <p>Les besoins sont calculés pour chaque phase dont la ligne de gabarit
+               porte une nomenclature, à partir du métré de son élément.</p>
+        </field>
+    </record>
+</odoo>

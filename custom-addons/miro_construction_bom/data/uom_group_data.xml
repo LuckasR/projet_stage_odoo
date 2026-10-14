@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Les recettes mêlent m³, kg, L et m² : les unités de mesure doivent
+         être visibles sur les nomenclatures (colonne masquée sans ce groupe). -->
+    <record id="base.group_user" model="res.groups">
+        <field name="implied_ids" eval="[(4, ref('uom.group_uom'))]"/>
+    </record>
+</odoo>

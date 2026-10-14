@@ -1,0 +1,8 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_construction_material_need_user,construction.material.need.user,model_construction_material_need,base.group_user,1,1,1,1
+access_construction_element_type_bom_user,construction.element.type.bom.user,model_construction_element_type_bom,base.group_user,1,1,1,1
+access_construction_project_material_user,construction.project.material.user,model_construction_project_material,base.group_user,1,1,1,1
+access_need_purchase_wizard_user,construction.need.purchase.wizard.user,model_construction_need_purchase_wizard,base.group_user,1,1,1,1
+access_need_purchase_wizard_line_user,construction.need.purchase.wizard.line.user,model_construction_need_purchase_wizard_line,base.group_user,1,1,1,1
+access_need_consume_wizard_user,construction.need.consume.wizard.user,model_construction_need_consume_wizard,base.group_user,1,1,1,1
+access_need_consume_wizard_line_user,construction.need.consume.wizard.line.user,model_construction_need_consume_wizard_line,base.group_user,1,1,1,1

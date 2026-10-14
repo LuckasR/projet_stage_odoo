@@ -17,6 +17,15 @@
         sequence="10"
     />
 
+    <!-- Catégories : référentiel des besoins génériques -->
+    <menuitem
+        id="menu_construction_material_category"
+        name="Catégories de matériaux"
+        parent="menu_construction_root"
+        action="action_construction_material_category"
+        sequence="15"
+    />
+
     <!-- Types -->
     <menuitem
         id="menu_construction_material_type"
@@ -35,12 +44,5 @@
         sequence="30"
     />
 
-    <!--  NOMENCLATURES / RECETTES -->
-    <menuitem id="menu_construction_bom" 
-              name="Nomenclatures" 
-              parent="menu_construction_root"
-              action="action_construction_bom" 
-              sequence="40" 
-    />
 
 </odoo>

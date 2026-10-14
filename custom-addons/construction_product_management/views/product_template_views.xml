@@ -21,6 +21,7 @@
                             <field name="construction_material_type_id"
                                 options="{'no_create': False}" />
                             <field name="construction_category" readonly="1" />
+                            <field name="material_category_id" />
                         </group>
                     </group>
 

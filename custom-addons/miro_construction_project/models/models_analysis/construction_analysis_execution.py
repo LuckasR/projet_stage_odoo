@@ -15,6 +15,7 @@ from ...service.formwork_detection_service import (
     WALL_LAYERS,
     FormworkDetectionService,
 )
+from ...service.footing_detection_service import is_ground_slab
 from ...service.plan_analysis import PlanContext, normalize_text
 from .construction_analysis_footing import UNIT_TO_M
 
@@ -608,7 +609,11 @@ class ConstructionAnalysisExecution(models.Model):
                 'e': st.get('slab_thickness', 0.0)})
         ground = profile.get('ground_slab')
         if ground:
-            lines.append(_("Dallage : %.2f m") % ground.get('thickness', 0.0))
+            spans = ground.get('spans') or {}
+            line = _("Dallage : %.2f m") % ground.get('thickness', 0.0)
+            if spans.get('x') and spans.get('y'):
+                line += _(" (coupes : %.2f x %.2f m)") % (spans['x'], spans['y'])
+            lines.append(line)
         for type_code, dims in sorted((profile.get('sections') or {}).items()):
             lines.append(_("Section %s : %s") % (type_code, ", ".join(
                 "%s=%.2f m" % kv for kv in sorted(dims.items()))))
@@ -644,6 +649,12 @@ class ConstructionElementDraftProfile(models.Model):
 
         for rec in self:
             code = rec.type_id.code or rec.type_code
+            if code == 'dalle' and is_ground_slab(rec.key):
+                # Le dallage n'est pas le plancher haut du même niveau : ni
+                # son épaisseur, ni la section « dalle » des détails.
+                if rec._apply_ground_slab_profile(profile, source):
+                    completed |= rec
+                continue
             dims = dict(rec.dimensions or {})
             filled = {}
 
@@ -674,6 +685,37 @@ class ConstructionElementDraftProfile(models.Model):
 
         completed._compute_quantities(apply_defaults=False)
         return completed
+
+    def _apply_ground_slab_profile(self, profile, source):
+        """Dallage du RDC : épaisseur lue dans les coupes et, si le plan de
+        fondation n'a pas donné l'emprise, L x l mesurés sur deux coupes
+        perpendiculaires. Ne remplace jamais une valeur déjà là. Retourne
+        True si le brouillon a été complété."""
+        self.ensure_one()
+        ground = profile.get('ground_slab') or {}
+        dims = dict(self.dimensions or {})
+        qty = dict(self.quantities or {})
+        filled, notes = {}, []
+        if ground.get('thickness') and not dims.get('h'):
+            dims['h'] = filled['h'] = round(ground['thickness'], 3)
+        spans = ground.get('spans') or {}
+        if spans.get('x') and spans.get('y') and not (
+                qty.get('surface_m2') or (dims.get('l') and dims.get('w'))):
+            length, width = sorted((spans['x'], spans['y']), reverse=True)
+            dims.update(l=length, w=width)
+            qty['surface_m2'] = round(length * width, 3)
+            notes.append(_("Surface estimée sur les coupes du plan %s : %.2f x %.2f m, "
+                           "telle que dessinée (à vérifier)") % (source, length, width))
+        if not (filled or notes):
+            return False
+
+        issue = self._issue_after_profile(filled, source) if filled else self.issue or ''
+        if notes:
+            parts = [p for p in issue.split(' ; ')
+                     if p and 'introuvable' not in normalize_text(p)]
+            issue = " ; ".join(parts + notes)
+        self.write({'dimensions': dims, 'quantities': qty, 'issue': issue})
+        return True
 
     def _issue_after_profile(self, filled, source):
         """Retire les anomalies que les cotes complétées lèvent, et trace
