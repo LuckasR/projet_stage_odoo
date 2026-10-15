@@ -11,12 +11,14 @@
                 <button name="action_create_material_purchases" type="object"
                     string="Demandes de prix matériaux" class="btn-secondary"/>
             </xpath>
-            <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
-                <button name="action_view_material_needs" type="object"
+            <!-- Juste à droite du diagramme du chantier : tableau de bord des
+                 besoins en matières premières du projet -->
+            <xpath expr="//button[@name='action_view_task_hierarchy']" position="after">
+                <button name="action_open_material_dashboard" type="object"
                     class="oe_stat_button" icon="fa-cubes">
                     <div class="o_stat_info">
                         <span class="o_stat_value"><field name="material_need_count"/></span>
-                        <span class="o_stat_text">Besoins matériaux</span>
+                        <span class="o_stat_text">Besoins en MP</span>
                     </div>
                 </button>
             </xpath>
@@ -38,6 +40,24 @@
                         </tree>
                     </field>
                 </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Même bouton sur le formulaire « Chantier » -->
+    <record id="view_project_construction_form_materials" model="ir.ui.view">
+        <field name="name">project.project.construction.form.materials</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="miro_construction_project.view_project_project_construction_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='action_view_task_hierarchy']" position="after">
+                <button name="action_open_material_dashboard" type="object"
+                    class="oe_stat_button" icon="fa-cubes">
+                    <div class="o_stat_info">
+                        <span class="o_stat_value"><field name="material_need_count"/></span>
+                        <span class="o_stat_text">Besoins en MP</span>
+                    </div>
+                </button>
             </xpath>
         </field>
     </record>

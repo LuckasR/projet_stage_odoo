@@ -5,6 +5,7 @@ from odoo.exceptions import ValidationError
 
 from ..service.element_sketch import (
     opening_summary, render_element_sketch, tremie_summary)
+from ..service.footing_detection_service import is_ground_slab
 from .models_analysis.construction_element_type import UOM_SELECTION
 
 _logger = logging.getLogger(__name__)
@@ -239,6 +240,88 @@ class ConstructionElement(models.Model):
                     vals['qty_%s' % key] = quantities[key]
             rec.write(vals)
             rec._refresh_phase_hours()
+
+    def _apply_structure_profile(self, profile):
+        """Complète les éléments DÉJÀ GÉNÉRÉS avec le profil structurel d'un
+        plan de détail, comme le sont les brouillons
+        (construction.element.draft._apply_structure_profile) :
+
+          - poteaux, murs non reliés à un objet mur : hauteur libre de
+            l'étage de leur niveau ;
+          - dallage du RDC : épaisseur du dallage ; autre dalle : épaisseur
+            du plancher de son étage ;
+          - semelles, semelles filantes, longrines, poutres, poteaux : section
+            lue dans les coupes et les détails (hauteur, largeur).
+
+        Puis métrés manquants, heures des phases et besoins en matériaux.
+        Une cote déjà présente, ou un métré saisi, n'est jamais remplacé.
+        Retourne les éléments complétés."""
+        from .models_analysis.construction_analysis_execution import (
+            PROFILE_SECTIONS, STOREY_HEIGHT_TYPES)
+        Analysis = self.env['construction.analysis']
+        sections = profile.get('sections') or {}
+        done = self.browse()
+        for rec in self:
+            code = rec.element_type_id.code
+            dims = dict(rec.dimensions or {})
+            filled = []
+
+            def fill(key, value):
+                if value and not dims.get(key):
+                    dims[key] = round(value, 3)
+                    filled.append(key)
+
+            storey = Analysis._storey_for_level(profile, rec.level_id) if rec.level_id else None
+            if code in STOREY_HEIGHT_TYPES and not (rec.wall_id or rec.opening_id):
+                fill('h', (storey or {}).get('clear_height'))
+            if code == 'dalle':
+                if is_ground_slab(rec.key):
+                    fill('h', (profile.get('ground_slab') or {}).get('thickness'))
+                else:
+                    fill('h', (storey or {}).get('slab_thickness'))
+            for key, (src_type, src_dim) in PROFILE_SECTIONS.get(code, {}).items():
+                fill(key, (sections.get(src_type) or {}).get(src_dim))
+            if not filled:
+                continue
+
+            vals = {'dimensions': dims}
+            for key, value in rec._quantities_for(dims).items():
+                if not rec['qty_%s' % key]:
+                    vals['qty_%s' % key] = round(value, 3)
+            # Une écriture des métrés recalcule les besoins des phases non
+            # commencées (miro_construction_bom).
+            rec.write(vals)
+            done |= rec
+        done._refresh_phase_hours()
+        return done
+
+    def _quantities_for(self, dims):
+        """Métrés d'un ouvrage d'après ses cotes : mêmes formules que les
+        brouillons (construction.element.draft._compute_quantities)."""
+        self.ensure_one()
+        code = self.element_type_id.code
+        l, h = dims.get('l') or 0.0, dims.get('h') or 0.0
+        w = dims.get('w', dims.get('ep')) or 0.0
+        if code == 'dalle':
+            surface = self.qty_surface_m2 or l * w
+            if not (surface and h):
+                return {}
+            values = {'surface_m2': surface, 'beton_m3': surface * h}
+            if not is_ground_slab(self.key):
+                values['coffrage_m2'] = surface   # sous-face ; aucune pour un dallage
+        elif not (l and w and h):
+            return {}
+        elif code == 'mur':
+            surface = max(l - (dims.get('ouvertures_m') or 0.0), 0.0) * h
+            values = {'surface_m2': surface, 'beton_m3': surface * w}
+        elif code == 'poutre':
+            values = {'beton_m3': l * w * h, 'coffrage_m2': (2 * h + w) * l}
+        else:
+            values = {'beton_m3': l * w * h, 'coffrage_m2': 2 * (l + w) * h}
+        ratio = self.element_type_id.steel_ratio_kg_m3
+        if ratio:
+            values['acier_kg'] = values['beton_m3'] * ratio
+        return values
 
     def _refresh_phase_hours(self):
         """Heures prévues des phases non commencées, d'après les métrés

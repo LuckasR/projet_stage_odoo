@@ -77,6 +77,136 @@ class ProjectProject(models.Model):
         return self.env['product.product']
 
     # ------------------------------------------------------------------
+    # Tableau de bord des matériaux
+    # ------------------------------------------------------------------
+    @api.model
+    def _material_status(self, row):
+        """État d'un matériau (libellé, classe) : le plus urgent l'emporte."""
+        eps = 1e-6
+        if row['no_product']:
+            return _("Produit à choisir"), 'warn'
+        if row['gap'] > 0:
+            return _("Surconsommation"), 'bad'
+        if row['planned'] and row['consumed'] >= row['planned'] - eps:
+            return _("Consommé"), 'ok'
+        if row['shortage'] > 0:
+            return _("Stock insuffisant"), 'bad'
+        if row['planned'] and row['received'] >= row['planned'] - eps:
+            return _("Reçu"), 'ok'
+        if row['ordered'] > 0:
+            return _("Commandé"), 'info'
+        return _("À commander"), 'neutral'
+
+    def action_print_material_report(self):
+        """Rapport PDF des besoins en matériaux : état, approvisionnement,
+        répartitions et points d'attention."""
+        self.ensure_one()
+        return self.env.ref('miro_construction_bom.action_report_material_needs').report_action(self)
+
+    def action_open_material_dashboard(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'miro_construction_bom.material_dashboard',
+            'name': _("Besoins en matériaux — %s") % self.name,
+            'context': {'default_project_id': self.id},
+        }
+
+    def get_material_dashboard(self):
+        """Données du tableau de bord : un seul appel, tout agrégé ici.
+
+        Les quantités sont dans l'unité du PRODUIT (ce qu'on achète et
+        stocke) ; les besoins sans produit sont regroupés par catégorie, à
+        part. Les coûts sont au coût du produit (standard_price)."""
+        self.ensure_one()
+        needs = self.material_need_ids
+        currency = self.company_id.currency_id or self.env.company.currency_id
+
+        def bucket():
+            return {'planned': 0.0, 'ordered': 0.0, 'received': 0.0, 'consumed': 0.0,
+                    'remaining': 0.0, 'gap': 0.0, 'planned_cost': 0.0,
+                    'consumed_cost': 0.0, 'need_ids': [], 'elements': set()}
+
+        materials, groups = {}, {'ouvrage': {}, 'level': {}, 'phase': {}}
+        for need in needs:
+            key = ('p', need.product_id.id) if need.product_id else ('c', need.category_id.id)
+            row = materials.setdefault(key, bucket())
+            cost = need.product_id.standard_price or 0.0
+            row['planned'] += need.product_qty
+            row['ordered'] += need.qty_ordered
+            row['received'] += need.qty_received
+            row['consumed'] += need.qty_consumed
+            row['remaining'] += need.qty_remaining
+            row['gap'] += need.qty_gap
+            row['planned_cost'] += need.planned_cost
+            row['consumed_cost'] += need.qty_consumed * cost
+            row['need_ids'].append(need.id)
+            row['elements'].add(need.element_id.id)
+            for kind, label in (('ouvrage', need.ouvrage_task_id.name),
+                                ('level', need.level_id.name),
+                                ('phase', need.task_id.phase_template_line_id.name or need.phase_type)):
+                grp = groups[kind].setdefault(label or _("Non classé"), {
+                    'planned_cost': 0.0, 'consumed_cost': 0.0, 'count': 0})
+                grp['planned_cost'] += need.planned_cost
+                grp['consumed_cost'] += need.qty_consumed * cost
+                grp['count'] += 1
+
+        rows = []
+        for (kind, res_id), row in materials.items():
+            sample = self.env['construction.material.need'].browse(row['need_ids'][0])
+            product = sample.product_id
+            stock = product.qty_available if product else 0.0
+            shortage = max(row['remaining'] - stock - max(row['ordered'] - row['received'], 0.0), 0.0)
+            rows.append({
+                'key': '%s%s' % (kind, res_id),
+                'product_id': product.id or False,
+                'name': product.display_name if product else _("Produit à choisir"),
+                'category': sample.category_id.display_name or '',
+                'uom': (product.uom_id.name if product else sample.uom_id.name) or '',
+                'planned': row['planned'], 'ordered': row['ordered'],
+                'received': row['received'], 'consumed': row['consumed'],
+                'remaining': row['remaining'], 'gap': row['gap'],
+                'stock': stock, 'shortage': shortage,
+                'unit_cost': product.standard_price if product else 0.0,
+                'planned_cost': row['planned_cost'], 'consumed_cost': row['consumed_cost'],
+                'element_count': len(row['elements'] - {False}),
+                'need_ids': row['need_ids'],
+                'no_product': not product,
+            })
+            rows[-1]['status'], rows[-1]['status_class'] = self._material_status(rows[-1])
+        rows.sort(key=lambda r: (not r['no_product'], -r['planned_cost'], r['name']))
+
+        def ratio(part, whole):
+            return round(100.0 * part / whole, 1) if whole else 0.0
+
+        planned_cost = sum(r['planned_cost'] for r in rows)
+        weight = lambda field: sum(r[field] * r['unit_cost'] for r in rows)
+        return {
+            'project': {'id': self.id, 'name': self.name},
+            'currency': {'symbol': currency.symbol, 'position': currency.position,
+                         'digits': currency.decimal_places},
+            'kpis': {
+                'planned_cost': planned_cost,
+                'consumed_cost': sum(r['consumed_cost'] for r in rows),
+                'material_count': len(rows),
+                'need_count': len(needs),
+                'element_count': len(needs.element_id),
+                # Avancement de l'approvisionnement, pondéré par la valeur
+                'pct_ordered': ratio(weight('ordered'), weight('planned')),
+                'pct_received': ratio(weight('received'), weight('planned')),
+                'pct_consumed': ratio(weight('consumed'), weight('planned')),
+                'no_product': sum(1 for r in rows if r['no_product']),
+                'overrun': sum(1 for r in rows if r['gap'] > 0),
+                'shortage': sum(1 for r in rows if r['shortage'] > 0),
+            },
+            'materials': rows,
+            'groups': {
+                kind: sorted(({'name': name, **vals} for name, vals in data.items()),
+                             key=lambda g: -g['planned_cost'])
+                for kind, data in groups.items()},
+        }
+
+    # ------------------------------------------------------------------
     # Actions
     # ------------------------------------------------------------------
     def action_view_material_needs(self):

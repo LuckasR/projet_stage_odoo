@@ -1,0 +1,125 @@
+// Rapport PDF des besoins en matériaux (wkhtmltopdf : tableaux plutôt que
+// flexbox, border-collapse « separate » pour éviter les traits fantômes).
+$mmr-navy: #1b2a41;
+$mmr-ocre: #e8a317;
+$mmr-muted: #6b7280;
+$mmr-line: #e5e7eb;
+$mmr-soft: #f7f8fa;
+$mmr-bad: #b91c1c;
+
+.o_mmr {
+    font-size: 8.5pt;
+
+    h2 { margin-bottom: 2px; }
+    h3 {
+        font-size: 10.5pt;
+        font-weight: 700;
+        color: $mmr-navy;
+        text-transform: uppercase;
+        letter-spacing: .6px;
+        margin: 16px 0 6px;
+        padding-bottom: 3px;
+        border-bottom: 2px solid $mmr-ocre;
+    }
+    .o_mmr_subtitle { color: $mmr-muted; margin-bottom: 12px; }
+    .o_mmr_muted { color: $mmr-muted; font-size: 7.5pt; }
+    .o_mmr_bad { color: $mmr-bad; }
+    .o_mmr_block { page-break-inside: avoid; }
+
+    table.o_mmr_kpis, table.o_mmr_groups, table.o_mmr_steps, table.o_mmr_alerts,
+    table.o_mmr_bar_head, table.o_mmr_list {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        border: none;
+        td { border: none; }
+    }
+
+    // Synthèse
+    table.o_mmr_kpis { border-spacing: 8px 0; margin: 0 -8px; width: calc(100% + 16px); }
+    td.o_mmr_kpi {
+        width: 33%;
+        vertical-align: top;
+        background: $mmr-soft;
+        padding: 10px 12px;
+        border-top: 3px solid $mmr-line;
+    }
+    td.o_mmr_kpi_main {
+        background: $mmr-navy;
+        color: #fff;
+        border-top-color: $mmr-ocre;
+        .o_mmr_label, .o_mmr_foot { color: rgba(255, 255, 255, .78); }
+        .o_mmr_foot strong { color: #fff; }
+    }
+    .o_mmr_label {
+        font-size: 7pt;
+        font-weight: 700;
+        letter-spacing: .8px;
+        text-transform: uppercase;
+        color: $mmr-muted;
+        margin-bottom: 4px;
+    }
+    .o_mmr_value { font-size: 17pt; font-weight: 700; line-height: 1.2; }
+    .o_mmr_foot { margin-top: 4px; font-size: 8pt; }
+
+    td.o_mmr_step_label { width: 26%; padding: 2px 0; }
+    td.o_mmr_step_bar { padding: 2px 8px; }
+    td.o_mmr_step_value { width: 14%; text-align: right; font-weight: 700; }
+
+    .o_mmr_track { height: 7px; background: $mmr-line; border-radius: 3px; overflow: hidden; }
+    .o_mmr_fill {
+        height: 7px;
+        border-radius: 3px;
+        &.is-ordered  { background: #c9d6ec; }
+        &.is-received { background: #5b7bb4; }
+        &.is-consumed { background: $mmr-navy; }
+    }
+
+    table.o_mmr_alerts td { padding: 2px 0; color: $mmr-muted; }
+    td.o_mmr_alert_count { width: 26px; font-weight: 700; }
+    table.o_mmr_alerts tr.is-on td { color: $mmr-bad; }
+    table.o_mmr_alerts tr.is-warn td { color: #b45309; }
+
+    // Tableau des matériaux
+    table.o_mmr_table {
+        td, th { padding: 4px 6px !important; vertical-align: middle; }
+        tr.o_mmr_total td {
+            font-weight: 700;
+            border-top: 2px solid $mmr-navy;
+            background: $mmr-soft;
+        }
+    }
+    .o_mmr_badge {
+        display: inline-block;
+        padding: 1px 6px;
+        border-radius: 8px;
+        font-size: 7pt;
+        font-weight: 700;
+        white-space: nowrap;
+        background: #f1f3f5;
+        color: $mmr-muted;
+        &.is-ok   { background: #ecfdf5; color: #15803d; }
+        &.is-bad  { background: #fef2f2; color: $mmr-bad; }
+        &.is-warn { background: #fffbeb; color: #b45309; }
+        &.is-info { background: #eff6ff; color: #1d4ed8; }
+    }
+
+    // Répartitions et points d'attention
+    td.o_mmr_group { width: 33%; vertical-align: top; padding: 0 22px 0 0 !important; }
+    td.o_mmr_group:last-child { padding-right: 0 !important; }
+    .o_mmr_group_title {
+        font-weight: 700;
+        color: $mmr-navy;
+        margin-bottom: 6px;
+    }
+    .o_mmr_bar { margin-bottom: 7px; page-break-inside: avoid; }
+    table.o_mmr_bar_head td { padding: 0 0 2px; }
+    table.o_mmr_list td { padding: 3px 0; border-bottom: 1px solid $mmr-line !important; }
+
+    .o_mmr_note {
+        margin-top: 14px;
+        font-size: 7pt;
+        color: $mmr-muted;
+        font-style: italic;
+    }
+}

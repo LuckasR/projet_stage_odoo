@@ -21,6 +21,7 @@ class MrpBom(models.Model):
     besoins matériaux des phases (cf. construction.material.need)."""
     _inherit = 'mrp.bom'
 
+    # Pour etre proposer dans la gabarit de phase 
     construction_ok = fields.Boolean(
         "Recette de chantier",
         help="Proposée sur les phases des gabarits et des types d'éléments.")
