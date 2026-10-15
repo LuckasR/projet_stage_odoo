@@ -36,8 +36,19 @@ nomenclatures natives d'Odoo (mrp.bom) et les catégories de matériaux
         'wizard/need_purchase_wizard_views.xml',
         'wizard/need_consume_wizard_views.xml',
         'views/menu_views.xml',
+        'report/material_needs_report.xml',
         'data/default_boms.xml',
     ],
+    'assets': {
+        'web.report_assets_common': [
+            'miro_construction_bom/static/src/scss/report_material_needs.scss',
+        ],
+        'web.assets_backend': [
+            'miro_construction_bom/static/src/material_dashboard/material_dashboard.js',
+            'miro_construction_bom/static/src/material_dashboard/material_dashboard.xml',
+            'miro_construction_bom/static/src/material_dashboard/material_dashboard.scss',
+        ],
+    },
     'installable': True,
     'application': False,
     'auto_install': False,

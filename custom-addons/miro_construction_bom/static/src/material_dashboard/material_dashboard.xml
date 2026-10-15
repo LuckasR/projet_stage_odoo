@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="miro_construction_bom.MaterialDashboard">
+        <div class="o_mm">
+            <div t-if="state.loading and !state.data" class="o_mm_loading">
+                <i class="fa fa-circle-o-notch fa-spin"/> Chargement des besoins…
+            </div>
+
+            <t t-if="state.data">
+                <!-- ═══════════════ EN-TÊTE ═══════════════ -->
+                <header class="o_mm_header">
+                    <div class="o_mm_heading">
+                        <span class="o_mm_eyebrow">
+                            <i class="fa fa-cubes"/>
+                            <span>Besoins en matériaux</span>
+                        </span>
+                        <h1>
+                            <a href="#" t-on-click.prevent="openProject" t-esc="state.data.project.name"/>
+                        </h1>
+                        <div class="o_mm_subtitle">
+                            <t t-esc="kpis.material_count"/> matériaux ·
+                            <t t-esc="kpis.need_count"/> besoins ·
+                            <t t-esc="kpis.element_count"/> éléments de construction
+                        </div>
+                    </div>
+                    <div class="o_mm_actions">
+                        <button class="o_mm_btn" t-on-click="refreshNeeds" title="Recalcule les besoins des phases non commencées">
+                            <i class="fa fa-refresh"/><span>Recalculer</span>
+                        </button>
+                        <button class="o_mm_btn" t-on-click="openAllNeeds">
+                            <i class="fa fa-list"/><span>Liste détaillée</span>
+                        </button>
+                        <button class="o_mm_btn" t-on-click="printReport" title="État, approvisionnement et répartitions en PDF">
+                            <i class="fa fa-file-pdf-o"/><span>Rapport PDF</span>
+                        </button>
+                        <button class="o_mm_btn o_mm_btn_primary" t-on-click="purchase">
+                            <i class="fa fa-shopping-cart"/><span>Demandes de prix</span>
+                        </button>
+                    </div>
+                </header>
+
+                <!-- ═══════════════ INDICATEURS ═══════════════ -->
+                <section class="o_mm_kpis">
+                    <div class="o_mm_kpi o_mm_kpi_main">
+                        <div class="o_mm_kpi_label">Coût matériaux prévu</div>
+                        <div class="o_mm_kpi_value" t-esc="money(kpis.planned_cost)"/>
+                        <div class="o_mm_kpi_foot">
+                            Déjà consommé : <strong t-esc="money(kpis.consumed_cost)"/>
+                        </div>
+                    </div>
+
+                    <div class="o_mm_kpi">
+                        <div class="o_mm_kpi_label">Approvisionnement</div>
+                        <div class="o_mm_steps">
+                            <div class="o_mm_step">
+                                <span class="o_mm_step_label">Commandé</span>
+                                <div class="o_mm_step_track"><div class="o_mm_step_fill is-ordered" t-attf-style="width: {{ kpis.pct_ordered }}%"/></div>
+                                <span class="o_mm_step_value" t-esc="pct(kpis.pct_ordered)"/>
+                            </div>
+                            <div class="o_mm_step">
+                                <span class="o_mm_step_label">Reçu</span>
+                                <div class="o_mm_step_track"><div class="o_mm_step_fill is-received" t-attf-style="width: {{ kpis.pct_received }}%"/></div>
+                                <span class="o_mm_step_value" t-esc="pct(kpis.pct_received)"/>
+                            </div>
+                            <div class="o_mm_step">
+                                <span class="o_mm_step_label">Consommé</span>
+                                <div class="o_mm_step_track"><div class="o_mm_step_fill is-consumed" t-attf-style="width: {{ kpis.pct_consumed }}%"/></div>
+                                <span class="o_mm_step_value" t-esc="pct(kpis.pct_consumed)"/>
+                            </div>
+                        </div>
+                        <div class="o_mm_kpi_foot">Pondéré par la valeur des matériaux</div>
+                    </div>
+
+                    <div class="o_mm_kpi">
+                        <div class="o_mm_kpi_label">Points d'attention</div>
+                        <div class="o_mm_alerts">
+                            <button class="o_mm_alert" t-att-class="{'is-on': kpis.shortage}" t-on-click="() => this.setFilter('shortage')">
+                                <span class="o_mm_alert_count" t-esc="kpis.shortage"/>
+                                <span>Stock insuffisant</span>
+                            </button>
+                            <button class="o_mm_alert" t-att-class="{'is-on': kpis.overrun}" t-on-click="() => this.setFilter('overrun')">
+                                <span class="o_mm_alert_count" t-esc="kpis.overrun"/>
+                                <span>Surconsommation</span>
+                            </button>
+                            <button class="o_mm_alert is-warn" t-att-class="{'is-on': kpis.no_product}" t-on-click="() => this.setFilter('no_product')">
+                                <span class="o_mm_alert_count" t-esc="kpis.no_product"/>
+                                <span>Produit à choisir</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ═══════════════ CORPS ═══════════════ -->
+                <div class="o_mm_body">
+                    <!-- Matériaux -->
+                    <section class="o_mm_panel o_mm_main">
+                        <div class="o_mm_panel_head">
+                            <div class="o_mm_chips">
+                                <t t-foreach="filters" t-as="f" t-key="f.key">
+                                    <button class="o_mm_chip" t-att-class="{'is-active': state.filter === f.key}"
+                                            t-on-click="() => this.setFilter(f.key)">
+                                        <t t-esc="f.label"/>
+                                        <span class="o_mm_chip_count" t-esc="filterCount(f.key)"/>
+                                    </button>
+                                </t>
+                            </div>
+                            <div class="o_mm_search">
+                                <i class="fa fa-search"/>
+                                <input type="text" placeholder="Rechercher un matériau…"
+                                       t-att-value="state.search" t-on-input="onSearch"/>
+                            </div>
+                        </div>
+
+                        <div t-if="!rows.length" class="o_mm_empty">
+                            <i class="fa fa-inbox"/>
+                            <div t-if="state.data.materials.length">Aucun matériau ne correspond à ce filtre.</div>
+                            <div t-else="">Aucun besoin pour ce projet : générez les éléments et leurs phases,
+                                et vérifiez que les phases ont une nomenclature.</div>
+                        </div>
+
+                        <table t-else="" class="o_mm_table">
+                            <thead>
+                                <tr>
+                                    <th>Matériau</th>
+                                    <th class="text-end">Prévu</th>
+                                    <th class="o_mm_col_pipe">Approvisionnement</th>
+                                    <th class="text-end">Stock</th>
+                                    <th class="text-end">Écart</th>
+                                    <th class="text-end">Coût prévu</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="rows" t-as="row" t-key="row.key">
+                                    <t t-set="pipe" t-value="pipeline(row)"/>
+                                    <t t-set="status" t-value="rowStatus(row)"/>
+                                    <tr t-on-click="() => this.openNeeds(row)" title="Voir le détail des besoins">
+                                        <td>
+                                            <div class="o_mm_mat">
+                                                <span class="o_mm_dot" t-att-class="status.cls"/>
+                                                <div>
+                                                    <a t-if="row.product_id" href="#" class="o_mm_mat_name"
+                                                       t-on-click.prevent="(ev) => this.openProduct(row, ev)" t-esc="row.name"/>
+                                                    <span t-else="" class="o_mm_mat_name is-missing" t-esc="row.name"/>
+                                                    <div class="o_mm_mat_meta">
+                                                        <span t-if="row.category and row.category !== row.name" class="o_mm_tag" t-esc="row.category"/>
+                                                        <span t-esc="row.element_count"/> élément(s)
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="text-end o_mm_num">
+                                            <strong t-esc="qty(row.planned)"/>
+                                            <span class="o_mm_uom" t-esc="row.uom"/>
+                                        </td>
+                                        <td class="o_mm_col_pipe">
+                                            <div class="o_mm_pipe">
+                                                <div class="o_mm_pipe_seg is-consumed" t-attf-style="width: {{ pipe.consumed }}%"/>
+                                                <div class="o_mm_pipe_seg is-received" t-attf-style="width: {{ pipe.received }}%"/>
+                                                <div class="o_mm_pipe_seg is-ordered" t-attf-style="width: {{ pipe.ordered }}%"/>
+                                                <div class="o_mm_pipe_mark" t-attf-style="left: {{ pipe.plannedMark }}%"/>
+                                            </div>
+                                            <div class="o_mm_pipe_legend">
+                                                <span class="o_mm_badge" t-att-class="status.cls" t-esc="status.label"/>
+                                                <span>Cmd <t t-esc="qty(row.ordered)"/></span>
+                                                <span>Reçu <t t-esc="qty(row.received)"/></span>
+                                                <span>Conso <t t-esc="qty(row.consumed)"/></span>
+                                            </div>
+                                        </td>
+                                        <td class="text-end o_mm_num">
+                                            <t t-esc="qty(row.stock)"/>
+                                            <div t-if="row.shortage &gt; 0" class="o_mm_short">
+                                                manque <t t-esc="qty(row.shortage)"/>
+                                            </div>
+                                        </td>
+                                        <td class="text-end o_mm_num">
+                                            <span t-if="row.gap &gt; 0" class="o_mm_gap is-bad">+<t t-esc="qty(row.gap)"/></span>
+                                            <span t-elif="row.consumed" class="o_mm_gap is-ok">
+                                                <t t-esc="qty(row.consumed - row.planned)"/>
+                                            </span>
+                                            <span t-else="" class="o_mm_muted">—</span>
+                                        </td>
+                                        <td class="text-end o_mm_num">
+                                            <strong t-esc="money(row.planned_cost)"/>
+                                            <div t-if="row.unit_cost" class="o_mm_muted">
+                                                <t t-esc="money(row.unit_cost)"/> / <t t-esc="row.uom"/>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+
+                        <div class="o_mm_legend">
+                            <span><i class="o_mm_sw is-consumed"/>Consommé</span>
+                            <span><i class="o_mm_sw is-received"/>Reçu, en stock</span>
+                            <span><i class="o_mm_sw is-ordered"/>Commandé, à recevoir</span>
+                            <span><i class="o_mm_sw is-mark"/>Quantité prévue</span>
+                        </div>
+                    </section>
+
+                    <!-- Répartition -->
+                    <aside class="o_mm_panel o_mm_side">
+                        <div class="o_mm_panel_title">Répartition du coût</div>
+                        <div class="o_mm_tabs">
+                            <t t-foreach="groupTabs" t-as="g" t-key="g.key">
+                                <button class="o_mm_tab" t-att-class="{'is-active': state.group === g.key}"
+                                        t-on-click="() => this.setGroup(g.key)" t-esc="g.label"/>
+                            </t>
+                        </div>
+                        <div t-if="!groupRows.length" class="o_mm_muted o_mm_side_empty">Aucune donnée.</div>
+                        <t t-foreach="groupRows" t-as="g" t-key="g.name">
+                            <div class="o_mm_bar">
+                                <div class="o_mm_bar_head">
+                                    <span class="o_mm_bar_name" t-esc="g.name"/>
+                                    <span class="o_mm_bar_value" t-esc="money(g.planned_cost)"/>
+                                </div>
+                                <div class="o_mm_bar_track">
+                                    <div class="o_mm_bar_fill" t-attf-style="width: {{ g.width }}%">
+                                        <div class="o_mm_bar_done" t-attf-style="width: {{ g.consumedWidth }}%"/>
+                                    </div>
+                                </div>
+                                <div class="o_mm_bar_foot">
+                                    <t t-esc="g.count"/> besoin(s) · consommé <t t-esc="pct(g.consumedWidth)"/>
+                                </div>
+                            </div>
+                        </t>
+                    </aside>
+                </div>
+            </t>
+        </div>
+    </t>
+
+</templates>

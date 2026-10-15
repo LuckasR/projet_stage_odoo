@@ -1,0 +1,256 @@
+// Mise en page « Miro Construction » : structure, typographie, espacements.
+// Les couleurs viennent de la société (cf. styles_company_report_miro) ;
+// seuls les gris neutres sont fixés ici.
+// wkhtmltopdf (QtWebKit) : pas de variables CSS ni de flexbox fiable.
+
+// Odoo ne déclare que la graisse normale de Montserrat (web/static/fonts) :
+// on ajoute les graisses grasses, livrées avec les mêmes fichiers.
+@font-face {
+    font-family: 'Montserrat';
+    src: url('/web/static/fonts/google/Montserrat/Montserrat-SemiBold.ttf') format('truetype');
+    font-weight: 600;
+    font-style: normal;
+}
+@font-face {
+    font-family: 'Montserrat';
+    src: url('/web/static/fonts/google/Montserrat/Montserrat-Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+}
+@font-face {
+    font-family: 'Montserrat';
+    src: url('/web/static/fonts/google/Montserrat/Montserrat-ExtraBold.ttf') format('truetype');
+    font-weight: 800;
+    font-style: normal;
+}
+
+$miro-text: #2B2B2B;
+$miro-muted: #6B7280;
+$miro-line: #E5E7EB;
+$miro-light: #F7F8FA;
+
+.o_miro_header {
+    font-size: 9pt;
+    color: $miro-text;
+
+    .miro-header-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        border: none !important;
+        td { vertical-align: middle; padding: 0; border: none !important; }
+    }
+    .miro-brand { width: 50%; }
+    .miro-logo { max-height: 64px; max-width: 260px; }
+    .miro-wordmark {
+        font-family: 'Montserrat', sans-serif;
+        line-height: 1;
+        .miro-wordmark-main {
+            display: block;
+            font-size: 28pt;
+            font-weight: 800 !important;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .miro-wordmark-sub {
+            display: block;
+            font-size: 9.5pt;
+            font-weight: 700;
+            letter-spacing: 6.5px;
+            text-transform: uppercase;
+            margin-top: 3px;
+        }
+    }
+    .miro-tagline {
+        margin-top: 5px;
+        font-size: 8pt;
+        font-style: italic;
+        color: $miro-muted;
+    }
+    .miro-company-info {
+        width: 50%;
+        text-align: right;
+        line-height: 1.45;
+        color: $miro-muted;
+        .miro-company-name {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 11pt;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+    }
+    .miro-header-rule {
+        margin-top: 10px;
+        .miro-rule-primary { height: 4px; }
+        .miro-rule-secondary { height: 2px; margin-top: 2px; width: 32%; }
+    }
+}
+
+.o_report_layout_miro {
+    font-size: 9.5pt;
+    color: $miro-text;
+
+    h1, h2, h3 {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700 !important;
+    }
+    h2 {
+        font-size: 17pt;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin: 6px 0 14px 0;
+    }
+
+    // Destinataire / adresse complémentaire : cartes étiquetées
+    .miro-address-zone { margin-bottom: 14px; }
+    .address [name="address"], .address [name="information_block"] {
+        background-color: $miro-light;
+        padding: 10px 14px;
+        line-height: 1.45;
+        address { margin-bottom: 0; }
+    }
+    .address [name="address"]::before, .address [name="information_block"]::before {
+        display: block;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 7.5pt;
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        margin-bottom: 4px;
+    }
+    .address [name="address"]::before { content: "DESTINATAIRE"; }
+    .address [name="information_block"]::before { content: "INFORMATIONS"; }
+
+    // Bloc des dates / références : une carte par information
+    #informations {
+        margin-left: 0;
+        margin-right: 0;
+        > div {
+            background-color: $miro-light;
+            padding: 7px 10px !important;
+            margin-right: 6px;
+            margin-bottom: 6px !important;
+            min-width: 22%;
+            strong {
+                display: block;
+                font-size: 7.5pt;
+                text-transform: uppercase;
+                letter-spacing: 0.8px;
+            }
+        }
+    }
+
+    // Tableau des lignes
+    table.o_main_table, table.table {
+        border-collapse: collapse;
+        margin-top: 10px;
+        thead tr th {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 8pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            padding: 7px 8px !important;
+            border: none !important;
+        }
+        tbody tr td {
+            padding: 6px 8px !important;
+            border-bottom: 1px solid $miro-line;
+        }
+        tbody tr:nth-child(even):not(.o_line_section):not(.is-subtotal) td {
+            background-color: $miro-light;
+        }
+        tbody tr.o_line_section td {
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        tbody tr.o_line_note td { color: $miro-muted; }
+        tbody tr.is-subtotal td {
+            font-weight: 700;
+            border-bottom: 2px solid $miro-line;
+        }
+    }
+
+    // Totaux
+    #total table, .totals_taxes_company_currency table {
+        margin-top: 4px;
+        td { padding: 6px 10px !important; border: none; }
+        tr.o_total td {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 11pt;
+            font-weight: 700;
+            padding: 9px 10px !important;
+        }
+    }
+
+    // Montant en lettres, banque, signature (facture)
+    .miro-amount-words {
+        background-color: $miro-light;
+        padding: 8px 12px;
+        margin: 6px 0 12px 0;
+        font-size: 9pt;
+        text-align: left;
+        strong { display: block; font-size: 7.5pt; letter-spacing: 1px; text-transform: uppercase; }
+    }
+    .miro-bottom {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        border: none !important;
+        margin-top: 10px;
+        page-break-inside: avoid;
+        td { vertical-align: top; padding: 0; border: none !important; }
+    }
+    .miro-bank {
+        background-color: $miro-light;
+        padding: 9px 14px;
+        width: 52%;
+        margin-bottom: 10px;
+        line-height: 1.55;
+        .miro-bank-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 7.5pt;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            margin-bottom: 3px;
+        }
+    }
+    .miro-signature {
+        border: 1px dashed #B8BEC8;
+        height: 82px;
+        padding: 9px 14px;
+        line-height: 1.55;
+        .miro-signature-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 7.5pt;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            margin-bottom: 3px;
+        }
+    }
+    [name="comment"], [name="payment_term"], #payment_terms_note_id {
+        font-size: 8.5pt;
+    }
+}
+
+.o_miro_footer {
+    font-size: 7.5pt;
+    color: $miro-muted;
+    .miro-footer-rule { height: 2px; margin-bottom: 6px; }
+    .miro-footer-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        border: none !important;
+        td { vertical-align: top; padding: 0 6px 0 0; line-height: 1.5; border: none !important; }
+    }
+    .miro-footer-legal { width: 45%; strong { font-size: 8.5pt; } }
+    .miro-footer-contact { width: 35%; }
+    .miro-footer-page {
+        width: 20%;
+        text-align: right;
+        font-weight: 700;
+        .miro-footer-docname { font-weight: 400; }
+    }
+    .miro-footer-custom { margin-top: 4px; text-align: center; }
+}

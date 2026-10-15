@@ -544,10 +544,22 @@ class ConstructionAnalysisExecution(models.Model):
             # brouillons et éléments (cf. construction.wall._sync_elements).
             walls = self._apply_profile_to_walls(self.env['construction.wall'].search([
                 ('project_id', '=', self.project_id.id)]), profile)
+            # Validés mais pas encore générés aussi : la génération recopie
+            # le brouillon dans l'élément.
             pending = self.env['construction.element.draft'].search([
-                ('project_id', '=', self.project_id.id), ('state', '=', 'pending')])
+                ('project_id', '=', self.project_id.id),
+                ('state', 'in', ('pending', 'validated'))])
             completed = pending._apply_structure_profile(
                 profile, self.file_id.display_name)
+            # Et les éléments déjà générés : un poteau ou une semelle validés
+            # avant l'import du plan de détail n'auraient sinon jamais de
+            # hauteur, donc ni béton, ni coffrage, ni besoins en matériaux.
+            heightened = self.env['construction.element'].search([
+                ('project_id', '=', self.project_id.id),
+                ('element_type_id.code', 'in',
+                 list(set(STOREY_HEIGHT_TYPES) | set(PROFILE_SECTIONS) | {'dalle'})),
+                ('opening_id', '=', False),
+            ])._apply_structure_profile(profile)
             completed |= walls.draft_ids.filtered(lambda d: d.state == 'pending')
             openings, unmatched = self._apply_profile_openings(self.project_id, profile)
             completed |= openings.draft_ids.filtered(lambda d: d.state == 'pending')
@@ -565,6 +577,9 @@ class ConstructionAnalysisExecution(models.Model):
         body = _("Profil structurel relevé. %d brouillon(s) en attente complété(s), "
                  "%d mur(s) ont reçu leur hauteur, %d ouverture(s) leur hauteur, "
                  "allège et nature.") % (len(completed), len(walls), len(openings))
+        if self.project_id and heightened:
+            body += " " + _("%d élément(s) déjà générés (poteaux, semelles, "
+                            "longrines...) complétés par ce plan.") % len(heightened)
         if unmatched:
             body += " " + _(
                 "Ouvertures des coupes sans correspondance sur les plans du "
@@ -727,3 +742,4 @@ class ConstructionElementDraftProfile(models.Model):
         parts.append(_("Complété par le plan de détail %s : %s") % (
             source, ", ".join("%s=%.2f m" % (k, v) for k, v in sorted(filled.items()))))
         return " ; ".join(parts)
+

@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- A4 paysage : le tableau d'approvisionnement compte 11 colonnes -->
+    <record id="paperformat_material_needs" model="report.paperformat">
+        <field name="name">A4 paysage — besoins en matériaux</field>
+        <field name="default" eval="False"/>
+        <field name="format">A4</field>
+        <field name="page_height">0</field>
+        <field name="page_width">0</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">40</field>
+        <field name="margin_bottom">28</field>
+        <field name="margin_left">7</field>
+        <field name="margin_right">7</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">35</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <record id="action_report_material_needs" model="ir.actions.report">
+        <field name="name">Rapport des besoins en matériaux</field>
+        <field name="model">project.project</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">miro_construction_bom.report_material_needs</field>
+        <field name="report_file">miro_construction_bom.report_material_needs</field>
+        <field name="print_report_name">'Besoins matériaux - %s' % object.name</field>
+        <field name="paperformat_id" ref="paperformat_material_needs"/>
+        <field name="binding_model_id" ref="project.model_project_project"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_material_needs">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <t t-set="d" t-value="o.get_material_dashboard()"/>
+                    <t t-set="k" t-value="d['kpis']"/>
+                    <t t-set="cur" t-value="o.company_id.currency_id or o.env.company.currency_id"/>
+                    <t t-set="money" t-value="{'widget': 'monetary', 'display_currency': cur}"/>
+                    <t t-set="num" t-value="{'widget': 'float', 'precision': 2}"/>
+
+                    <div class="page o_mmr">
+                        <!-- Titre -->
+                        <h2>Rapport des besoins en matériaux</h2>
+                        <div class="o_mmr_subtitle">
+                            <strong t-esc="o.name"/>
+                            · <t t-esc="k['material_count']"/> matériaux
+                            · <t t-esc="k['need_count']"/> besoins
+                            · <t t-esc="k['element_count']"/> éléments de construction
+                            · édité le <t t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y à %H:%M')"/>
+                        </div>
+
+                        <!-- ===================== SYNTHÈSE ===================== -->
+                        <table class="o_mmr_kpis">
+                            <tr>
+                                <td class="o_mmr_kpi o_mmr_kpi_main">
+                                    <div class="o_mmr_label">Coût matériaux prévu</div>
+                                    <div class="o_mmr_value" t-esc="k['planned_cost']" t-options="money"/>
+                                    <div class="o_mmr_foot">Déjà consommé :
+                                        <strong t-esc="k['consumed_cost']" t-options="money"/></div>
+                                </td>
+                                <td class="o_mmr_kpi">
+                                    <div class="o_mmr_label">Approvisionnement (pondéré par la valeur)</div>
+                                    <table class="o_mmr_steps">
+                                        <t t-foreach="[('Commandé', k['pct_ordered'], 'ordered'), ('Reçu', k['pct_received'], 'received'), ('Consommé', k['pct_consumed'], 'consumed')]" t-as="step">
+                                            <tr>
+                                                <td class="o_mmr_step_label" t-esc="step[0]"/>
+                                                <td class="o_mmr_step_bar">
+                                                    <div class="o_mmr_track">
+                                                        <div t-attf-class="o_mmr_fill is-#{step[2]}" t-attf-style="width: #{min(step[1], 100)}%;"/>
+                                                    </div>
+                                                </td>
+                                                <td class="o_mmr_step_value"><t t-esc="int(round(step[1]))"/> %</td>
+                                            </tr>
+                                        </t>
+                                    </table>
+                                </td>
+                                <td class="o_mmr_kpi">
+                                    <div class="o_mmr_label">Points d'attention</div>
+                                    <table class="o_mmr_alerts">
+                                        <tr t-att-class="'is-on' if k['shortage'] else ''">
+                                            <td class="o_mmr_alert_count" t-esc="k['shortage']"/><td>matériau(x) en stock insuffisant</td>
+                                        </tr>
+                                        <tr t-att-class="'is-on' if k['overrun'] else ''">
+                                            <td class="o_mmr_alert_count" t-esc="k['overrun']"/><td>matériau(x) en surconsommation</td>
+                                        </tr>
+                                        <tr t-att-class="'is-warn' if k['no_product'] else ''">
+                                            <td class="o_mmr_alert_count" t-esc="k['no_product']"/><td>besoin(s) sans produit choisi</td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- ===================== ÉTAT PAR MATÉRIAU ===================== -->
+                        <h3>1. État de l'approvisionnement par matériau</h3>
+                        <table class="table table-sm o_main_table o_mmr_table">
+                            <thead>
+                                <tr>
+                                    <th class="text-start">Matériau</th>
+                                    <th class="text-start">État</th>
+                                    <th class="text-end">Prévu</th>
+                                    <th class="text-end">Commandé</th>
+                                    <th class="text-end">Reçu</th>
+                                    <th class="text-end">Consommé</th>
+                                    <th class="text-end">Reste</th>
+                                    <th class="text-end">Stock</th>
+                                    <th class="text-end">Manque</th>
+                                    <th class="text-end">Écart</th>
+                                    <th class="text-end">Coût prévu</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="d['materials']" t-as="r">
+                                    <td>
+                                        <strong t-esc="r['name']"/>
+                                        <div t-if="r['category'] and r['category'] != r['name']" class="o_mmr_muted" t-esc="r['category']"/>
+                                    </td>
+                                    <td><span t-attf-class="o_mmr_badge is-#{r['status_class']}" t-esc="r['status']"/></td>
+                                    <td class="text-end text-nowrap"><t t-esc="r['planned']" t-options="num"/> <span class="o_mmr_muted" t-esc="r['uom']"/></td>
+                                    <td class="text-end" t-esc="r['ordered']" t-options="num"/>
+                                    <td class="text-end" t-esc="r['received']" t-options="num"/>
+                                    <td class="text-end" t-esc="r['consumed']" t-options="num"/>
+                                    <td class="text-end" t-esc="r['remaining']" t-options="num"/>
+                                    <td class="text-end" t-esc="r['stock']" t-options="num"/>
+                                    <td class="text-end">
+                                        <strong t-if="r['shortage'] &gt; 0" class="o_mmr_bad" t-esc="r['shortage']" t-options="num"/>
+                                        <span t-else="" class="o_mmr_muted">—</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong t-if="r['gap'] &gt; 0" class="o_mmr_bad">+<t t-esc="r['gap']" t-options="num"/></strong>
+                                        <span t-else="" class="o_mmr_muted">—</span>
+                                    </td>
+                                    <td class="text-end text-nowrap"><strong t-esc="r['planned_cost']" t-options="money"/></td>
+                                </tr>
+                                <tr class="o_mmr_total">
+                                    <td colspan="10" class="text-end">Total coût matériaux prévu</td>
+                                    <td class="text-end text-nowrap" t-esc="k['planned_cost']" t-options="money"/>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <!-- ===================== RÉPARTITIONS ===================== -->
+                        <div class="o_mmr_block">
+                            <h3>2. Répartition du coût prévu</h3>
+                            <table class="o_mmr_groups">
+                                <tr>
+                                    <t t-foreach="[('ouvrage', 'Par ouvrage'), ('level', 'Par niveau'), ('phase', 'Par phase')]" t-as="grp">
+                                        <td class="o_mmr_group">
+                                            <div class="o_mmr_group_title" t-esc="grp[1]"/>
+                                            <t t-set="rows" t-value="d['groups'][grp[0]]"/>
+                                            <t t-set="top" t-value="max([g['planned_cost'] for g in rows] or [0]) or 1"/>
+                                            <div t-if="not rows" class="o_mmr_muted">Aucune donnée.</div>
+                                            <div t-foreach="rows" t-as="g" class="o_mmr_bar">
+                                                <table class="o_mmr_bar_head">
+                                                    <tr>
+                                                        <td t-esc="g['name']"/>
+                                                        <td class="text-end text-nowrap"><strong t-esc="g['planned_cost']" t-options="money"/></td>
+                                                    </tr>
+                                                </table>
+                                                <div class="o_mmr_track">
+                                                    <div class="o_mmr_fill is-ordered" t-attf-style="width: #{100.0 * g['planned_cost'] / top}%;">
+                                                        <div class="o_mmr_fill is-consumed" t-attf-style="width: #{min(100.0, 100.0 * g['consumed_cost'] / g['planned_cost']) if g['planned_cost'] else 0}%;"/>
+                                                    </div>
+                                                </div>
+                                                <div class="o_mmr_muted">
+                                                    <t t-esc="g['count']"/> besoin(s)
+                                                    · <t t-esc="int(round(100.0 * g['planned_cost'] / k['planned_cost'])) if k['planned_cost'] else 0"/> % du coût
+                                                    · consommé <t t-esc="int(round(100.0 * g['consumed_cost'] / g['planned_cost'])) if g['planned_cost'] else 0"/> %
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </t>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- ===================== POINTS D'ATTENTION ===================== -->
+                        <t t-set="short_rows" t-value="[r for r in d['materials'] if r['shortage'] &gt; 0]"/>
+                        <t t-set="over_rows" t-value="[r for r in d['materials'] if r['gap'] &gt; 0]"/>
+                        <t t-set="nop_rows" t-value="[r for r in d['materials'] if r['no_product']]"/>
+                        <div class="o_mmr_block" t-if="short_rows or over_rows or nop_rows">
+                            <h3>3. Points d'attention</h3>
+                            <table class="o_mmr_groups">
+                                <tr>
+                                    <td class="o_mmr_group">
+                                        <div class="o_mmr_group_title">Stock insuffisant — à commander</div>
+                                        <div t-if="not short_rows" class="o_mmr_muted">Aucun.</div>
+                                        <table class="o_mmr_list">
+                                            <tr t-foreach="short_rows" t-as="r">
+                                                <td t-esc="r['name']"/>
+                                                <td class="text-end text-nowrap o_mmr_bad">manque <t t-esc="r['shortage']" t-options="num"/> <t t-esc="r['uom']"/></td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td class="o_mmr_group">
+                                        <div class="o_mmr_group_title">Surconsommation</div>
+                                        <div t-if="not over_rows" class="o_mmr_muted">Aucune.</div>
+                                        <table class="o_mmr_list">
+                                            <tr t-foreach="over_rows" t-as="r">
+                                                <td t-esc="r['name']"/>
+                                                <td class="text-end text-nowrap o_mmr_bad">+<t t-esc="r['gap']" t-options="num"/> <t t-esc="r['uom']"/></td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td class="o_mmr_group">
+                                        <div class="o_mmr_group_title">Produit à choisir</div>
+                                        <div t-if="not nop_rows" class="o_mmr_muted">Aucun.</div>
+                                        <table class="o_mmr_list">
+                                            <tr t-foreach="nop_rows" t-as="r">
+                                                <td t-esc="r['category'] or r['name']"/>
+                                                <td class="text-end text-nowrap"><t t-esc="r['planned']" t-options="num"/> <t t-esc="r['uom']"/></td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <p class="o_mmr_note">
+                            Quantités dans l'unité de stock de chaque produit ; coûts au coût unitaire du
+                            produit. « Manque » = reste à consommer − stock disponible − commandes non
+                            encore reçues. « Écart » = consommé au-delà du prévu, phase par phase.
+                        </p>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

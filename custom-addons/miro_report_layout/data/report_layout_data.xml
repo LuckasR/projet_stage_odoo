@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Proposée dans Paramètres > Configurer la mise en page des documents -->
+    <record id="report_layout_miro" model="report.layout">
+        <field name="name">Miro Construction</field>
+        <field name="sequence">1</field>
+        <field name="view_id" ref="miro_report_layout.external_layout_miro"/>
+        <field name="image">/miro_report_layout/static/img/preview_miro.png</field>
+        <field name="pdf">/miro_report_layout/static/img/preview_miro.pdf</field>
+    </record>
+</odoo>
