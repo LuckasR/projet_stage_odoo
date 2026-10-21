@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- ==========================================================================
+         Main Gantt view layout.
+         Wraps the Layout component with SearchBar and the Renderer.
+         The Layout handles the Odoo-standard control panel and search bar.
+         The Renderer is injected into the "default" slot.
+         ========================================================================== -->
+    <t t-name="miro_gantt_view.Gantt.Controller">
+        <div t-att-class="props.className + ' o_gantt_view_view'" t-ref="root">
+            <Layout className="model.useSampleModel ? 'o_view_sample_data' : ''" display="props.display">
+
+                <t t-set-slot="control-panel-create-button">
+                    <button t-if="model.metaData.canCreate"
+                            class="btn btn-primary"
+                            data-hotkey="c"
+                            t-on-click="onAddClicked">
+                        <t t-esc="_titleNew"/>
+                    </button>
+                </t>
+                <!-- Search bar slot: shown when toggled by the user -->
+                <t t-set-slot="layout-actions">
+                    <SearchBar t-if="searchBarToggler.state.showSearchBar"/>
+                </t>
+                <!-- Navigation additional slot: search bar toggle button -->
+                <t t-set-slot="control-panel-navigation-additional">
+                    <t t-component="searchBarToggler.component" t-props="searchBarToggler.props"/>
+                </t>
+                <!-- Main content slot: renders the actual Gantt chart component -->
+                <t t-set-slot="default" t-slot-scope="layout">
+                    <t t-component="props.Renderer"
+                        model="model"
+                    />
+                </t>
+            </Layout>
+        </div>
+    </t>
+</templates>

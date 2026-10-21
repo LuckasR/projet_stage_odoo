@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="gantt_view.DateRangeInput">
+        <div class="d-inline-flex align-items-center gap-1">
+            <input
+                t-ref="start-date"
+                type="text"
+                class="o_datetime_input o_input cursor-pointer"
+                autocomplete="off"
+            />
+            <span class="o_gantt_view_range_sep">→</span>
+            <input
+                t-ref="end-date"
+                type="text"
+                class="o_datetime_input o_input cursor-pointer"
+                autocomplete="off"
+            />
+        </div>
+    </t>
+</templates>

@@ -121,7 +121,7 @@ class MrpBomLine(models.Model):
         "Coefficient", default=1.0, digits=(16, 3),
         help="Pertes ou réemploi : 1,05 = 5 % de pertes ; 0,20 = panneau "
              "réemployé 5 fois.")
-
+        
     @api.depends('product_id')
     def _compute_material_category_id(self):
         for line in self:

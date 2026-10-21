@@ -81,6 +81,9 @@ class ProjectTask(models.Model):
     x_incident_count = fields.Integer(
         compute='_compute_incident_count', string="Nb incidents")
 
+    
+    summary = fields.Text(
+          store=True, string="Summary")
     # ------------------------------------------------------------------
     # Compute
     # ------------------------------------------------------------------

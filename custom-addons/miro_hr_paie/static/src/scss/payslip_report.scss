@@ -1,0 +1,115 @@
+// Bulletin de paie (wkhtmltopdf : tableaux plutôt que flexbox, et
+// border-collapse « separate » pour éviter les traits fantômes).
+$mps-navy: #1b2a41;
+$mps-ocre: #e8a317;
+$mps-muted: #6b7280;
+$mps-line: #e5e7eb;
+$mps-soft: #f7f8fa;
+
+.o_mps {
+    font-size: 9pt;
+
+    h2 { margin-bottom: 2px; }
+    .o_mps_period { color: $mps-muted; margin-bottom: 12px; }
+    .o_mps_draft {
+        margin-left: 10px;
+        padding: 1px 8px;
+        border: 1px solid #b45309;
+        color: #b45309;
+        font-weight: 700;
+        font-size: 8pt;
+        letter-spacing: 1px;
+    }
+    .o_mps_label {
+        display: block;
+        font-size: 7pt;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: $mps-muted;
+        margin-bottom: 3px;
+    }
+
+    table.o_mps_parties, table.o_mps_attendance, table.o_mps_summary,
+    table.o_mps_signatures, table.o_mps_kv {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        border: none;
+        td { border: none; }
+    }
+
+    // Employeur / salarié
+    table.o_mps_parties { border-spacing: 10px 0; margin: 0 -10px 10px; width: calc(100% + 20px); }
+    td.o_mps_party {
+        width: 50%;
+        vertical-align: top;
+        background: $mps-soft;
+        border-left: 4px solid $mps-ocre !important;
+        padding: 9px 12px;
+        line-height: 1.5;
+        strong { color: $mps-navy; font-size: 10pt; }
+    }
+    .o_mps_ids { color: $mps-muted; font-size: 8pt; }
+    table.o_mps_kv td { padding: 1px 0; }
+    table.o_mps_kv td:first-child { color: $mps-muted; width: 38%; }
+
+    // Présences
+    table.o_mps_attendance { border-spacing: 6px 0; margin: 0 -6px 4px; width: calc(100% + 12px); }
+    table.o_mps_attendance td {
+        width: 20%;
+        background: $mps-soft;
+        border-top: 3px solid $mps-navy !important;
+        padding: 6px 9px;
+        strong { font-size: 11pt; color: $mps-navy; }
+    }
+
+    // Rubriques
+    table.o_mps_lines {
+        margin-top: 10px;
+        td, th { padding: 5px 8px !important; }
+        tr.o_mps_subtotal td {
+            font-weight: 700;
+            border-top: 2px solid $mps-navy;
+            background: $mps-soft;
+        }
+    }
+
+    // Net à payer
+    table.o_mps_summary { margin-top: 10px; page-break-inside: avoid; }
+    td.o_mps_summary_left { width: 55%; vertical-align: middle; padding-right: 16px; }
+    table.o_mps_totals td { padding: 3px 0; border-bottom: 1px solid $mps-line !important; }
+    td.o_mps_net {
+        width: 45%;
+        vertical-align: middle;
+        text-align: right;
+        background: $mps-navy;
+        border-top: 4px solid $mps-ocre !important;
+        padding: 12px 16px;
+        .o_mps_label { color: rgba(255, 255, 255, .75); }
+        .o_mps_net_value { color: #fff; font-size: 18pt; font-weight: 700; }
+    }
+    .o_mps_words { margin-top: 10px; }
+
+    // Charges patronales
+    .o_mps_employer {
+        margin-top: 12px;
+        padding: 8px 12px;
+        border: 1px solid $mps-line;
+        font-size: 8pt;
+        page-break-inside: avoid;
+        tr.o_mps_cost td { font-weight: 700; border-top: 1px solid $mps-line !important; padding-top: 3px; }
+    }
+
+    .o_mps_note { margin-top: 10px; font-style: italic; }
+
+    // Signatures
+    table.o_mps_signatures { border-spacing: 16px 0; margin: 18px -16px 0; width: calc(100% + 32px); page-break-inside: avoid; }
+    table.o_mps_signatures td { width: 50%; vertical-align: top; }
+    .o_mps_sign {
+        height: 80px;
+        border: 1px dashed #b8bec8;
+        padding: 8px 12px;
+    }
+    .o_mps_legal { margin-top: 12px; font-size: 7pt; color: $mps-muted; text-align: center; }
+}

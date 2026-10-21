@@ -4,6 +4,31 @@ import { registry } from "@web/core/registry";
 import { Component, useState, onWillStart } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
 
+// Icône d'une phase selon son code (gabarits de phases)
+const PHASE_ICONS = {
+    coffrage: "fa-th-large",
+    ferraillage: "fa-bars",
+    coulage: "fa-tint",
+    decoffrage: "fa-th",
+    elevation: "fa-building-o",
+};
+
+const STATUS = {
+    done: { label: "Terminé", cls: "is-done" },
+    late: { label: "En retard", cls: "is-late" },
+    progress: { label: "En cours", cls: "is-progress" },
+    todo: { label: "À faire", cls: "is-todo" },
+};
+
+/** État d'un nœud : le plus urgent l'emporte (le retard avant l'avancement). */
+function nodeStatus(node) {
+    const progress = node.x_avancement_global || 0;
+    if (progress >= 100) return "done";
+    if (node.x_est_en_retard) return "late";
+    if (progress > 0) return "progress";
+    return "todo";
+}
+
 export class ConstructionTaskNode extends Component {
     static template = "miro_construction_project.TaskNode";
     static props = ["store", "taskId", "depth"];
@@ -16,14 +41,17 @@ export class ConstructionTaskNode extends Component {
         return this.props.store.tasksById[this.props.taskId];
     }
 
+    get allChildIds() {
+        return this.props.store.childrenByParent[this.props.taskId] || [];
+    }
+
     get childIds() {
-        const all = this.props.store.childrenByParent[this.props.taskId] || [];
-        if (!this.props.store.visibleIds) return all;
-        return all.filter((id) => this.props.store.visibleIds.has(id));
+        if (!this.props.store.visibleIds) return this.allChildIds;
+        return this.allChildIds.filter((id) => this.props.store.visibleIds.has(id));
     }
 
     get hasChildren() {
-        return (this.props.store.childrenByParent[this.props.taskId] || []).length > 0;
+        return this.allChildIds.length > 0;
     }
 
     get isExpanded() {
@@ -31,25 +59,58 @@ export class ConstructionTaskNode extends Component {
         return !!this.props.store.expanded[this.props.taskId];
     }
 
+    get isElement() {
+        return this.task.kind === "element";
+    }
+
+    get isOuvrage() {
+        return this.task.kind === "task" && (this.task.is_ouvrage || this.props.depth === 0) && this.hasChildren;
+    }
+
     get roundedProgress() {
         return Math.round(this.task.x_avancement_global || 0);
     }
 
-    get isDone() {
-        return (this.task.x_avancement_global || 0) >= 100;
+    /** Un repère vertical par niveau d'indentation */
+    get indents() {
+        return Array.from({ length: this.props.depth }, (_, i) => i);
     }
 
-    get statusDotClass() {
-        if (this.isDone) return "is-done";
-        if (this.task.x_est_en_retard) return "is-late";
-        if ((this.task.x_avancement_global || 0) > 0) return "is-info";
-        return "is-empty";
+    get status() {
+        return STATUS[nodeStatus(this.task)];
     }
 
-    get progressBarClass() {
-        if (this.isDone) return "is-done";
-        if (this.task.x_est_en_retard) return "is-late";
-        return "";
+    get kindIcon() {
+        if (this.isElement) return "fa-cube";
+        if (this.isOuvrage) return this.isExpanded ? "fa-folder-open" : "fa-folder";
+        return PHASE_ICONS[this.task.phase_type] || "fa-circle-o";
+    }
+
+    get kindClass() {
+        if (this.isElement) return "is-element";
+        if (this.isOuvrage) return "is-ouvrage";
+        return "is-phase";
+    }
+
+    get subtitle() {
+        if (this.isElement) {
+            return [this.task.element_type_id && this.task.element_type_id[1],
+                    this.task.level_id && this.task.level_id[1]].filter((v) => v).join(" · ");
+        }
+        return this.task.x_corps_metier_label || "";
+    }
+
+    get deadline() {
+        const d = this.task.date_deadline;
+        if (!d) return "";
+        const [y, m, day] = d.slice(0, 10).split("-");
+        return `${day}/${m}/${y}`;
+    }
+
+    get deadlinePassed() {
+        const d = this.task.date_deadline;
+        return d && (this.task.x_avancement_global || 0) < 100
+            && new Date(d.slice(0, 10)) < new Date(new Date().toDateString());
     }
 
     toggle(ev) {
@@ -57,10 +118,6 @@ export class ConstructionTaskNode extends Component {
         if (!this.hasChildren) return;
         const id = this.props.taskId;
         this.props.store.expanded[id] = !this.props.store.expanded[id];
-    }
-
-    get isElement() {
-        return this.task.kind === "element";
     }
 
     async openForm() {
@@ -85,6 +142,13 @@ export class ProjectTaskHierarchy extends Component {
     setup() {
         this.orm = useService("orm");
         this.action = useService("action");
+        this.statusFilters = [
+            { key: "all", label: "Toutes", icon: "fa-list-ul" },
+            { key: "progress", label: "En cours", icon: "fa-hourglass-half" },
+            { key: "late", label: "En retard", icon: "fa-exclamation-triangle" },
+            { key: "done", label: "Terminées", icon: "fa-check" },
+            { key: "todo", label: "À faire", icon: "fa-circle-o" },
+        ];
 
         this.store = useState({
             tasksById: {},
@@ -95,14 +159,19 @@ export class ProjectTaskHierarchy extends Component {
             projectName: "",
             loading: true,
             search: "",
+            filter: "all",
             visibleIds: null,
-            stats: { total: 0, done: 0, inProgress: 0, late: 0 },
+            stats: { total: 0, done: 0, progress: 0, late: 0, todo: 0 },
+            counts: { ouvrages: 0, elements: 0, phases: 0 },
             globalProgress: 0,
         });
 
         onWillStart(() => this._loadData());
     }
-        
+
+    // ------------------------------------------------------------------
+    // Affichage
+    // ------------------------------------------------------------------
     get visibleRootIds() {
         if (!this.store.visibleIds) return this.store.rootIds;
         return this.store.rootIds.filter((id) => this.store.visibleIds.has(id));
@@ -112,6 +181,20 @@ export class ProjectTaskHierarchy extends Component {
         return this.store.globalProgress;
     }
 
+    /** Anneau d'avancement : longueur du trait sur la circonférence (r = 42). */
+    get ringDash() {
+        const c = 2 * Math.PI * 42;
+        return `${(c * this.globalProgress) / 100} ${c}`;
+    }
+
+    statCount(key) {
+        return key === "all" ? this.store.stats.total : this.store.stats[key];
+    }
+
+    // ------------------------------------------------------------------
+    // Recherche et filtres : un nœud reste visible s'il correspond, avec
+    // tous ses ancêtres (pour garder le chemin jusqu'à lui).
+    // ------------------------------------------------------------------
     onSearchInput(ev) {
         this.store.search = ev.target.value;
         this._computeVisible();
@@ -119,38 +202,65 @@ export class ProjectTaskHierarchy extends Component {
 
     clearSearch() {
         this.store.search = "";
-        this.store.visibleIds = null;
+        this._computeVisible();
+    }
+
+    setFilter(key) {
+        this.store.filter = this.store.filter === key ? "all" : key;
+        this._computeVisible();
     }
 
     _computeVisible() {
         const q = this.store.search.toLowerCase().trim();
-        if (!q) {
+        const filter = this.store.filter;
+        if (!q && filter === "all") {
             this.store.visibleIds = null;
             return;
         }
         const visible = new Set();
         for (const id in this.store.tasksById) {
-            const task = this.store.tasksById[id];
-            if (task.name && task.name.toLowerCase().includes(q)) {
-                let pid = id;
-                while (pid) {
-                    visible.add(pid);
-                    pid = this.store.parentOf[pid];
-                }
+            const node = this.store.tasksById[id];
+            // Le filtre d'état porte sur les phases (les tâches qui ont un
+            // avancement propre), pas sur les regroupements.
+            const isLeaf = !(this.store.childrenByParent[id] || []).length;
+            if (filter !== "all" && (!isLeaf || nodeStatus(node) !== filter)) continue;
+            if (q && !(node.name || "").toLowerCase().includes(q)) continue;
+            let pid = id;
+            while (pid) {
+                visible.add(pid);
+                pid = this.store.parentOf[pid];
             }
         }
         this.store.visibleIds = visible;
     }
 
+    expandAll() {
+        const expanded = {};
+        for (const id of Object.keys(this.store.tasksById)) expanded[id] = true;
+        this.store.expanded = expanded;
+    }
+
+    collapseAll() {
+        this.store.expanded = {};
+    }
+
+    /** Déplie les ouvrages seulement : on voit leurs éléments, pas les phases. */
+    expandOuvrages() {
+        const expanded = {};
+        for (const id of this.store.rootIds) expanded[id] = true;
+        this.store.expanded = expanded;
+    }
+
+    // ------------------------------------------------------------------
+    // Données
+    // ------------------------------------------------------------------
     async _loadData() {
         const context = (this.props.action && this.props.action.context) || {};
         this.projectId = context.default_project_id || context.active_id || false;
 
         const domain = this.projectId ? [["project_id", "=", this.projectId]] : [];
-        const tasks = await this.orm.searchRead(
-            "project.task",
-            domain,
-            [
+        const [tasks, corpsSelection] = await Promise.all([
+            this.orm.searchRead("project.task", domain, [
                 "name",
                 "parent_id",
                 "construction_element_id",
@@ -158,8 +268,14 @@ export class ProjectTaskHierarchy extends Component {
                 "x_est_en_retard",
                 "x_corps_metier",
                 "x_responsable_technique_id",
-            ]
-        );
+                "is_ouvrage",
+                "phase_type",
+                "date_deadline",
+            ]),
+            this.orm.call("project.task", "fields_get", [["x_corps_metier"]], { attributes: ["selection"] }),
+        ]);
+        const corpsLabels = Object.fromEntries(
+            (corpsSelection.x_corps_metier && corpsSelection.x_corps_metier.selection) || []);
 
         // Éléments de construction : niveau intermédiaire entre l'Ouvrage et
         // ses phases. Une phase a pour parent_id l'Ouvrage (hiérarchie Odoo,
@@ -197,7 +313,7 @@ export class ProjectTaskHierarchy extends Component {
         const parentOf = {};
         const childrenByParent = {};
         const rootIds = [];
-        const stats = { total: 0, done: 0, inProgress: 0, late: 0 };
+        const stats = { total: 0, done: 0, progress: 0, late: 0, todo: 0 };
         let progressSum = 0;
 
         const attach = (nodeId, parentId) => {
@@ -229,9 +345,16 @@ export class ProjectTaskHierarchy extends Component {
             attach(`e${element.id}`, ouvrage && taskIds.has(ouvrage) ? `t${ouvrage}` : null);
         }
 
+        let phases = 0;
+        let ouvrages = 0;
         for (const task of tasks) {
             const nodeId = `t${task.id}`;
-            tasksById[nodeId] = { ...task, kind: "task", resId: task.id };
+            tasksById[nodeId] = {
+                ...task,
+                kind: "task",
+                resId: task.id,
+                x_corps_metier_label: corpsLabels[task.x_corps_metier] || "",
+            };
             const elementNode = task.construction_element_id
                 && `e${task.construction_element_id[0]}`;
             let parentId = null;
@@ -240,6 +363,8 @@ export class ProjectTaskHierarchy extends Component {
                 parentId = `t${task.parent_id[0]}`;
             }
             attach(nodeId, parentId);
+            if (task.is_ouvrage) ouvrages++;
+            if (task.construction_element_id) phases++;
 
             // Une phase en retard met son élément en retard.
             if (parentId === elementNode && task.x_est_en_retard
@@ -248,16 +373,11 @@ export class ProjectTaskHierarchy extends Component {
             }
 
             stats.total++;
-            const progress = task.x_avancement_global || 0;
-            progressSum += progress;
-
-            if (progress >= 100) stats.done++;
-            else if (task.x_est_en_retard) stats.late++;
-            else if (progress > 0) stats.inProgress++;
+            progressSum += task.x_avancement_global || 0;
+            stats[nodeStatus(task)]++;
         }
 
         // Avancement global = moyenne de l'avancement de toutes les tâches.
-        // (Mettre sur les tâches racines seulement est une alternative métier.)
         const globalProgress = stats.total
             ? Math.round(progressSum / stats.total)
             : 0;
@@ -267,6 +387,7 @@ export class ProjectTaskHierarchy extends Component {
         this.store.childrenByParent = childrenByParent;
         this.store.rootIds = rootIds;
         this.store.stats = stats;
+        this.store.counts = { ouvrages, elements: elements.length, phases };
         this.store.globalProgress = globalProgress;
         this.store.loading = false;
 
@@ -278,14 +399,18 @@ export class ProjectTaskHierarchy extends Component {
         }
     }
 
-    expandAll() {
-        const expanded = {};
-        for (const id of Object.keys(this.store.tasksById)) expanded[id] = true;
-        this.store.expanded = expanded;
-    }
-
-    collapseAll() {
-        this.store.expanded = {};
+    // ------------------------------------------------------------------
+    // Actions
+    // ------------------------------------------------------------------
+    openProject() {
+        if (!this.projectId) return;
+        this.action.doAction({
+            type: "ir.actions.act_window",
+            res_model: "project.project",
+            res_id: this.projectId,
+            views: [[false, "form"]],
+            target: "current",
+        });
     }
 
     /** Maquette 3D du projet, reconstruite à partir de ses éléments de

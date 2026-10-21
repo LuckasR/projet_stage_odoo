@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_miro_crew_tree" model="ir.ui.view">
+        <field name="name">miro.crew.tree</field>
+        <field name="model">miro.crew</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="composition"/>
+                <field name="headcount"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="hourly_cost"/>
+            </tree>
+        </field>
+    </record>
+    <record id="view_miro_crew_form" model="ir.ui.view">
+        <field name="name">miro.crew.form</field>
+        <field name="model">miro.crew</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="Maçonnerie — petite équipe"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="headcount"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="hourly_cost"/>
+                        </group>
+                        <group>
+                            <field name="active" widget="boolean_toggle"/>
+                            <field name="color" widget="color"/>
+                        </group>
+                    </group>
+                    <field name="line_ids">
+                        <tree editable="bottom">
+                            <field name="trade_id"/>
+                            <field name="quantity"/>
+                            <field name="currency_id" column_invisible="1"/>
+                            <field name="hourly_cost"/>
+                        </tree>
+                    </field>
+                    <field name="note" placeholder="Matériel associé, remarques..."/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_miro_crew" model="ir.actions.act_window">
+        <field name="name">Équipes types</field>
+        <field name="res_model">miro.crew</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+</odoo>

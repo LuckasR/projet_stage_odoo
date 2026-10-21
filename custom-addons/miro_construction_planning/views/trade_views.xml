@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_miro_trade_tree" model="ir.ui.view">
+        <field name="name">miro.trade.tree</field>
+        <field name="model">miro.trade</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="code" optional="show"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="employee_count"/>
+                <field name="computed_hourly_cost"/>
+                <field name="manual_hourly_cost"/>
+                <field name="hourly_cost" decoration-bf="1"/>
+                <field name="active" column_invisible="1"/>
+            </tree>
+        </field>
+    </record>
+    <record id="action_miro_trade" model="ir.actions.act_window">
+        <field name="name">Métiers</field>
+        <field name="res_model">miro.trade</field>
+        <field name="view_mode">tree</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Créer un métier</p>
+            <p>Le coût horaire chargé et l'effectif se calculent depuis les employés
+               du métier (onglet Paie de leur fiche) ; un coût imposé les remplace.</p>
+        </field>
+    </record>
+</odoo>

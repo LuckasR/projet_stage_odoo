@@ -32,7 +32,7 @@ spécifiques de la gestion de chantiers de construction :
     'author': "Votre Entreprise",
     'website': "https://www.example.com",
     'license': 'LGPL-3',
-    'depends': ['project', 'mail', 'queue_job'],
+    'depends': ['project', 'mail', 'queue_job' , 'miro_gantt_view'],
     'data': [
         'security/ir.model.access.csv',
         'data/ir_config_parameter.xml',
@@ -61,6 +61,9 @@ spécifiques de la gestion de chantiers de construction :
             'miro_construction_project/static/src/task_hierarchy/task_hierarchy.scss',
             'miro_construction_project/static/src/viewer_menu/viewer_menu.js',
             'miro_construction_project/static/src/viewer_menu/viewer_menu.xml',
+            'miro_construction_project/static/src/chantier_kanban/chantier_kanban.scss',
+            'miro_construction_project/static/src/phase_element/phase_element.scss',
+            'miro_construction_project/static/src/phase_element/element_metre.scss',
         ],
     },
     'installable': True,

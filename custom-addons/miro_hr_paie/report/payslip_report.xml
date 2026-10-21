@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_payslip" model="ir.actions.report">
+        <field name="name">Bulletin de paie</field>
+        <field name="model">miro.payslip</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">miro_hr_paie.report_payslip</field>
+        <field name="report_file">miro_hr_paie.report_payslip</field>
+        <field name="print_report_name">'Bulletin de paie - %s - %s' % (object.employee_id.name, object.name)</field>
+        <field name="binding_model_id" ref="model_miro_payslip"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_payslip_document">
+        <t t-call="web.external_layout">
+            <t t-set="o" t-value="o.with_context(lang=o.employee_id.lang or o.env.lang)"/>
+            <t t-set="emp" t-value="o.employee_id"/>
+            <t t-set="cur" t-value="o.currency_id"/>
+            <t t-set="money" t-value="{'widget': 'monetary', 'display_currency': cur}"/>
+            <t t-set="num" t-value="{'widget': 'float', 'precision': 2}"/>
+            <t t-set="pay_labels" t-value="dict(o._fields['pay_type'].selection)"/>
+
+            <div class="page o_mps">
+                <h2>
+                    <span>Bulletin de paie</span>
+                    <span class="miro-doc-number" t-field="o.name"/>
+                </h2>
+                <div class="o_mps_period">
+                    Période du <strong t-field="o.date_from"/> au <strong t-field="o.date_to"/>
+                    <t t-if="o.payment_date"> · payé le <strong t-field="o.payment_date"/></t>
+                    <span t-if="o.state == 'draft'" class="o_mps_draft">BROUILLON</span>
+                </div>
+
+                <!-- Employeur / salarié -->
+                <table class="o_mps_parties">
+                    <tr>
+                        <td class="o_mps_party">
+                            <div class="o_mps_label">Employeur</div>
+                            <strong t-esc="o.company_id.name"/>
+                            <div t-if="o.company_id.street" t-esc="o.company_id.street"/>
+                            <div t-if="o.company_id.city"><t t-esc="o.company_id.zip"/> <t t-esc="o.company_id.city"/></div>
+                            <div class="o_mps_ids">
+                                <t t-if="o.company_id.vat">NIF : <t t-esc="o.company_id.vat"/></t>
+                                <t t-if="o.company_id.miro_stat"> · STAT : <t t-esc="o.company_id.miro_stat"/></t>
+                            </div>
+                        </td>
+                        <td class="o_mps_party">
+                            <div class="o_mps_label">Salarié</div>
+                            <strong t-esc="emp.name"/>
+                            <table class="o_mps_kv">
+                                <tr t-if="emp.identification_id"><td>Matricule</td><td t-esc="emp.identification_id"/></tr>
+                                <tr t-if="o.job_label"><td>Emploi</td><td t-esc="o.job_label"/></tr>
+                                <tr t-if="emp.department_id"><td>Service</td><td t-esc="emp.department_id.name"/></tr>
+                                <tr><td>Mode de paie</td><td>
+                                    <t t-esc="pay_labels.get(o.pay_type, '')"/>
+                                    <t t-if="o.rate"> — <t t-esc="o.rate" t-options="money"/>
+                                        <t t-if="o.pay_type == 'daily'"> / jour</t>
+                                        <t t-elif="o.pay_type == 'hourly'"> / heure</t>
+                                        <t t-else=""> / mois</t>
+                                    </t>
+                                </td></tr>
+                                <tr t-if="emp.miro_cnaps_number"><td>N° CNaPS</td><td t-esc="emp.miro_cnaps_number"/></tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Présences -->
+                <table class="o_mps_attendance">
+                    <tr>
+                        <td><span class="o_mps_label">Jours travaillés</span><strong t-esc="o.worked_days" t-options="num"/></td>
+                        <td><span class="o_mps_label">Heures travaillées</span><strong t-esc="o.worked_hours" t-options="num"/></td>
+                        <td><span class="o_mps_label">Heures supplémentaires</span><strong t-esc="o.overtime_hours" t-options="num"/></td>
+                        <td><span class="o_mps_label">Jours ouvrés</span><strong t-esc="o.expected_days" t-options="num"/></td>
+                        <td><span class="o_mps_label">Absences</span><strong t-esc="o.absent_days" t-options="num"/></td>
+                    </tr>
+                </table>
+
+                <!-- Rubriques -->
+                <table class="table table-sm o_main_table o_mps_lines">
+                    <thead>
+                        <tr>
+                            <th class="text-start">Désignation</th>
+                            <th class="text-end">Nombre / base</th>
+                            <th class="text-end">Taux</th>
+                            <th class="text-end">Gains</th>
+                            <th class="text-end">Retenues</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="o.line_ids.filtered(lambda l: l.category != 'employer')" t-as="line">
+                            <td t-esc="line.name"/>
+                            <td class="text-end">
+                                <t t-if="line.base"><t t-esc="line.base" t-options="money"/></t>
+                                <t t-elif="line.quantity"><t t-esc="line.quantity" t-options="num"/></t>
+                            </td>
+                            <td class="text-end">
+                                <t t-if="line.rate_pct"><t t-esc="line.rate_pct" t-options="num"/> %</t>
+                                <t t-elif="line.unit_amount"><t t-esc="line.unit_amount" t-options="money"/></t>
+                            </td>
+                            <td class="text-end">
+                                <t t-if="line.category == 'gain'" t-esc="line.amount" t-options="money"/>
+                            </td>
+                            <td class="text-end">
+                                <t t-if="line.category == 'deduction'" t-esc="line.amount" t-options="money"/>
+                            </td>
+                        </tr>
+                        <tr class="o_mps_subtotal">
+                            <td colspan="3">Totaux</td>
+                            <td class="text-end" t-esc="o.gross" t-options="money"/>
+                            <td class="text-end" t-esc="o.total_deductions" t-options="money"/>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Net à payer -->
+                <table class="o_mps_summary">
+                    <tr>
+                        <td class="o_mps_summary_left">
+                            <table class="o_mps_kv o_mps_totals">
+                                <tr><td>Salaire brut</td><td class="text-end" t-esc="o.gross" t-options="money"/></tr>
+                                <tr><td>Total des retenues</td><td class="text-end" t-esc="o.total_deductions" t-options="money"/></tr>
+                                <tr><td>Revenu imposable (IRSA)</td><td class="text-end" t-esc="o.taxable" t-options="money"/></tr>
+                            </table>
+                        </td>
+                        <td class="o_mps_net">
+                            <div class="o_mps_label">Net à payer</div>
+                            <div class="o_mps_net_value" t-esc="o.net" t-options="money"/>
+                        </td>
+                    </tr>
+                </table>
+                <div class="miro-amount-words o_mps_words">
+                    <strong>Arrêté le présent bulletin à la somme de</strong>
+                    <span t-esc="o._amount_in_words()"/>
+                </div>
+
+                <!-- Charges patronales -->
+                <t t-set="employer_lines" t-value="o.line_ids.filtered(lambda l: l.category == 'employer')"/>
+                <div t-if="employer_lines" class="o_mps_employer">
+                    <div class="o_mps_label">Charges patronales (à titre d'information)</div>
+                    <table class="o_mps_kv">
+                        <tr t-foreach="employer_lines" t-as="line">
+                            <td t-esc="line.name"/>
+                            <td class="text-end"><t t-esc="line.rate_pct" t-options="num"/> % de <t t-esc="line.base" t-options="money"/></td>
+                            <td class="text-end" t-esc="line.amount" t-options="money"/>
+                        </tr>
+                        <tr class="o_mps_cost">
+                            <td colspan="2">Coût total employeur</td>
+                            <td class="text-end" t-esc="o.total_cost" t-options="money"/>
+                        </tr>
+                    </table>
+                </div>
+
+                <p t-if="o.note" class="o_mps_note" t-field="o.note"/>
+
+                <!-- Signatures -->
+                <table class="o_mps_signatures">
+                    <tr>
+                        <td><div class="o_mps_sign">
+                            <div class="o_mps_label">L'employeur</div>
+                            <div>Pour <t t-esc="o.company_id.name"/></div>
+                        </div></td>
+                        <td><div class="o_mps_sign">
+                            <div class="o_mps_label">Le salarié</div>
+                            <div>Lu et approuvé, pour acquit</div>
+                        </div></td>
+                    </tr>
+                </table>
+                <p class="o_mps_legal">
+                    Conservez ce bulletin de paie sans limitation de durée : il vous permet de faire valoir vos droits.
+                </p>
+            </div>
+        </t>
+    </template>
+
+    <template id="report_payslip">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="miro_hr_paie.report_payslip_document" t-lang="o.employee_id.lang or o.env.lang"/>
+            </t>
+        </t>
+    </template>
+</odoo>

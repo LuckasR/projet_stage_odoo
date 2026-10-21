@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- ==========================================================================
+         GanttDateGrid: renders the background date grid cells for the Gantt area.
+         One cell per time column, with today and day-off highlighting.
+         Called via renderToString() from renderer_dom.js.
+         Data: { totalColumns, columns: [{isToday, isDayOff}] }
+         ========================================================================== -->
+    <t t-name="miro_gantt_view.Gantt.DateGrid">
+        <div class="o_gantt_view_date_grid"
+             t-attf-style="display: grid; grid-template-columns: repeat({{ totalColumns }}, 1fr);">
+            <t t-foreach="columns" t-as="col" t-key="col_index">
+                <div class="o_gantt_view_cell"
+                     t-att-class="{'o_gantt_view_today': col.isToday, 'o_gantt_view_day_off': col.isDayOff}"
+                     t-attf-style="grid-column: {{ col_index + 1 }};"/>
+            </t>
+        </div>
+    </t>
+
+
+    <!-- ==========================================================================
+         GanttGroupRow: renders a group row in the Gantt grid area.
+         Serves as a collapsible group header within the grid.
+         Called via renderToString() from renderer_dom.js.
+         Data: { groupPath, groupKey, depth, height }
+         ========================================================================== -->
+    <t t-name="miro_gantt_view.Gantt.GroupRow">
+        <div class="o_gantt_view_group_row"
+             t-att-class="{'o_gantt_view_group_row_child': depth > 0}"
+             t-attf-style="position: relative; height: {{ height }}px; width: 100%; display: flex; align-items: center;"
+             t-att-data-group-path="groupPath"
+             t-att-data-group-key="groupKey">
+            <!-- Overview band: spans the group's min start → max end dates as a
+                 hatched row background (distinct from the task pills). -->
+            <t t-if="barShow">
+                <div class="o_gantt_view_group_bar"
+                     t-attf-style="left: {{ barLeftPct }}%; width: {{ barWidthPct }}%;"/>
+            </t>
+        </div>
+    </t>
+
+    <!-- ==========================================================================
+         GanttTaskBandPill: renders a single task pill inside a band row.
+         Bands group the records of a leaf group (or all records in ungrouped
+         mode) into one vertical row; each record sits on its OWN row (lane).
+          The pill wrapper carries data-record-id for drag targeting.
+          Called via renderToString() from gantt.js.
+         Data: { recordId, colorIndex, name, status, pillLeftPct, pillWidthPct,
+                 topOffset, barHeight, hasResizeRight, hasResizeLeft,
+                  isDragging, highlighted, outOfRange }
+         ========================================================================== -->
+    <t t-name="miro_gantt_view.Gantt.TaskBandPill">
+        <div class="o_gantt_view_pill_wrapper"
+             t-att-class="{'o_gantt_view_pill_offscreen': outOfRange, 'o_gantt_view_pill_overdue': overdue}"
+             t-att-data-record-id="recordId"
+             t-attf-style="position: absolute; top: {{ topOffset }}px; height: {{ barHeight }}px; left: {{ pillLeftPct }}%; width: {{ pillWidthPct }}%;">
+            <!-- The main pill (task bar) — drag/click events attached in JS -->
+            <div class="o_gantt_view_pill position-relative h-100 d-flex align-items-center o_gantt_view_pill_interactive"
+                 t-att-class="(highlighted ? 'o_gantt_view_pill_highlighted ' : '') + colorClass + (outsideWarning ? ' o_gantt_view_pill_overdue_outside' : '')"
+                 t-att-style="colorStyle">
+                <!-- Task name label (hidden when moved outside the pill or while dragging) -->
+                <t t-if="!labelOutside and name and !isDragging">
+                    <span class="o_gantt_view_pill_title text-truncate mx-1"><t t-esc="name"/></span>
+                </t>
+                <!-- Status badge in the pill deliberately disabled: the status is
+                     displayed in the sidebar column and the popover ribbon. -->
+                <!-- Right resize handle -->
+                <t t-if="hasResizeRight">
+                    <div class="o_gantt_view_resize_handle"/>
+                </t>
+                <!-- Left resize handle -->
+                <t t-if="hasResizeLeft">
+                    <div class="o_gantt_view_resize_handle_left"/>
+                </t>
+
+            </div>
+            <!-- Label rendered to the right of the taskbar, on the same line,
+                 when the pill is too narrow to fit it (left: 100% = right edge
+                 of the pill wrapper; vertically centered via CSS). -->
+             <t t-if="labelOutside and !isDragging">
+                <span class="o_gantt_view_pill_label_outside"
+                      t-att-class="{'text-warning': overdue}"
+                      t-attf-style="left: 100%;">
+                    <t t-esc="name"/>
+                    <span t-if="outsideWarning" class="fa fa-exclamation-triangle o_gantt_view_pill_label_warn ms-1"/>
+                </span>
+            </t>
+
+        </div>
+    </t>
+
+</templates>

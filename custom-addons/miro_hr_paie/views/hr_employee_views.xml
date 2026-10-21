@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_employee_form_miro_paie" model="ir.ui.view">
+        <field name="name">hr.employee.form.miro.paie</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_miro_payslips" type="object" class="oe_stat_button"
+                        icon="fa-money" groups="hr.group_hr_user">
+                    <field name="miro_payslip_count" widget="statinfo" string="Bulletins"/>
+                </button>
+            </xpath>
+            <xpath expr="//page[@name='hr_settings']" position="before">
+                <page name="miro_paie" string="Paie" groups="hr.group_hr_user">
+                    <group>
+                        <group string="Rémunération">
+                            <field name="miro_currency_id" invisible="1"/>
+                            <field name="miro_pay_type" widget="radio"/>
+                            <field name="miro_daily_rate" invisible="miro_pay_type != 'daily'"
+                                   required="miro_pay_type == 'daily'"/>
+                            <field name="miro_hourly_rate" invisible="miro_pay_type != 'hourly'"
+                                   required="miro_pay_type == 'hourly'"/>
+                            <field name="miro_monthly_wage" invisible="miro_pay_type != 'monthly'"
+                                   required="miro_pay_type == 'monthly'"/>
+                            <field name="miro_trade" placeholder="Maçon, coffreur, manœuvre..."/>
+                        </group>
+                        <group string="Cotisations et impôt">
+                            <field name="miro_cnaps_number"/>
+                            <field name="miro_social_contributions"/>
+                            <field name="miro_subject_irsa"/>
+                            <field name="miro_dependents" invisible="not miro_subject_irsa"/>
+                        </group>
+                    </group>
+                    <div class="text-muted">
+                        Les présences (Présences &gt; Pointages) donnent les jours et les heures
+                        travaillés ; au-delà de la journée normale, les heures sont majorées
+                        (Paramètres &gt; Employés &gt; Paie).
+                    </div>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -235,6 +235,7 @@
 
                     <notebook>
                         <page string="Représentation" name="sketch">
+                            <field name="metre_cards_html" nolabel="1" readonly="1"/>
                             <field name="sketch_svg" nolabel="1" readonly="1"/>
                             <p class="text-muted">
                                 Schéma dessiné à l'échelle des dimensions de l'élément
@@ -263,6 +264,30 @@
                                 peut ni en ajouter ni en retirer ici, seule la valeur
                                 se saisit. Ajouter une caractéristique au type la fait
                                 apparaître sur tous les ouvrages de ce type.
+                            </p>
+                        </page>
+                        <page string="Métré" name="metre">
+                            <group>
+                                <group string="Volume et surfaces">
+                                    <field name="qty_beton_m3" readonly="1" string="Volume béton (m³)"
+                                           options="{'digits': [16, 3]}"/>
+                                    <field name="qty_surface_m2" readonly="1" string="Surface (m²)"
+                                           options="{'digits': [16, 3]}" invisible="not qty_surface_m2"/>
+                                    <field name="qty_coffrage_m2" readonly="1" string="Surface coffrée (m²)"
+                                           options="{'digits': [16, 3]}" invisible="not qty_coffrage_m2"/>
+                                    <field name="qty_acier_kg" readonly="1" string="Acier (kg)"
+                                           options="{'digits': [16, 2]}"/>
+                                </group>
+                                <group string="Cotes">
+                                    <field name="dimension_summary" readonly="1" nolabel="1" colspan="2"/>
+                                </group>
+                            </group>
+                            <field name="metre_detail_html" nolabel="1" readonly="1"/>
+                            <p class="text-muted">
+                                Le métré se calcule depuis les caractéristiques de l'élément :
+                                corriger une cote (onglet « Caractéristiques ») le recalcule,
+                                ainsi que les besoins en matériaux, la main-d'œuvre et les
+                                heures des phases non commencées.
                             </p>
                         </page>
                         <page string="Phases" name="phases">

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="seq_miro_payslip" model="ir.sequence">
+        <field name="name">Bulletin de paie</field>
+        <field name="code">miro.payslip</field>
+        <field name="prefix">PAIE/%(year)s/%(month)s/</field>
+        <field name="padding">4</field>
+        <field name="company_id" eval="False"/>
+    </record>
+</odoo>

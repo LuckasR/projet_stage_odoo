@@ -30,6 +30,52 @@
                 <field name="x_niveau_hierarchie"/>
             </xpath>
 
+            <!-- Phase d'un élément : l'élément, ses cotes et ses métrés, en
+                 tête de fiche (avant les onglets) -->
+            <xpath expr="//notebook" position="before">
+                <field name="construction_element_id" invisible="1"/>
+                <div class="o_miro_phase_element" invisible="not construction_element_id">
+                    <div class="o_miro_phase_element_head">
+                        <span class="o_miro_phase_element_label">Élément de construction</span>
+                        <field name="construction_element_id" readonly="1" nolabel="1"
+                               options="{'no_create': True}" class="o_miro_phase_element_link"/>
+                        <span class="text-muted">
+                            <field name="element_type_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
+                            <span invisible="not element_level_id"> · </span>
+                            <field name="element_level_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
+                        </span>
+                    </div>
+                    <div class="text-muted small mb-2" invisible="not element_dimension_summary">
+                        <field name="element_dimension_summary" readonly="1" nolabel="1"/>
+                    </div>
+                    <div class="o_miro_phase_qty_grid">
+                        <div class="o_miro_phase_qty is-main" invisible="not phase_qty_label">
+                            <span class="o_miro_phase_qty_label">Quantité de la phase</span>
+                            <span class="o_miro_phase_qty_value">
+                                <field name="phase_qty" readonly="1" nolabel="1"/>
+                            </span>
+                            <span class="o_miro_phase_qty_unit"><field name="phase_qty_label" readonly="1" nolabel="1"/></span>
+                        </div>
+                        <div class="o_miro_phase_qty" invisible="not element_qty_beton_m3">
+                            <span class="o_miro_phase_qty_label">Volume béton</span>
+                            <span class="o_miro_phase_qty_value"><field name="element_qty_beton_m3" readonly="1" nolabel="1"/> m³</span>
+                        </div>
+                        <div class="o_miro_phase_qty" invisible="not element_qty_coffrage_m2">
+                            <span class="o_miro_phase_qty_label">Surface coffrée</span>
+                            <span class="o_miro_phase_qty_value"><field name="element_qty_coffrage_m2" readonly="1" nolabel="1"/> m²</span>
+                        </div>
+                        <div class="o_miro_phase_qty" invisible="not element_qty_surface_m2">
+                            <span class="o_miro_phase_qty_label">Surface</span>
+                            <span class="o_miro_phase_qty_value"><field name="element_qty_surface_m2" readonly="1" nolabel="1"/> m²</span>
+                        </div>
+                        <div class="o_miro_phase_qty" invisible="not element_qty_acier_kg">
+                            <span class="o_miro_phase_qty_label">Acier</span>
+                            <span class="o_miro_phase_qty_value"><field name="element_qty_acier_kg" readonly="1" nolabel="1"/> kg</span>
+                        </div>
+                    </div>
+                </div>
+            </xpath>
+
             <!-- Avant la description : sur une tâche de chantier, c'est le
                  suivi qu'on vient consulter (les matériaux de la phase, s'il y
                  en a, se placent devant, cf. miro_construction_bom). -->
@@ -105,11 +151,131 @@
         </field>
     </record>
 
-    <record id="action_project_task_list_construction" model="ir.actions.act_window">
-        <field name="name">Tâches du projet</field>
-        <field name="res_model">project.task</field>
-        <field name="view_mode">tree,form</field>
-        <field name="view_id" ref="view_project_task_list_construction"/>
-    </record>
+    
+    
+    
+    <record id="project_task_miro_gantt_view_main_base" model="ir.ui.view">
+        <field name="name">project.task.view.miro_gantt.main.base</field>
+        <field name="model">project.task</field>
+        <field name="type">miro_gantt</field>
+        <field name="groups_id" eval="[(4, ref('miro_gantt_view.group_gantt_user'))]"/>
+        <field name="arch" type="xml">
+            <miro_gantt
+            string="Task"
+            default_title="Task"
+            default_filter="month"
+            default_group_by="project_id,user_ids"
+            sidebar_column_fields="x_avancement_global,state,x_date_debut_prevue,x_date_fin_prevue,date_deadline"
+            sidebar_label_field="name"
+            taskbar_label_field="summary"
+            date_start="x_date_debut_prevue"
+            date_end="x_date_fin_prevue"
+            duration_field="allocated_hours"
+            status_field="state"
+            progress_field="x_avancement_global"
+            colored_by="project_id"
+            available_filters="day,week,month,year"
+            create_groups="miro_gantt_view.group_gantt_manager"
+            edit_groups="miro_gantt_view.group_gantt_manager"
+            delete_groups="miro_gantt_view.group_gantt_manager"
+            >
+            <field name="name"/>
+            <field name="project_id"/>
+            <field name="state"/>
+            <field name="effective_hours"/>
+            <field name="allocated_hours"/>
+            <field name="x_avancement_global"/>
+            <field name="description"/>
+                <field name="summary"/>
+                <field name="user_ids"/>
+               
+                <templates>
+                    <t t-name="miro-gantt-popup">
+                        <div class="o_miro_gantt_popup p-3">
+                            <!-- Title -->
 
-</odoo>
+                            <!-- Project -->
+                            <div t-if="project_id" >
+                                <span class="fw-bold">Project:</span>
+                                    <div class="text-muted"><t t-esc="project_id[1]"/></div>
+                                </div>
+                                <div>
+                                    <span class="fw-bold">Summary :</span>
+                                    <div class="text-muted"> <t t-esc="summary"/> </div>
+                                </div>
+                                
+                                <!-- Dates -->
+                                <div t-if="x_date_debut_prevue &amp;&amp; x_date_fin_prevue">
+                                    <span class="fw-bold">Schedule:</span>
+                                    <div class="text-muted">
+                                                <i class="fa fa-calendar me-1" title="Schedule"/>
+                                                <t t-esc="x_date_debut_prevue.toFormat('dd/MM/yyyy')"/>
+                                                →
+                                                <t t-esc="x_date_fin_prevue.toFormat('dd/MM/yyyy')"/>
+                                            </div>
+                                    </div>
+
+                                    
+
+                                    <div t-if="user_ids.length > 0" >
+                                    <span class="fw-bold">Assigned to:</span>
+                                    <div class="text-muted">
+                                        <i class="fa fa-users me-1" title="Users"/>
+                                        <t t-foreach="user_ids" t-as="user">
+                                            <span>
+                                                <t t-esc="user.name"/>
+                                            </span>
+                                            <t t-if="user_index != len(user_ids) - 1">, </t>
+                                        </t>
+                                    </div>
+                                </div>
+                              
+                                
+                                <!-- Duration -->
+                                
+                                <div t-if="allocated_hours">
+                                    <span class="fw-bold">Duration:</span>
+                                    <div class="text-muted">
+                                        <i class="fa fa-hourglass-end me-1" title="Duration"/>
+                                        <t t-esc="effective_hours.toFixed(2)"/>
+                                        /
+                                        <t t-esc="allocated_hours"/>
+                                        hours
+                                        
+                                        <t t-if="effective_hours &gt; allocated_hours">
+                                            <span class="text-danger fw-bold ms-2">
+                                                (Time Variance: : <t t-esc="(allocated_hours - effective_hours).toFixed(2)"/>h)
+                                            </span>
+                                        </t>
+                                    </div>
+                                    <div class="x_avancement_global mt-2" style="height: 20px; width:100%;">
+                                        <div class="x_avancement_global-bar fw-bold" role="progressbar"
+                                        t-attf-style="width: #{(effective_hours / allocated_hours) * 100}%;"
+                                        aria-valuemin="0" aria-valuemax="100">
+                                        <!-- <t t-if="effective_hours &lt; allocated_hours"> -->
+                                            <t t-esc="round((effective_hours / allocated_hours) * 100)"/>%
+                                            <!-- </t> -->
+                                            <!-- <t t-if="effective_hours &gt;= allocated_hours">
+                                                <t t-esc="100"/>%
+                                                </t> -->
+                                            </div>
+                                        </div>
+                                </div>
+                                
+                                
+                            </div>
+                        </t>
+                    </templates>
+                </miro_gantt>
+            </field>
+        </record>
+        
+        <record id="action_project_task_list_construction" model="ir.actions.act_window">
+            <field name="name">Tâches du projet</field>
+            <field name="res_model">project.task</field>
+            <field name="view_mode">tree,form,miro_gantt</field>
+            <field name="view_id" ref="view_project_task_list_construction"/>
+        </record>
+        
+    </odoo>
+    

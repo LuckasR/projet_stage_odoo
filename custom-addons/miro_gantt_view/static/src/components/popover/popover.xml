@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+ <!-- ==========================================================================
+         Popover template: shows task details when clicking a bar.
+         Wrapper 100% native core/popover (`.o_popover.popover` bootstrap, native
+         arrow + animation) with calendar styling (`o_cw_popover` = card-header,
+         o_cw_body, card-footer, close fc-close fc-icon-x).
+         Content:
+           - Status ribbon (top-left) + popover title (center-left) +
+             close button (right) in the card-header
+           - Detail body / custom template (miro_gantt popup) inside o_cw_body
+           - Optional Edit and Delete buttons (btn-primary / btn-secondary) in footer
+         ========================================================================== -->
+    <t t-name="gantt_view.Popover">
+        <div class="card-header d-flex align-items-center justify-content-between py-2 pe-2 position-relative">
+            <span t-if="title" class="popover-header border-0 ms-4 pe-2" t-esc="title"/>
+            <span t-if="status" class="o_gantt_view_popover_ribbon"><t t-esc="status"/></span>
+            <span class="o_cw_popover_close ms-4 mt-2 me-2"
+                  t-on-click.stop="() => props.close()"
+                  t-att-title="_titleClose">
+                <i class="fc-close fc-icon fc-icon-x"/>
+            </span>
+        </div>
+        <!-- Body: dynamically populated with task detail fields or custom template -->
+        <div class="o_cw_body">
+            <div class="popover-body" t-ref="bodyRef"/>
+        </div>
+        <!-- Footer: Edit and Delete buttons, calendar style (card-footer) -->
+        <div class="card-footer d-flex gap-1 border-top" t-att-class="{ 'o_footer_shrink': !(hasEdit || hasDelete) }">
+            <a href="#" class="btn btn-primary o_gantt_view_popover_edit"
+               t-if="hasEdit"
+               t-on-click.prevent="onEdit">
+                <t t-esc="_titleEdit"/>
+            </a>
+            <a href="#" class="btn btn-primary o_gantt_view_popover_edit"
+               t-if="hasOpenFullForm"
+               t-on-click.prevent="onOpenFullForm">
+                <t t-esc="_titleOpenFullForm"/>
+            </a>
+            <a href="#" class="btn btn-secondary o_gantt_view_popover_delete"
+               t-if="hasDelete"
+               t-on-click.prevent="onDelete">
+                <t t-esc="_titleDelete"/>
+            </a>
+        </div>
+    </t>
+
+
+    <!-- ==========================================================================
+         Totals row popover (line chart): click on a column opens a
+         READ-ONLY list of the tasks covering this column, grouped like the
+         sidebar (group by): one collapsible header per group (icon
+         fa-play/fa-sort-desc + name + counter, same as the sidebar), then the
+         group's tasks (icon fa-file-o + name + dates), hidden when the group is
+         collapsed. Consultation only, no navigation or action.
+         The list scrolls when it overflows.
+
+         Same wrapping as the other popovers of the module via `popoverClass`
+         'o_cw_popover' (set in renderer.js at `usePopover`): calendar
+         card-header wrapper + `.o_cw_body` body.
+         ========================================================================== -->
+
+
+    <t t-name="total_rows.ChartPopover">
+        <div class="card-header d-flex align-items-center justify-content-between py-2 pe-2">
+            <span class="o_gantt_view_chart_popover_title" t-esc="_defaultTitle"/>
+            <span class="o_gantt_view_chart_popover_date text-muted"
+                  style="font-size: 12px;"
+                  t-if="_columnDateLabel"
+                  t-esc="_columnDateLabel"/>
+        </div>
+        <div class="o_cw_body o_gantt_view_chart_popover_list">
+            <t t-foreach="_visibleGroups" t-as="group" t-key="group.key">
+                <div class="o_gantt_view_chart_popover_group">
+                    <!-- Collapsible group header: same icon as the sidebar
+                         toggle; indentation matches the group-by depth -->
+                    <div class="o_gantt_view_chart_popover_group_header"
+                         t-on-click="() => this._toggleGroup(group.key)"
+                         t-attf-style="padding-left: {{ group.depth * 16 }}px;">
+                        <i class="fa me-1"
+                           t-att-class="_isCollapsed(group.key) ? 'fa-play' : 'fa-sort-desc'"
+                           style="cursor: pointer;"/>
+                        <span class="o_gantt_view_row_title text-truncate fw-bold"
+                              t-att-title="group.name"
+                              t-esc="group.name"/>
+                        <span class="badge text-bg-secondary ms-1"
+                              style="font-size: 11px; flex-shrink: 0;">
+                            <t t-esc="group.count"/>
+                        </span>
+                    </div>
+                    <!-- Group tasks (leaf groups only), hidden when collapsed -->
+                    <t t-if="!group.isParent and !_isCollapsed(group.key)">
+                        <t t-foreach="group.tasks" t-as="record" t-key="record.id">
+                            <div class="o_gantt_view_chart_popover_item">
+                                <span class="fa fa-file-o me-1"
+                                      style="font-size: 10px; color: #6c757d; flex-shrink: 0;"/>
+                                <span class="o_gantt_view_row_title text-truncate ps-1 pe-1"
+                                      t-att-title="record.name"
+                                      style="min-width: 0; flex: 1 1 auto;"
+                                      t-esc="record.name || '—'"/>
+                            </div>
+                        </t>
+                    </t>
+                </div>
+            </t>
+            <div t-if="!_totalCount" class="o_gantt_view_chart_popover_empty">
+                <t t-esc="_emptyLabel"/>
+            </div>
+        </div>
+    </t>
+
+</templates>

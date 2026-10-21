@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="miro_ai_assistant.Bubble">
+        <button t-if="!hidden" type="button" class="o_miro_ai_bubble" t-att-style="style"
+                t-att-class="{ 'is-opening': state.opening }"
+                t-on-click="onClick" title="Miro Assistant — posez une question sur vos chantiers">
+            <span class="o_miro_ai_bubble_pulse"/>
+            <img src="/miro_ai_assistant/static/img/assistant.png" alt="Miro Assistant"/>
+            <span class="o_miro_ai_bubble_label">
+                <strong>Miro Assistant</strong>
+                <span>Où en est mon chantier ?</span>
+            </span>
+        </button>
+    </t>
+</templates>

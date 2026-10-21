@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_miro_paie" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.miro.paie</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="hr.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='hr']" position="inside">
+                <block title="Paie" name="miro_paie_setting_container">
+                    <setting string="Temps de travail"
+                             help="Journée normale, base mensuelle et majoration des heures supplémentaires">
+                        <div class="content-group">
+                            <div class="row mt8"><label for="miro_hours_per_day" class="col-lg-6 o_light_label"/><field name="miro_hours_per_day"/></div>
+                            <div class="row"><label for="miro_month_days" class="col-lg-6 o_light_label"/><field name="miro_month_days"/></div>
+                            <div class="row"><label for="miro_overtime_rate" class="col-lg-6 o_light_label"/><field name="miro_overtime_rate"/></div>
+                            <div class="row"><label for="miro_deduct_absences" class="col-lg-6 o_light_label"/><field name="miro_deduct_absences"/></div>
+                        </div>
+                    </setting>
+                    <setting string="Cotisations sociales" help="Taux salariaux et patronaux (indicatifs : à faire valider)">
+                        <div class="content-group">
+                            <div class="row mt8"><label for="miro_cnaps_employee_rate" class="col-lg-6 o_light_label"/><field name="miro_cnaps_employee_rate"/></div>
+                            <div class="row"><label for="miro_cnaps_employer_rate" class="col-lg-6 o_light_label"/><field name="miro_cnaps_employer_rate"/></div>
+                            <div class="row"><label for="miro_cnaps_ceiling" class="col-lg-6 o_light_label"/><field name="miro_cnaps_ceiling"/></div>
+                            <div class="row"><label for="miro_health_label" class="col-lg-6 o_light_label"/><field name="miro_health_label"/></div>
+                            <div class="row"><label for="miro_health_employee_rate" class="col-lg-6 o_light_label"/><field name="miro_health_employee_rate"/></div>
+                            <div class="row"><label for="miro_health_employer_rate" class="col-lg-6 o_light_label"/><field name="miro_health_employer_rate"/></div>
+                            <div class="row"><label for="miro_health_ceiling" class="col-lg-6 o_light_label"/><field name="miro_health_ceiling"/></div>
+                        </div>
+                    </setting>
+                    <setting string="IRSA" help="Minimum de perception et réduction par personne à charge">
+                        <div class="content-group">
+                            <div class="row mt8"><label for="miro_irsa_minimum" class="col-lg-6 o_light_label"/><field name="miro_irsa_minimum"/></div>
+                            <div class="row"><label for="miro_irsa_dependent_reduction" class="col-lg-6 o_light_label"/><field name="miro_irsa_dependent_reduction"/></div>
+                            <button name="%(miro_hr_paie.action_miro_irsa_bracket)d" type="action"
+                                    string="Barème par tranches" icon="oi-arrow-right" class="btn-link mt8"/>
+                        </div>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>

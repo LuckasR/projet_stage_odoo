@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_miro_trade_user,miro.trade.user,model_miro_trade,base.group_user,1,1,1,1
+access_miro_crew_user,miro.crew.user,model_miro_crew,base.group_user,1,1,1,1
+access_miro_crew_line_user,miro.crew.line.user,model_miro_crew_line,base.group_user,1,1,1,1
+access_miro_crew_rate_user,miro.crew.rate.user,model_miro_crew_rate,base.group_user,1,1,1,1
+access_miro_planning_load_user,miro.planning.load.user,model_miro_planning_load,base.group_user,1,1,1,1
+access_miro_project_crew_capacity_user,miro.project.crew.capacity.user,model_miro_project_crew_capacity,base.group_user,1,1,1,1

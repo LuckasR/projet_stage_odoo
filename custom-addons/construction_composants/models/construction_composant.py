@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api
 
-
+# 
 class ConstructionComposant(models.Model):
     _name = 'construction.composant'
     _description = "Composant de construction (semelle, mur, poteau...)"

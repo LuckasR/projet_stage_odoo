@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--Group category dedicated to the Gantt view-->
+    <record id="module_category_miro_gantt" model="ir.module.category">
+        <field name="name">Miro Gantt</field>
+        <field name="sequence">10</field>
+    </record>
+
+    <!-- Gantt : User — read access to the Gantt view-->
+    <record id="group_gantt_user" model="res.groups">
+        <field name="name">Gantt : User</field>
+        <field name="category_id" ref="module_category_miro_gantt"/>
+    </record>
+
+    <!-- Gantt: Manager — Full CRUD (create, edit, delete, drag-and-drop).
+         Inherits from the User group.-->
+    <record id="group_gantt_manager" model="res.groups">
+        <field name="name">Gantt : Manager</field>
+        <field name="category_id" ref="module_category_miro_gantt"/>
+        <field name="implied_ids" eval="[(4, ref('miro_gantt_view.group_gantt_user'))]"/>
+    </record>
+
+</odoo>

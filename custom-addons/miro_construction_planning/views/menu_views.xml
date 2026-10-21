@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_miro_trade" name="Métiers" parent="miro_construction_project.menu_construction_config"
+              action="action_miro_trade" sequence="60"/>
+    <menuitem id="menu_miro_crew" name="Équipes types" parent="miro_construction_project.menu_construction_config"
+              action="action_miro_crew" sequence="61"/>
+    <menuitem id="menu_miro_crew_rate" name="Cadences" parent="miro_construction_project.menu_construction_config"
+              action="action_miro_crew_rate" sequence="62"/>
+</odoo>

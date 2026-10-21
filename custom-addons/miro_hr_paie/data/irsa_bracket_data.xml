@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Barème IRSA indicatif (Madagascar), en Ariary : à faire valider par le
+         service comptable et à adapter dans Employés > Configuration > Barème IRSA. -->
+    <record id="irsa_bracket_0" model="miro.irsa.bracket">
+        <field name="company_id" ref="base.main_company"/>
+        <field name="amount_from">0</field>
+        <field name="amount_to">350000</field>
+        <field name="rate">0</field>
+    </record>
+    <record id="irsa_bracket_1" model="miro.irsa.bracket">
+        <field name="company_id" ref="base.main_company"/>
+        <field name="amount_from">350000</field>
+        <field name="amount_to">400000</field>
+        <field name="rate">5</field>
+    </record>
+    <record id="irsa_bracket_2" model="miro.irsa.bracket">
+        <field name="company_id" ref="base.main_company"/>
+        <field name="amount_from">400000</field>
+        <field name="amount_to">500000</field>
+        <field name="rate">10</field>
+    </record>
+    <record id="irsa_bracket_3" model="miro.irsa.bracket">
+        <field name="company_id" ref="base.main_company"/>
+        <field name="amount_from">500000</field>
+        <field name="amount_to">600000</field>
+        <field name="rate">15</field>
+    </record>
+    <record id="irsa_bracket_4" model="miro.irsa.bracket">
+        <field name="company_id" ref="base.main_company"/>
+        <field name="amount_from">600000</field>
+        <field name="rate">20</field>
+    </record>
+</odoo>

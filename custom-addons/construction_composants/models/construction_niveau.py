@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api
 
-
+# Niveau 
 class ConstructionNiveau(models.Model):
     _name = 'construction.niveau'
     _description = "Niveau du bâtiment (Fondation, R+0, R+1...)"

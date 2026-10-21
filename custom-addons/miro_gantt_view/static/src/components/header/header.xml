@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- ==========================================================================
+         GanttHeader: renders the full column header area (major + minor).
+         Data: { sidebarVisible, sidebarWidth, totalColumns, defaultTitle,
+                 sortOrder, headerGroups, columns }
+         ========================================================================== -->
+
+    <t t-name="gantt_view.Header">
+        <div class="o_gantt_view_column_header">
+            <!-- Major header (month/year labels) — CSS Grid column spanning -->
+            <div class="o_gantt_view_major_header">
+                <div class="o_gantt_view_major_header_cells"
+                     t-attf-style="display: grid; grid-template-columns: repeat({{ totalColumns }}, 1fr);">
+                    <t t-foreach="headerGroups" t-as="group" t-key="group.key">
+                        <div class="o_gantt_view_major_cell d-flex align-items-center justify-content-center text-truncate px-2"
+                             t-att-class="{'o_gantt_view_major_cell_even': group_index % 2 === 0, 'o_gantt_view_major_cell_odd': group_index % 2 !== 0}"
+                             t-attf-style="grid-column: {{ group.gridStart }} / span {{ group.count }}; height: 25px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;"
+                             t-att-title="group.label">
+                            <t t-esc="group.label"/>
+                        </div>
+                    </t>
+                </div>
+            </div>
+            <!-- Minor header (day/hour labels) — CSS Grid per column -->
+            <div class="o_gantt_view_minor_header">
+                <div class="o_gantt_view_header_slots flex-grow-1 bg-view fw-bold"
+                     t-attf-style="display: grid; grid-template-columns: repeat({{ totalColumns }}, 1fr);">
+                    <t t-foreach="columns" t-as="col" t-key="col_index">
+                        <div class="o_gantt_view_header_cell d-flex align-items-center justify-content-center py-2"
+                             t-att-class="{'o_gantt_view_today': col.isToday}"
+                             t-attf-style="grid-column: {{ col_index + 1 }};">
+                            <t t-esc="col.text"/>
+                        </div>
+                    </t>
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>

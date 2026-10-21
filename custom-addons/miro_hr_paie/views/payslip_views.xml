@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_miro_payslip_tree" model="ir.ui.view">
+        <field name="name">miro.payslip.tree</field>
+        <field name="model">miro.payslip</field>
+        <field name="arch" type="xml">
+            <tree decoration-muted="state == 'cancel'" decoration-info="state == 'draft'"
+                  decoration-success="state == 'paid'" sample="1">
+                <field name="name"/>
+                <field name="employee_id" widget="many2one_avatar_employee"/>
+                <field name="date_from"/>
+                <field name="date_to"/>
+                <field name="pay_type" optional="show"/>
+                <field name="worked_days" optional="show" sum="Jours"/>
+                <field name="worked_hours" optional="hide" sum="Heures"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="gross" sum="Brut" optional="show"/>
+                <field name="total_deductions" sum="Retenues" optional="hide"/>
+                <field name="net" sum="Net" string="Net à payer"/>
+                <field name="employer_charges" sum="Charges" optional="hide"/>
+                <field name="state" widget="badge" decoration-info="state == 'draft'"
+                       decoration-warning="state == 'done'" decoration-success="state == 'paid'"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_miro_payslip_form" model="ir.ui.view">
+        <field name="name">miro.payslip.form</field>
+        <field name="model">miro.payslip</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_compute" type="object" string="Calculer" class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button name="action_done" type="object" string="Valider" invisible="state != 'draft'"/>
+                    <button name="action_paid" type="object" string="Marquer comme payé" class="btn-primary"
+                            invisible="state != 'done'"/>
+                    <button name="action_print" type="object" string="Imprimer le bulletin"
+                            invisible="state == 'cancel'"/>
+                    <button name="action_draft" type="object" string="Remettre en brouillon"
+                            invisible="state not in ('done', 'cancel')"/>
+                    <button name="action_cancel" type="object" string="Annuler"
+                            invisible="state in ('paid', 'cancel')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,done,paid"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <span class="text-muted">Bulletin de paie</span>
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="employee_id" readonly="state != 'draft'"/>
+                            <field name="job_label"/>
+                            <field name="pay_type"/>
+                            <field name="rate" invisible="not pay_type"/>
+                        </group>
+                        <group>
+                            <label for="date_from" string="Période"/>
+                            <div class="o_row">
+                                <field name="date_from" readonly="state != 'draft'"/>
+                                <i class="fa fa-long-arrow-right mx-2"/>
+                                <field name="date_to" readonly="state != 'draft'"/>
+                            </div>
+                            <field name="payment_date"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="company_id" invisible="1"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                    </group>
+                    <group string="Présences de la période" col="4">
+                        <field name="worked_days"/>
+                        <field name="worked_hours" widget="float_time"/>
+                        <field name="overtime_hours" widget="float_time"/>
+                        <field name="expected_days"/>
+                        <field name="absent_days"/>
+                        <field name="attendance_count"/>
+                    </group>
+                    <notebook>
+                        <page string="Rubriques" name="lines">
+                            <field name="line_ids" readonly="state != 'draft'">
+                                <tree editable="bottom" decoration-muted="category == 'employer'"
+                                      decoration-danger="category == 'deduction'">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="code" optional="hide"/>
+                                    <field name="name"/>
+                                    <field name="category"/>
+                                    <field name="quantity"/>
+                                    <field name="unit_amount"/>
+                                    <field name="base" optional="show"/>
+                                    <field name="rate_pct" optional="show"/>
+                                    <field name="amount"/>
+                                    <field name="manual" optional="hide"/>
+                                    <field name="currency_id" column_invisible="1"/>
+                                </tree>
+                            </field>
+                            <div class="text-muted">
+                                Ajoutez ici primes, indemnités (nature « Gain ») ou avances
+                                (nature « Retenue ») : elles sont conservées au recalcul.
+                            </div>
+                            <group class="oe_subtotal_footer">
+                                <field name="gross"/>
+                                <field name="total_deductions"/>
+                                <field name="net" class="oe_subtotal_footer_separator"/>
+                                <field name="employer_charges"/>
+                                <field name="total_cost"/>
+                            </group>
+                        </page>
+                        <page string="Note" name="note">
+                            <field name="note" placeholder="Remarque imprimée sur le bulletin..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_miro_payslip_search" model="ir.ui.view">
+        <field name="name">miro.payslip.search</field>
+        <field name="model">miro.payslip</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="employee_id"/>
+                <filter name="draft" string="Brouillons" domain="[('state', '=', 'draft')]"/>
+                <filter name="done" string="Validés" domain="[('state', '=', 'done')]"/>
+                <filter name="paid" string="Payés" domain="[('state', '=', 'paid')]"/>
+                <separator/>
+                <filter name="this_month" string="Ce mois-ci" domain="[('date_from', '&gt;=', context_today().strftime('%Y-%m-01'))]"/>
+                <group expand="0" string="Regrouper par">
+                    <filter name="group_employee" string="Employé" context="{'group_by': 'employee_id'}"/>
+                    <filter name="group_period" string="Période" context="{'group_by': 'date_from:month'}"/>
+                    <filter name="group_pay_type" string="Mode de paie" context="{'group_by': 'pay_type'}"/>
+                    <filter name="group_state" string="État" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_miro_payslip" model="ir.actions.act_window">
+        <field name="name">Bulletins de paie</field>
+        <field name="res_model">miro.payslip</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_miro_payslip_search"/>
+        <field name="context">{'search_default_group_period': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aucun bulletin de paie</p>
+            <p>Générez les bulletins d'une période : ils sont calculés d'après les présences
+               et le mode de paie de chaque employé (journalier, horaire ou mensuel).</p>
+        </field>
+    </record>
+</odoo>
