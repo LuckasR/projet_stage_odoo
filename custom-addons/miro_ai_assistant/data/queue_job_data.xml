@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Les réponses du bot ont leur propre canal : elles ne s'empilent pas
+         derrière les analyses de plans. Le canal racine doit cependant avoir
+         plus d'une place (odoo.conf, section [queue_job] :
+         channels = root:3,root.miro_assistant:2). -->
+    <record id="channel_miro_assistant" model="queue.job.channel">
+        <field name="name">miro_assistant</field>
+        <field name="parent_id" ref="queue_job.channel_root"/>
+    </record>
+    <record id="job_function_answer" model="queue.job.function">
+        <field name="model_id" ref="model_miro_ai_assistant"/>
+        <field name="method">_answer_job</field>
+        <field name="channel_id" ref="channel_miro_assistant"/>
+    </record>
+</odoo>

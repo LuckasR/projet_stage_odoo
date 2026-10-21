@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_miro_irsa_bracket_tree" model="ir.ui.view">
+        <field name="name">miro.irsa.bracket.tree</field>
+        <field name="model">miro.irsa.bracket</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom">
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="amount_from"/>
+                <field name="amount_to"/>
+                <field name="rate"/>
+            </tree>
+        </field>
+    </record>
+    <record id="action_miro_irsa_bracket" model="ir.actions.act_window">
+        <field name="name">Barème IRSA</field>
+        <field name="res_model">miro.irsa.bracket</field>
+        <field name="view_mode">tree</field>
+        <field name="help" type="html">
+            <p>Tranches de revenu imposable mensuel et taux applicables. Le taux d'une
+               tranche s'applique à la part du revenu comprise dans cette tranche.</p>
+        </field>
+    </record>
+</odoo>

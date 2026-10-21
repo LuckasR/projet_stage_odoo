@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_phase_template_form_planning" model="ir.ui.view">
+        <field name="name">construction.phase.template.form.planning</field>
+        <field name="model">construction.phase.template</field>
+        <field name="inherit_id" ref="miro_construction_project.view_construction_phase_template_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='depends_on_line_id']" position="after">
+                <field name="min_lag_days" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

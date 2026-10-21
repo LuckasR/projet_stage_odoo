@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_miro_crew_rate_tree" model="ir.ui.view">
+        <field name="name">miro.crew.rate.tree</field>
+        <field name="model">miro.crew.rate</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom" decoration-bf="is_default">
+                <field name="phase_type"/>
+                <field name="element_type_id" placeholder="Tous"/>
+                <field name="crew_id"/>
+                <field name="headcount" optional="show"/>
+                <field name="rate"/>
+                <field name="qty_key" optional="show"/>
+                <field name="is_default"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="crew_hourly_cost" optional="show"/>
+                <field name="unit_cost" optional="show"/>
+                <field name="note" optional="hide"/>
+            </tree>
+        </field>
+    </record>
+    <record id="view_miro_crew_rate_search" model="ir.ui.view">
+        <field name="name">miro.crew.rate.search</field>
+        <field name="model">miro.crew.rate</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="phase_type"/>
+                <field name="element_type_id"/>
+                <field name="crew_id"/>
+                <filter name="default" string="Équipes par défaut" domain="[('is_default', '=', True)]"/>
+                <group expand="1" string="Regrouper par">
+                    <filter name="group_phase" string="Type de phase" context="{'group_by': 'phase_type'}"/>
+                    <filter name="group_element" string="Type d'élément" context="{'group_by': 'element_type_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    <record id="action_miro_crew_rate" model="ir.actions.act_window">
+        <field name="name">Cadences</field>
+        <field name="res_model">miro.crew.rate</field>
+        <field name="view_mode">tree</field>
+        <field name="context">{'search_default_group_phase': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Définir une cadence</p>
+            <p>Ce qu'une équipe produit en une heure sur un type de phase (1,5 m² de
+               parpaing, 1,2 m³ de béton...). Durée = quantité ÷ cadence ; une cadence
+               propre à un type d'élément passe avant la cadence générale.</p>
+        </field>
+    </record>
+</odoo>

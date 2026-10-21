@@ -1,0 +1,226 @@
+/* ==========================================================================
+   Chantiers — vue kanban en grandes cartes : photo en haut, chantier en bas.
+   La classe posée sur <kanban> n'arrive pas jusqu'au conteneur des cartes :
+   on cible donc la carte (.o_mck_card) et, par :has(), la case qui la porte.
+   ========================================================================== */
+// Grille : toutes les cartes ont la même largeur, y compris sur la
+// dernière ligne (en flex, une carte seule n'y prend pas la même taille).
+.o_kanban_renderer:has(.o_mck_card) {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 22px;
+    padding: 22px !important;
+    align-items: stretch;
+
+    .o_kanban_ghost { display: none !important; }
+}
+
+.o_kanban_record:has(> .o_mck_card) {
+    // Plus grandes que les cartes natives (~300 px) : 380 px minimum
+    width: auto !important;
+    min-width: 0;
+    max-width: none;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+}
+
+.o_mck_card {
+    --mck-navy: #1b2a41;
+    --mck-ocre: #e8a317;
+    --mck-ink: #111827;
+    --mck-muted: #6b7280;
+    --mck-line: #e5e7eb;
+
+    padding: 0 !important;   // le rembourrage natif ferait un second cadre
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    border: 1px solid var(--mck-line);
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(17, 24, 39, .06);
+    transition: box-shadow .2s, transform .2s;
+
+    &:hover {
+        box-shadow: 0 10px 28px rgba(17, 24, 39, .14);
+        transform: translateY(-2px);
+        .o_mck_cover img { transform: scale(1.04); }
+    }
+}
+
+/* Photo de couverture */
+.o_mck_cover {
+    position: relative;
+    height: 210px;
+    overflow: hidden;
+    background: var(--mck-navy);
+
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform .35s ease;
+    }
+
+    &::after {
+        content: "";
+        position: absolute;
+        inset: auto 0 0 0;
+        height: 4px;
+        background: var(--mck-ocre);
+    }
+}
+
+.o_mck_placeholder {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: rgba(255, 255, 255, .55);
+    background: linear-gradient(135deg, #1b2a41 0%, #2c4266 100%);
+    i { font-size: 54px; color: rgba(232, 163, 23, .85); }
+    span { font-size: 12px; }
+}
+
+.o_mck_status {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    padding: 3px 11px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: #fff;
+    background: #6b7280;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .25);
+    &.is-en_cours { background: #1d4ed8; }
+    &.is-en_pause { background: #d97706; }
+    &.is-termine  { background: #15803d; }
+    &.is-annule   { background: #b91c1c; }
+}
+
+.o_mck_code {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--mck-navy);
+    background: rgba(255, 255, 255, .92);
+}
+
+/* Informations */
+.o_mck_body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 18px 14px;
+    flex: 1;
+}
+
+.o_mck_title {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--mck-navy);
+}
+
+.o_mck_place {
+    margin-top: -6px;
+    color: var(--mck-muted);
+    font-size: 13px;
+    i { color: var(--mck-ocre); margin-right: 4px; }
+}
+
+.o_mck_tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.o_mck_tag {
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    color: #374151;
+    background: #f1f3f5;
+    &.is-phase { color: #92400e; background: #fef3c7; }
+}
+
+.o_mck_progress_head {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 12px;
+    color: var(--mck-muted);
+    strong { color: var(--mck-navy); }
+}
+
+.o_mck_track {
+    height: 8px;
+    border-radius: 4px;
+    background: #eef0f3;
+    overflow: hidden;
+}
+
+.o_mck_fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--mck-navy), #3b5a8f);
+}
+
+.o_mck_stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding: 10px 0;
+    border-top: 1px solid #f1f3f5;
+    border-bottom: 1px solid #f1f3f5;
+
+    > div { display: flex; flex-direction: column; min-width: 0; }
+    .is-late .o_mck_stat_value { color: #b91c1c; }
+}
+
+.o_mck_stat_label {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #9ca3af;
+}
+
+.o_mck_stat_value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--mck-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.o_mck_footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: auto;
+    font-size: 13px;
+    color: var(--mck-muted);
+
+    .o_mck_client { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+/* Photo dans la fiche chantier : plus grande que l'avatar standard */
+.o_form_view .o_miro_chantier_photo.oe_avatar {
+    img { max-width: 220px !important; max-height: 140px !important; object-fit: cover; border-radius: 8px; }
+}

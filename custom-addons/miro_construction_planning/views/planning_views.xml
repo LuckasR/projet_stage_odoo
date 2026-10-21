@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ===================== Charge par métier ===================== -->
+    <record id="view_miro_planning_load_graph" model="ir.ui.view">
+        <field name="name">miro.planning.load.graph</field>
+        <field name="model">miro.planning.load</field>
+        <field name="arch" type="xml">
+            <graph string="Charge par métier" type="bar" stacked="0" sample="1">
+                <field name="date" interval="week"/>
+                <field name="trade_id"/>
+                <field name="needed" type="measure"/>
+            </graph>
+        </field>
+    </record>
+    <record id="view_miro_planning_load_pivot" model="ir.ui.view">
+        <field name="name">miro.planning.load.pivot</field>
+        <field name="model">miro.planning.load</field>
+        <field name="arch" type="xml">
+            <pivot string="Charge par métier">
+                <field name="trade_id" type="row"/>
+                <field name="date" interval="week" type="col"/>
+                <field name="needed" type="measure"/>
+                <field name="available" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="view_miro_planning_load_tree" model="ir.ui.view">
+        <field name="name">miro.planning.load.tree</field>
+        <field name="model">miro.planning.load</field>
+        <field name="arch" type="xml">
+            <tree decoration-danger="saturated">
+                <field name="date"/>
+                <field name="trade_id"/>
+                <field name="needed"/>
+                <field name="available"/>
+                <field name="usage_pct" widget="progressbar"/>
+                <field name="person_hours" sum="Total"/>
+                <field name="saturated" column_invisible="1"/>
+            </tree>
+        </field>
+    </record>
+    <record id="view_miro_planning_load_search" model="ir.ui.view">
+        <field name="name">miro.planning.load.search</field>
+        <field name="model">miro.planning.load</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="trade_id"/>
+                <filter name="saturated" string="Jours saturés" domain="[('saturated', '=', True)]"/>
+                <group expand="0" string="Regrouper par">
+                    <filter name="group_trade" string="Métier" context="{'group_by': 'trade_id'}"/>
+                    <filter name="group_week" string="Semaine" context="{'group_by': 'date:week'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ===================== Phases planifiées ===================== -->
+    <!-- Gantt (module miro_gantt_view) : vue par défaut du planning. Les
+         barres se déplacent et s'étirent : les dates prévues et l'échéance de
+         la phase suivent (project.task.write). -->
+    <record id="view_task_planning_gantt" model="ir.ui.view">
+        <field name="name">project.task.planning.gantt</field>
+        <field name="model">project.task</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <miro_gantt string="Planning du chantier"
+                        date_start="miro_planned_start" date_end="miro_planned_end"
+                        default_group_by="parent_id,construction_element_id"
+                        colored_by="miro_crew_id.color"
+                        default_filter="week" available_filters="day,week,month,year"
+                        default_title="Phases"
+                        sidebar_label_field="name" taskbar_label_field="name"
+                        progress_field="x_avancement_global"
+                        overdue_field="x_est_en_retard"
+                        duration_field="x_duree_prevue_jours"
+                        sidebar_column_fields="miro_crew_id,miro_headcount,x_duree_prevue_jours"
+                        create="0" delete="0">
+                <field name="miro_crew_id"/>
+                <field name="miro_headcount"/>
+                <field name="x_duree_prevue_jours"/>
+                <field name="x_avancement_global"/>
+                <field name="x_est_en_retard"/>
+                <field name="construction_element_id"/>
+                <field name="parent_id"/>
+            </miro_gantt>
+        </field>
+    </record>
+
+    <record id="view_task_planning_calendar" model="ir.ui.view">
+        <field name="name">project.task.planning.calendar</field>
+        <field name="model">project.task</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <calendar string="Planning du chantier" date_start="miro_planned_start" date_stop="miro_planned_end"
+                      color="miro_crew_id" mode="month" quick_create="0" event_open_popup="1">
+                <field name="construction_element_id"/>
+                <field name="miro_crew_id" filters="1"/>
+                <field name="miro_headcount"/>
+                <field name="miro_duration_hours" widget="float_time"/>
+            </calendar>
+        </field>
+    </record>
+    <record id="view_task_planning_tree" model="ir.ui.view">
+        <field name="name">project.task.planning.tree</field>
+        <field name="model">project.task</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <tree default_order="miro_planned_start" decoration-danger="x_est_en_retard"
+                  decoration-muted="x_avancement_global &gt;= 100">
+                <field name="name"/>
+                <field name="parent_id" optional="show" string="Ouvrage"/>
+                <field name="miro_crew_id"/>
+                <field name="miro_headcount" optional="show"/>
+                <field name="miro_planned_start"/>
+                <field name="miro_planned_end"/>
+                <field name="x_duree_prevue_jours" optional="show"/>
+                <field name="miro_labor_cost" optional="show" sum="Total"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="x_avancement_global" widget="progressbar" optional="show"/>
+                <field name="x_est_en_retard" column_invisible="1"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- ===================== Onglet Planning du chantier ===================== -->
+    <record id="view_project_construction_form_planning" model="ir.ui.view">
+        <field name="name">project.project.construction.form.planning</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="miro_construction_project.view_project_project_construction_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Planning" name="miro_planning">
+                    <div class="mb-3">
+                        <button name="action_miro_plan" type="object" string="Planifier le chantier"
+                                class="btn-primary" icon="fa-calendar-check-o"
+                                confirm="Recalculer le planning à partir de la date de début des travaux ? Les dates des phases non terminées seront remplacées."/>
+                        <button name="action_miro_view_schedule" type="object" string="Planning (Gantt)"
+                                class="btn-secondary ms-2" icon="fa-tasks" invisible="not miro_planned_on"/>
+                        <button name="action_miro_view_load" type="object" string="Charge par métier"
+                                class="btn-secondary ms-2" icon="fa-bar-chart" invisible="not miro_planned_on"/>
+                    </div>
+                    <group>
+                        <group string="Dates">
+                            <field name="x_date_debut_travaux" string="Début des travaux" required="0"/>
+                            <field name="x_date_fin_prevue" string="Fin prévue (planning)" readonly="1"/>
+                            <field name="miro_planned_workdays"/>
+                            <field name="miro_planned_phase_count"/>
+                            <field name="miro_planned_on"/>
+                        </group>
+                        <group string="Règles">
+                            <field name="miro_calendar_id" placeholder="Calendrier de la société"/>
+                            <field name="miro_parallel_crews"/>
+                            <field name="miro_update_deadlines"/>
+                        </group>
+                    </group>
+                    <field name="miro_crew_capacity_ids" nolabel="1">
+                        <tree editable="bottom">
+                            <field name="crew_id"/>
+                            <field name="count"/>
+                        </tree>
+                    </field>
+                    <div invisible="not miro_planning_warnings" class="alert alert-warning" role="alert">
+                        <strong>Remarques du planning</strong>
+                        <field name="miro_planning_warnings" nolabel="1"/>
+                    </div>
+                    <separator string="Effectif proposé par métier"/>
+                    <field name="miro_load_summary" nolabel="1"/>
+                </page>
+            </xpath>
+        </field>
+    </record>
+    <record id="view_project_form_planning" model="ir.ui.view">
+        <field name="name">project.project.form.planning</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="project.edit_project"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Planning" name="miro_planning">
+                    <div class="mb-3">
+                        <button name="action_miro_plan" type="object" string="Planifier le chantier"
+                                class="btn-primary" icon="fa-calendar-check-o"/>
+                        <button name="action_miro_view_schedule" type="object" string="Planning (Gantt)"
+                                class="btn-secondary ms-2" icon="fa-tasks" invisible="not miro_planned_on"/>
+                        <button name="action_miro_view_load" type="object" string="Charge par métier"
+                                class="btn-secondary ms-2" icon="fa-bar-chart" invisible="not miro_planned_on"/>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="x_date_debut_travaux"/>
+                            <field name="x_date_fin_prevue" readonly="1"/>
+                            <field name="miro_planned_workdays"/>
+                            <field name="miro_planned_on"/>
+                        </group>
+                        <group>
+                            <field name="miro_calendar_id"/>
+                            <field name="miro_parallel_crews"/>
+                            <field name="miro_update_deadlines"/>
+                        </group>
+                    </group>
+                    <field name="miro_planning_warnings" nolabel="1" invisible="not miro_planning_warnings"/>
+                    <field name="miro_load_summary" nolabel="1"/>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Phase : dates planifiées dans le suivi de chantier -->
+    <record id="view_task_form_planning" model="ir.ui.view">
+        <field name="name">project.task.form.planning</field>
+        <field name="model">project.task</field>
+        <field name="inherit_id" ref="miro_construction_planning.view_task_form_labor"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='miro_crew_id']" position="before">
+                <field name="miro_planned_start"/>
+                <field name="miro_planned_end"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

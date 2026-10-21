@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.miro.ai.assistant</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="Miro Assistant" string="Miro Assistant" name="miro_ai_assistant"
+                     groups="base.group_system">
+                    <block title="Fournisseur d'IA (API compatible OpenAI)" id="miro_ai_provider">
+                        <setting id="miro_ai_api_url" string="URL de l'API"
+                                 help="Groq, OpenAI, Mistral, OpenRouter, Ollama... sans « /chat/completions ».">
+                            <field name="miro_ai_api_url" placeholder="https://api.groq.com/openai/v1"/>
+                        </setting>
+                        <setting id="miro_ai_api_key" string="Clé API"
+                                 help="Groq : console.groq.com → API Keys.">
+                            <field name="miro_ai_api_key" password="True" placeholder="gsk_..."/>
+                        </setting>
+                        <setting id="miro_ai_model" string="Modèle"
+                                 help="Nom exact chez le fournisseur ; il doit savoir appeler des outils.">
+                            <field name="miro_ai_model" placeholder="openai/gpt-oss-20b"/>
+                        </setting>
+                        <setting id="miro_ai_reasoning_effort" string="Réflexion"
+                                 help="Pour les modèles qui raisonnent (gpt-oss...) ; vide pour les autres.">
+                            <field name="miro_ai_reasoning_effort"/>
+                        </setting>
+                        <setting id="miro_ai_max_tokens" string="Jetons max. par réponse">
+                            <field name="miro_ai_max_tokens"/>
+                        </setting>
+                        <setting id="miro_ai_extra_params" string="Paramètres supplémentaires"
+                                 help="Objet JSON ajouté à chaque requête, ex. {&quot;temperature&quot;: 0.2}.">
+                            <field name="miro_ai_extra_params" placeholder="{&quot;temperature&quot;: 0.2}"/>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+</odoo>

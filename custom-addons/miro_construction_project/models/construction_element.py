@@ -1,5 +1,7 @@
 import logging
 
+from markupsafe import Markup
+
 from odoo import Command, _, api, fields, models
 from odoo.exceptions import ValidationError
 
@@ -93,6 +95,11 @@ class ConstructionElement(models.Model):
         "Nb d'ouvertures", compute='_compute_wall_opening_count')
     sketch_svg = fields.Html(
         "Représentation", compute='_compute_sketch_svg', sanitize=False)
+    metre_cards_html = fields.Html(
+        "Métré", compute='_compute_metre_html', sanitize=False,
+        help="Volume et surfaces de l'élément, calculés depuis ses caractéristiques.")
+    metre_detail_html = fields.Html(
+        "Détail du métré", compute='_compute_metre_html', sanitize=False)
 
     # --- Quantités ------------------------------------------------------
     reinforcement = fields.Char(
@@ -383,7 +390,87 @@ class ConstructionElement(models.Model):
         res = super().write(vals)
         if 'element_type_id' in vals:
             self._sync_value_lines()
+        if 'dimensions' in vals and not self.env.context.get('miro_no_metre'):
+            self._recompute_metre(exclude=set(vals))
         return res
+
+    def _recompute_metre(self, exclude=()):
+        """Le métré suit les caractéristiques : une cote corrigée recalcule
+        volume, surfaces et acier (sauf les métrés écrits en même temps, par
+        exemple ceux qu'un mur reporte lui-même). Passe par write() : besoins
+        en matériaux, main-d'œuvre et heures des phases suivent."""
+        for rec in self:
+            values = rec._quantities_for(rec.dimensions or {})
+            vals = {'qty_%s' % key: round(value, 3) for key, value in values.items()
+                    if 'qty_%s' % key not in exclude
+                    and abs((rec['qty_%s' % key] or 0.0) - value) > 1e-6}
+            if vals:
+                rec.with_context(miro_no_metre=True).write(vals)
+                rec._refresh_phase_hours()
+
+    # ------------------------------------------------------------------
+    # Métré : affichage (représentation et onglet « Métré »)
+    # ------------------------------------------------------------------
+    def _metre_lines(self):
+        """[(libellé, valeur, unité, formule)] du métré de l'élément, dans
+        l'ordre d'affichage. La formule reprend les cotes de l'élément."""
+        self.ensure_one()
+        dims = self.dimensions or {}
+        code = self.element_type_id.code
+        l, h = dims.get('l') or 0.0, dims.get('h') or 0.0
+        w = dims.get('w', dims.get('ep')) or 0.0
+        f = lambda v: ("%.2f" % v).replace('.', ',')
+        lines = []
+        if code == 'dalle':
+            surf = self.qty_surface_m2
+            lines.append((_("Volume béton"), self.qty_beton_m3, "m³",
+                          _("surface × épaisseur = %s × %s") % (f(surf), f(h))))
+            lines.append((_("Surface"), surf, "m²",
+                          _("surface nette du contour (trémies déduites)") if dims.get('tremies')
+                          else _("L × l = %s × %s") % (f(l), f(w))))
+            if not is_ground_slab(self.key):
+                lines.append((_("Surface coffrée"), self.qty_coffrage_m2, "m²",
+                              _("sous-face de la dalle")))
+        elif code == 'mur':
+            openings = dims.get('ouvertures_m') or 0.0
+            lines.append((_("Surface"), self.qty_surface_m2, "m²",
+                          _("(L − ouvertures) × h = (%s − %s) × %s") % (f(l), f(openings), f(h))))
+            lines.append((_("Volume"), self.qty_beton_m3, "m³",
+                          _("surface × épaisseur = %s × %s") % (f(self.qty_surface_m2), f(w))))
+        else:
+            lines.append((_("Volume béton"), self.qty_beton_m3, "m³",
+                          _("L × l × h = %s × %s × %s") % (f(l), f(w), f(h))))
+            lines.append((_("Surface coffrée"), self.qty_coffrage_m2, "m²",
+                          _("(2 h + l) × L = (2 × %s + %s) × %s") % (f(h), f(w), f(l))
+                          if code == 'poutre' else
+                          _("2 (L + l) × h = 2 × (%s + %s) × %s") % (f(l), f(w), f(h))))
+        ratio = self.element_type_id.steel_ratio_kg_m3
+        lines.append((_("Acier"), self.qty_acier_kg, "kg",
+                      _("volume × ratio = %s × %s kg/m³") % (
+                          ("%.3f" % self.qty_beton_m3).replace('.', ','), f(ratio))
+                      if ratio else _("saisi, ou lu sur le plan")))
+        return lines
+
+    @api.depends('dimensions', 'element_type_id', 'qty_beton_m3', 'qty_coffrage_m2',
+                 'qty_surface_m2', 'qty_acier_kg', 'key')
+    def _compute_metre_html(self):
+        for rec in self:
+            lines = rec._metre_lines() if rec.element_type_id else []
+            cards = Markup('').join(
+                Markup('<div class="o_metre_card"><span class="o_metre_label">%s</span>'
+                       '<span class="o_metre_value">%s <small>%s</small></span></div>') % (
+                    label, ("%.3f" % value).replace('.', ',') if value else "—", unit)
+                for label, value, unit, _formula in lines)
+            rec.metre_cards_html = Markup('<div class="o_metre_cards">%s</div>') % cards
+            rows = Markup('').join(
+                Markup('<tr><td class="o_metre_row_label">%s</td><td class="o_metre_formula">%s</td>'
+                       '<td class="o_metre_result">%s %s</td></tr>') % (
+                    label, formula, ("%.3f" % value).replace('.', ',') if value else "—", unit)
+                for label, value, unit, formula in lines)
+            rec.metre_detail_html = Markup(
+                '<table class="table table-sm o_metre_table"><thead><tr><th>%s</th><th>%s</th>'
+                '<th class="text-end">%s</th></tr></thead><tbody>%s</tbody></table>') % (
+                _("Métré"), _("Calcul"), _("Résultat"), rows)
 
     @api.depends('dimensions',
                  'element_type_id.field_ids.required',

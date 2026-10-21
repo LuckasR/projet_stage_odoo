@@ -1,0 +1,735 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* miro_gantt_view
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 17.0-20231221\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-21 08:18+0000\n"
+"PO-Revision-Date: 2026-09-21 08:18+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/popover/chart_popover.js:0
+#, python-format
+msgid "%s %ss"
+msgstr "%s %ss"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/model/records.js:0
+#, python-format
+msgid "%s deleted successfully"
+msgstr "%s supprimé avec succès"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/popover/chart_popover.js:0
+#: code:addons/miro_gantt_view/static/src/utils/chart_row.js:0
+#, python-format
+msgid "1 %s"
+msgstr "1 %s"
+
+#. module: miro_gantt_view
+#: model:ir.model,name:miro_gantt_view.model_ir_actions_act_window_view
+msgid "Action Window View"
+msgstr "Vue Fenêtre d'action"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Apr"
+msgstr "Avr"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "April"
+msgstr "Avril"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/model/records.js:0
+#, python-format
+msgid "Are you sure you want to delete %s?"
+msgstr "Voulez-vous vraiment supprimer %s ?"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Aug"
+msgstr "Août"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "August"
+msgstr "Août"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/dialogs/drag_confirm_dialog.js:0
+#: code:addons/miro_gantt_view/static/src/model/records.js:0
+#, python-format
+msgid "Cancel"
+msgstr "Annuler"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/drag_and_drop.js:0
+#, python-format
+msgid "Cannot move"
+msgstr "Déplacement impossible"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/drag_and_drop.js:0
+#: code:addons/miro_gantt_view/static/src/utils/drag_and_drop.js:0
+#, python-format
+msgid "Cannot resize"
+msgstr "Redimensionnement impossible"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/dialogs/drag_confirm_dialog.js:0
+#, python-format
+msgid "Change the end date of « %s » %s to:"
+msgstr "Modifier la date de fin de « %s » %s en :"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/dialogs/drag_confirm_dialog.js:0
+#, python-format
+msgid "Change the start date of « %s » %s to:"
+msgstr "Modifier la date de début de « %s » %s en :"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/popover/popover.js:0
+#, python-format
+msgid "Close"
+msgstr "Fermer"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/renderer/renderer.js:0
+#, python-format
+msgid "Column unit: Day"
+msgstr "Unité de colonne : Jour"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/renderer/renderer.js:0
+#, python-format
+msgid "Column unit: Month"
+msgstr "Unité de colonne : Mois"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/dialogs/drag_confirm_dialog.js:0
+#: code:addons/miro_gantt_view/static/src/components/dialogs/drag_confirm_dialog.js:0
+#, python-format
+msgid "Confirm"
+msgstr "Confirmer"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/controller/controller.js:0
+#, python-format
+msgid "Create"
+msgstr "Créer"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/renderer/renderer.js:0
+#, python-format
+msgid "Current year — type a year to jump to it"
+msgstr "Année courante — saisissez une année pour y accéder"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Day"
+msgstr "Jour"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Dec"
+msgstr "Déc"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "December"
+msgstr "Décembre"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/popover/popover.js:0
+#: code:addons/miro_gantt_view/static/src/model/records.js:0
+#, python-format
+msgid "Delete"
+msgstr "Supprimer"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/renderer/renderer.js:0
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Duration"
+msgstr "Durée"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/popover/popover.js:0
+#, python-format
+msgid "Edit"
+msgstr "Modifier"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/drag_and_drop.js:0
+#, python-format
+msgid "Editing and deletion are not allowed."
+msgstr "La modification et la suppression ne sont pas autorisées."
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/dialogs/drag_confirm_dialog.js:0
+#: code:addons/miro_gantt_view/static/src/renderer/renderer.js:0
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "End date"
+msgstr "Date de fin"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/controller/controller.js:0
+#, python-format
+msgid "Failed to create record"
+msgstr "Échec de la création de l'enregistrement"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/model/records.js:0
+#, python-format
+msgid "Failed to delete record: "
+msgstr "Échec de la suppression de l'enregistrement : "
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/taskbar/taskbar.js:0
+#, python-format
+msgid "Failed to load gantt data."
+msgstr "Échec du chargement des données du Gantt."
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/popover/popover_template.js:0
+#, python-format
+msgid "Failed to load task details"
+msgstr "Échec du chargement des détails de la tâche"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/model/records.js:0
+#, python-format
+msgid "Failed to open form view: "
+msgstr "Échec de l'ouverture de la vue formulaire : "
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/taskbar/taskbar.js:0
+#, python-format
+msgid "Failed to render gantt chart. Please try refreshing."
+msgstr "Échec de l'affichage du diagramme de Gantt. Veuillez essayer d'actualiser la page."
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/popover/popover_template.js:0
+#, python-format
+msgid "Failed to render popup template"
+msgstr "Échec du rendu du modèle de la fenêtre"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/drag_and_drop.js:0
+#, python-format
+msgid "Failed to revert changes "
+msgstr "Échec de l'annulation des modifications "
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/drag_and_drop.js:0
+#, python-format
+msgid "Failed to save changes: "
+msgstr "Échec de l'enregistrement des modifications : "
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Feb"
+msgstr "Févr"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "February"
+msgstr "Février"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Fri"
+msgstr "Ven"
+
+#. module: miro_gantt_view
+#: model:ir.model.fields.selection,name:miro_gantt_view.selection__ir_ui_view__type__miro_gantt
+msgid "Gantt"
+msgstr "Gantt"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/renderer/renderer.js:0
+#, python-format
+msgid "Invalid year — min 1000, max 9999"
+msgstr "Année invalide — min 1000, max 9999"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Jan"
+msgstr "Janv"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "January"
+msgstr "Janvier"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Jul"
+msgstr "Juil"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "July"
+msgstr "Juillet"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Jun"
+msgstr "Juin"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "June"
+msgstr "Juin"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/taskbar/taskbar.js:0
+#, python-format
+msgid "Loading..."
+msgstr "Chargement..."
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Mar"
+msgstr "Mars"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "March"
+msgstr "Mars"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "May"
+msgstr "Mai"
+
+#. module: miro_gantt_view
+#: model:ir.model.fields.selection,name:miro_gantt_view.selection__ir_actions_act_window_view__view_mode__miro_gantt
+msgid "Miro Gantt"
+msgstr "Miro Gantt"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Mon"
+msgstr "Lun"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Month"
+msgstr "Mois"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/dialogs/drag_confirm_dialog.js:0
+#, python-format
+msgid "Move « %s » from %s - %s to:"
+msgstr "Déplacer « %s » de %s - %s vers :"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/controller/controller.js:0
+#, python-format
+msgid "New"
+msgstr "Nouveau"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/renderer/renderer.js:0
+#, python-format
+msgid "Next"
+msgstr "Suivant"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/popover/popover_template.js:0
+#, python-format
+msgid "No details"
+msgstr "Aucun détail"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/popover/chart_popover.js:0
+#, python-format
+msgid "No %s"
+msgstr "Aucun %s"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Nov"
+msgstr "Nov"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "November"
+msgstr "Novembre"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Oct"
+msgstr "Oct"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "October"
+msgstr "Octobre"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/controller/controller.js:0
+#, python-format
+msgid "Open"
+msgstr "Ouvrir"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/popover/popover.js:0
+#, python-format
+msgid "Open full form"
+msgstr "Ouvrir le formulaire complet"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/renderer/renderer.js:0
+#, python-format
+msgid "Previous"
+msgstr "Précédent"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Progress"
+msgstr "Progression"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/renderer/renderer.js:0
+#, python-format
+msgid "Progress (%)"
+msgstr "Progression (%)"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/renderer/renderer.js:0
+#, python-format
+msgid "Range limited to %s years"
+msgstr "Plage limitée à %s années"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/drag_and_drop.js:0
+#, python-format
+msgid "Read-only view"
+msgstr "Vue en lecture seule"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/controller/controller.js:0
+#, python-format
+msgid "Record created successfully"
+msgstr "Enregistrement créé avec succès"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/renderer/renderer.js:0
+#, python-format
+msgid "Reset range"
+msgstr "Réinitialiser la plage"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Sat"
+msgstr "Sam"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Sep"
+msgstr "Sept"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "September"
+msgstr "Septembre"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/dialogs/drag_confirm_dialog.js:0
+#: code:addons/miro_gantt_view/static/src/renderer/renderer.js:0
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Start date"
+msgstr "Date de début"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/renderer/renderer.js:0
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Status"
+msgstr "Statut"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Sun"
+msgstr "Dim"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/popover/chart_popover.js:0
+#: code:addons/miro_gantt_view/static/src/utils/drag_and_drop.js:0
+#, python-format
+msgid "Task"
+msgstr "Tâche"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Thu"
+msgstr "Jeu"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/renderer/renderer.js:0
+#, python-format
+msgid "Today"
+msgstr "Aujourd'hui"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/renderer/renderer.js:0
+#, python-format
+msgid "Toggle sidebar"
+msgstr "Afficher/masquer la barre latérale"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/renderer/renderer.js:0
+#, python-format
+msgid "Toggle sidebar fields"
+msgstr "Afficher/masquer les champs de la barre latérale"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/renderer/renderer.js:0
+#, python-format
+msgid "Toggle totals row"
+msgstr "Afficher/masquer la ligne des totaux"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Tue"
+msgstr "Mar"
+
+#. module: miro_gantt_view
+#: model:ir.model,name:miro_gantt_view.model_ir_ui_view
+msgid "View"
+msgstr "Vue"
+
+#. module: miro_gantt_view
+#: model:ir.model.fields,field_description:miro_gantt_view.field_ir_actions_act_window_view__view_mode
+#: model:ir.model.fields,field_description:miro_gantt_view.field_ir_ui_view__type
+msgid "View Type"
+msgstr "Type de vue"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Wed"
+msgstr "Mer"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Week"
+msgstr "Semaine"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/chart_row.js:0
+#, python-format
+msgid "Without group"
+msgstr "Sans groupe"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/config.js:0
+#, python-format
+msgid "Year"
+msgstr "Année"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/drag_and_drop.js:0
+#, python-format
+msgid "date Start and date End are readonly"
+msgstr "La date de début et la date de fin sont en lecture seule"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/drag_and_drop.js:0
+#, python-format
+msgid "date end is readonly"
+msgstr "La date de fin est en lecture seule"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/drag_and_drop.js:0
+#, python-format
+msgid "date start is readonly"
+msgstr "La date de début est en lecture seule"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/view_registry.js:0
+#, python-format
+msgid "miro Gantt"
+msgstr "Miro Gantt"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/drag_and_drop.js:0
+#, python-format
+msgid "moved"
+msgstr "déplacé"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/model/records.js:0
+#, python-format
+msgid "record"
+msgstr "enregistrement"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/drag_and_drop.js:0
+#, python-format
+msgid "rescheduled"
+msgstr "replanifié"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/components/popover/chart_popover.js:0
+#: code:addons/miro_gantt_view/static/src/utils/chart_row.js:0
+#, python-format
+msgid "tasks"
+msgstr "tâches"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/model/records.js:0
+#, python-format
+msgid "this record"
+msgstr "cet enregistrement"
+
+#. module: miro_gantt_view
+#. odoo-javascript
+#: code:addons/miro_gantt_view/static/src/utils/drag_and_drop.js:0
+#, python-format
+msgid "undo"
+msgstr "annuler"

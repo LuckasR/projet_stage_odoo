@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+
+   <!-- ==========================================================================
+         Renderer root element: the main Gantt chart component.
+         Contains:
+           - Toolbar: navigation buttons (prev/next), sidebar toggle, zoom selector,
+             period dropdown, today button, and date range label.
+           - Scroll area: the scrollable body where the Gantt grid is rendered
+             (populated by renderer_dom.js).
+         ========================================================================== -->
+    <t t-name="miro_gantt_view.Gantt.Renderer">
+        <div t-ref="root"
+            class="o_gantt_view_renderer o_renderer h-100 d-flex flex-column"
+        >
+            <!-- Toolbar — style taken from the calendar view header
+                 (o_calendar_header): neutral background + border-bottom,
+                 grouped prev/next buttons, period title in <h5>. -->
+            <div class="o_gantt_view_toolbar d-flex flex-wrap align-items-center gap-1 px-3 py-2 border-bottom">
+                <div class="o_gantt_view_navigation_buttons btn-group">
+                    <!-- Toggle of the names panel (sidebar) on the left — light button
+                         (btn-light), like the calendar's lateral toggle -->
+                    <button class="btn btn-secondary d-none d-md-block"
+                        t-on-click="_toggleSidebar"
+                        t-att-title="_titleToggleSidebar">
+                        <span class="oi oi-panel-right"/>
+                    </button>
+
+                <!-- Previous / next navigation, grouped (btn-group) -->
+
+                    <button class="o_gantt_view_button_prev btn btn-secondary"
+                        t-on-click="() => this.scrollByPage(-1)"
+                        t-att-title="_titlePrev">
+                        <span class="oi oi-arrow-left"/>
+                    </button>
+                    <input type="number"
+                        min="1"
+                        step="1"
+                        t-if="state.zoom !== 'day' and state.zoom != 'week'  "
+                        class="btn btn-secondary o_gantt_view_scroll_step"
+                        t-att-value="state.ScrollByPageStep"
+                        t-on-input="(ev) => this.updateScrollByPageStep(ev.target.value)"
+                        t-att-title="_t('Number of columns to scroll by (month and year zoom)')"
+                        style="width: 70px; margin-left: 4px;"/>
+                    <button class="o_gantt_view_button_next btn btn-secondary"
+                        t-on-click="() => this.scrollByPage(1)"
+                        t-att-title="_titleNext">
+                        <span class="oi oi-arrow-right"/>
+                    </button>
+                </div>
+                <!-- Zoom selector (Day/Week/Month/Year) -->
+                <ViewScaleSelector
+                    scales="availableFilters"
+                    currentScale="state.zoom"
+                    setScale="(s) => this.setZoom(s)"
+                />
+                    <Dropdown
+                        t-if="state.zoom !== 'day' and state.zoom != 'year'  "
+                        class="'btn-group d-none d-sm-inline-flex'"
+                        togglerClass="'btn btn-secondary scale_button_selection'">
+                        <t t-set-slot="toggler">
+                            <t t-esc="selectedPeriodLabel"/>
+                        </t>
+                        <t t-foreach="periodOptions" t-as="opt" t-key="opt.value">
+                            <DropdownItem onSelected="() => this._onPeriodSelect(opt.value)">
+                                <t t-esc="opt.label"/>
+                            </DropdownItem>
+                        </t>
+                    </Dropdown>
+                    <!-- Year zoom: a plain number input carrying the displayed
+                         year (no period dropdown) — typing a year jumps to it. -->
+                    <input type="number"
+                        min="1000"
+                        step="1"
+                        t-if="state.zoom === 'year'"
+                        class="btn btn-secondary o_gantt_view_year_input"
+                        t-att-class="state.yearInputWarning ? 'o_gantt_view_year_input_error' : ''"
+                        t-att-value="_focusYear"
+                        t-on-change="(ev) => this._onYearInput(ev.target.value)"
+                        t-on-input="(ev) => this._clearYearWarning()"
+                        t-att-title="_yearInputTitle"
+style="width: 90px;"/>
+<Dropdown
+                        t-if="state.zoom === 'year' and _isYearUnitChoice"
+                        class="'btn-group'"
+                        togglerClass="'btn btn-secondary'">
+                        <t t-set-slot="toggler">
+                            <t t-esc="_yearColumnsLabel"/>
+                        </t>
+                        <DropdownItem onSelected="() => this.selectYearColumns('day')">
+                            <t t-esc="_yearColumnsDayLabel"/>
+                        </DropdownItem>
+                        <DropdownItem onSelected="() => this.selectYearColumns('month')">
+                            <t t-esc="_yearColumnsMonthLabel"/>
+                        </DropdownItem>
+                    </Dropdown>
+
+                <!-- Direct date picker (day zoom only) -->
+                    <span t-if="state.zoom === 'day'" class="o_miro_gantt_datepicker d-inline-block">
+                        <DateTimeInput
+                            value="_focusDateDT"
+                            type="'date'"
+                            showWeekNumbers="true"
+                            onChange="(dt) => this._onDateInput(dt)"/>
+                    </span>
+                     <!-- Custom range filter: start → end dates. A single-day
+                         range switches to the day zoom, up to 7 days to the
+                         week zoom, less than 3 months to the month filter,
+                         3 months and more to the scrollable year display
+                         (first column = start, last column = end). Unlike the
+                         default week zoom (always Monday → Sunday), the picked
+                         range is shown exactly as selected. -->
+                    <div t-if="state.zoom !== 'day'"
+                         t-att-class="state.rangeClipped ? 'o_gantt_view_custom_range o_gantt_view_range_clipped d-none d-lg-inline-flex align-items-center gap-1' : 'o_gantt_view_custom_range d-none d-lg-inline-flex align-items-center gap-1'">
+                        <DateRangeInput
+                            value="[this._customStartDT, this._customEndDT]"
+                            format="'dd/MM/yyyy'"
+                            onApply="(range) => this._onRangeApply(range)"/>
+                        <span t-if="state.rangeClipped"
+                              class="o_gantt_view_range_warning fa fa-exclamation-triangle"
+                              t-att-title="_rangeClippedTitle"/>
+                        <button t-if="state.customRange"
+                            class="btn btn-secondary"
+                            t-on-click="_clearCustomRange"
+                            t-att-title="_titleResetRange">
+                            <span class="fa fa-times"/>
+                        </button>
+                    </div>
+                <!-- Today button: brings the focus back to the current date -->
+                <button 
+                t-if="state.zoom === 'day' or state.zoom === 'week'  "
+                class="o_gantt_view_button_today btn btn-secondary"
+                    t-on-click="scrollToToday"
+                    t-att-title="_titleToday"><t t-esc="_titleToday"/></button>
+                <!-- Title of the currently displayed period (h5, like the calendar view) -->
+                <!-- <h5 class="d-none d-sm-inline-flex ms-lg-2 mb-0 text-truncate">
+                    <t t-esc="formattedFocusDate"/>
+                </h5> -->
+                <!-- Advanced controls, aligned to the right of the bar -->
+                <div class="ms-auto d-flex flex-wrap align-items-center gap-1">
+
+                    <!-- Sidebar field toggler moved to the sidebar's own
+                         header row (components/sidebar/sidebar.xml,
+                         gantt_view.HeaderSidebar), right under the sidebar
+                         column headers, instead of here. -->
+                    <!-- Totals row toggle: show/hide the global per-column totals
+                         count (number of taskbars per visible column) -->
+                    <button class="btn btn-secondary d-none d-sm-inline-block"
+                        t-on-click="_toggleTotalsRow"
+                        t-att-title="_titleToggleTotals">
+                        <span t-att-class="'fa ' + (state.showTotalsRow ? 'fa-bar-chart' : 'fa-bar-chart')"/>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Scrollable Gantt area:
+                 The renderer_dom module populates this div with column headers,
+                 row headers (sidebar), date grid, and task bars (pills).
+                 This is the main scrollable container for the Gantt chart. -->
+            <div t-ref="scrollArea" class="o_gantt_view_scroll_body w-100"/>
+
+            <!-- Global totals row: this sticky footer is placed outside the vertical
+                 scroll area. Its cells align on the grid columns and follow the
+                 main body's horizontal scroll position (translate applied in
+                 utils/chart_row.js / renderer.js 'scroll' handler) — the row
+                 itself has no scrollbar. -->
+            <div t-if="state.showTotalsRow"
+                 class="o_gantt_view_chart_row d-flex"
+                 t-ref="totalsRow">
+                <div class="o_gantt_view_chart_row_label"
+                     t-attf-style="width: {{ state.sidebarVisible ? state.sidebarWidth : 0 }}px;">
+                    <!-- <t t-esc="_titleTotalsRowLabel"/> -->
+                </div>
+                <!-- Cells generated in JS (utils/chart_row.js) -->
+                <div class="o_gantt_view_chart_row_scroll" t-ref="totalsRowScroll"/>
+            </div>
+        </div>
+    </t>
+
+</templates>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_miro_paie_root" name="Paie" parent="hr.menu_hr_root"
+              sequence="80" groups="hr.group_hr_user"/>
+    <menuitem id="menu_miro_payslip" name="Bulletins de paie" parent="menu_miro_paie_root"
+              action="action_miro_payslip" sequence="10"/>
+    <menuitem id="menu_miro_payslip_generate" name="Générer les bulletins" parent="menu_miro_paie_root"
+              action="action_miro_payslip_generate" sequence="20"/>
+    <menuitem id="menu_miro_irsa_bracket" name="Barème IRSA" parent="hr.menu_human_resources_configuration"
+              action="action_miro_irsa_bracket" sequence="90" groups="hr.group_hr_manager"/>
+</odoo>

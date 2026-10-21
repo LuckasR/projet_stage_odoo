@@ -1,0 +1,1526 @@
+// ============================================================================
+// gantt-view Gantt View — Variables & Mixins
+// ============================================================================
+
+// Colors
+$gantt-view-gray-300: #eaeaeb;
+$gantt-view-gray-100: #dbdde0;
+$gantt-view-view-bg: #ffffff;
+$gantt-view-brand-primary: #1a73e8;
+$gantt-view-text-color: #212529;
+$gantt-view-text-muted: #6c757d;
+
+// Borders
+$gantt-view-border-color: $gantt-view-gray-300;
+
+// Toggleable sidebar info columns: the width comes from the inline
+// `grid-template-columns` (sidebarColsCss in config.js, built from the
+// dynamic `sidebar_column_fields` or the historical fixed columns); the
+// `.o_gantt_view_sidebar_info` generic class below carries only the shared
+// typography/border styling so any dynamic column key works out of the box.
+$gantt-view-sidebar-info-col: o_gantt_view_sidebar_info;
+
+// Pill task bar (must match BAR_HEIGHT in config.js)
+$gantt-view-pill-height: 30px;
+
+// Drag highlights
+$gantt-view-highlight-cell-color: rgba(91, 173, 206, 0.781);
+
+// Today column highlights
+$gantt-view-highlight-today-border: #dca665;
+$gantt-view-highlight-today-bg: #fffaeb;
+
+// Position helper
+@mixin o-gantt-position-absolute(
+  $top: null,
+  $right: null,
+  $bottom: null,
+  $left: null
+) {
+  position: absolute;
+  top: $top;
+  right: $right;
+  bottom: $bottom;
+  left: $left;
+}
+
+// Hover/focus/drag states (disabled when actively grabbing, copying, etc.)
+@mixin o-gantt-view-hover() {
+  &:hover,
+  &:focus,
+  &.o_gantt-view_dragged_pill {
+    @at-root #{selector-replace(&, ".o_gantt_view_renderer", ".o_gantt_view_renderer:not(.o_gantt-view_copying)")} {
+      @content;
+    }
+  }
+}
+
+// Hoverable color that darkens on interaction
+@mixin o-gantt-view-hoverable-colors($color) {
+  background-color: $color;
+  @include o-gantt-view-hover() {
+    background-color: darken($color, 10%);
+  }
+}
+
+// Today cell highlight (golden left/top borders)
+@mixin o-gantt-view-cell {
+  &.o_gantt_view_today {
+    background-color: $gantt-view-highlight-today-bg;
+    border-left-color: $gantt-view-highlight-today-border;
+    border-top-color: $gantt-view-highlight-today-border;
+    + .o_gantt_view_header_cell,
+    + .o_gantt_view_cell {
+      border-left-color: $gantt-view-highlight-today-border;
+    }
+  }
+}
+
+// One rule per sidebar info column, prefixed by $parent (e.g. "> " inside the
+// header minor, or "" for the body cells), so the column selectors are never
+// repeated by hand. A single generic class (o_gantt_view_sidebar_info) keeps
+// the selector valid for the dynamic columns too.
+@mixin o-gantt-view-sidebar-info-cols($parent: "") {
+  #{$parent}.#{$gantt-view-sidebar-info-col} {
+    @content;
+  }
+}
+
+// Common header label geometry (matches the grid minor header cells)
+@mixin o-gantt-view-header-cell-base {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: $gantt-view-text-color;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  min-width: 0;
+}
+
+// Z-index layers
+@mixin o-gantt-view-zindex($level) {
+  z-index: map-get(
+    (
+      grid: 0,
+      grid-interact: 1,
+      pill: 10,
+      interact: 20,
+      top: 30,
+      view-nocontent: 25,
+    ),
+    $level
+  );
+}
+.o_gantt_view_task_row {
+  border-bottom: 1px solid $gantt-view-border-color;
+  overflow: hidden;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 48px;
+}
+
+// A band row (grid + sidebar) whose taskbars are all outside the horizontally
+// visible area: keep the box (so grid tracks / sidebar stay aligned) but hide
+// its rendering so no empty line is shown while scrolling.
+.o_gantt_view_row_hidden {
+  visibility: hidden;
+}
+
+// Alternating backgrounds are now applied via JS (globalRowIndex) to handle
+// nested parent structure correctly (task rows in different group wrappers).
+
+// 12-color palette for task pills (darker)
+$gantt-view-colors-complete: (
+  #1a56db,
+  #096b5e,
+  #0a4f22,
+  #7048d4,
+  #067a99,
+  #5254d0,
+  #0d6458,
+  #3e38b5,
+  #475a2d,
+  #3a4555,
+  #0170a8,
+  #6b30d0
+);
+
+// ============================================================================
+// View Container
+// ============================================================================
+
+// Root layout — fills available space, stacks vertically
+.o_gantt_view_view {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+// ============================================================================
+// Renderer — Main Gantt Area
+// ============================================================================
+
+.o_gantt_view_view .o_gantt_view_renderer {
+  overflow: hidden;
+
+  // CSS custom properties for theming
+  --Gantt__Pill-height: #{$gantt-view-pill-height};
+  --Gantt__Day-background-color: #{$gantt-view-view-bg};
+  --Gantt__DayOff-background-color: #e9eef370;
+  --Gantt__DayOffToday-background-color: #fffaeb;
+
+  // --------------------------------------------------------------------------
+  // Scroll Body — vertically scrollable area for tasks.
+  // Its height is content-driven (`flex: 0 1 auto`): it never grows beyond the
+  // real height of its rows, so the totals row below it hugs the last rendered
+  // taskbar instead of being pinned to the bottom of the screen. When the
+  // content is taller than the available space, `flex-shrink` + `min-height: 0`
+  // cap it to the remaining height and `overflow-y: auto` keeps the vertical
+  // scrolling.
+  // --------------------------------------------------------------------------
+  .o_gantt_view_scroll_body {
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex: 0 1 auto;
+    min-height: 0;
+    min-width: 0;
+    position: relative;
+
+    &::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 4px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Loading / Error states — centered in the scroll area
+  // --------------------------------------------------------------------------
+  .o_gantt_view_scroll_body > .o_gantt_view_loading,
+  .o_gantt_view_scroll_body > .o_gantt_view_error {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 720px;
+    margin: 0;
+    text-align: center;
+  }
+
+  .o_gantt_view_error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px 20px;
+    border-radius: 8px;
+    background-color: #fff5f5;
+    border: 1px solid #e3b6b6;
+    box-shadow: 0 1px 4px rgba(220, 53, 69, 0.2);
+    color: #b02a37;
+    font-size: 0.95rem;
+    line-height: 1.4;
+
+    .o_gantt_view_error_icon {
+      font-size: 1.25rem;
+      color: #dc3545;
+      flex-shrink: 0;
+    }
+  }
+
+  // CSS Grid body — wraps sidebar + column header + gantt content in a CSS Grid
+  .o_gantt_view_body {
+    min-width: 0;
+  }
+
+  // --------------------------------------------------------------------------
+  // Column Header — sticky vertical, scrolls horizontal
+  // --------------------------------------------------------------------------
+  .o_gantt_view_column_header {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 500;
+    background-color: $gantt-view-view-bg;
+    border-bottom: 1px solid $gantt-view-border-color;
+
+    .o_gantt_view_header_cell {
+      border: solid $gantt-view-border-color;
+      border-width: 0 0 1px 1px;
+      color: $gantt-view-text-color;
+      position: relative;
+      font-size: 12px;
+      white-space: nowrap;
+      @include o-gantt-view-cell;
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Major Header — CSS Grid row above the minor header
+  // --------------------------------------------------------------------------
+  .o_gantt_view_major_header {
+    display: flex;
+    flex-shrink: 0;
+    background-color: white;
+    border-top: 1px solid $gantt-view-border-color;
+    border-bottom: 1px solid $gantt-view-border-color;
+    border-right: 2px solid $gantt-view-border-color;
+
+    .o_gantt_view_major_header_cells {
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .o_gantt_view_major_cell {
+      border: none;
+      border-left: 1px solid $gantt-view-border-color;
+      color: $gantt-view-text-color;
+      position: relative;
+      font-size: 11px;
+      white-space: nowrap;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      overflow: hidden;
+      @include o-gantt-view-cell;
+    }
+    .o_gantt_view_major_cell_even,
+    .o_gantt_view_major_cell_odd {
+      background-color: #ffffff;
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Minor Header — CSS Grid row below the major header
+  // --------------------------------------------------------------------------
+  .o_gantt_view_minor_header {
+    display: flex;
+    flex-shrink: 0;
+    background-color: $gantt-view-view-bg;
+
+    .o_gantt_view_header_cell {
+      border-top-color: transparent;
+      border-right-color: transparent;
+      color: $gantt-view-text-color;
+      position: relative;
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      @include o-gantt-view-cell;
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Group Separator Line — vertical line between date groups
+  // --------------------------------------------------------------------------
+  .o_gantt_view_header_cell.o_gantt_view_today {
+    border-left-color: $gantt-view-highlight-today-border;
+    border-top-color: $gantt-view-highlight-today-border;
+  }
+
+  // Weekend background for header cells
+  .o_gantt_view_header_cell.o_gantt_view_day_off {
+    background-color: var(--Gantt__DayOff-background-color);
+    &.o_gantt_view_today {
+      background-color: var(--Gantt__DayOffToday-background-color);
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Row Headers — left sidebar with task/group names
+  // --------------------------------------------------------------------------
+  .o_gantt_view_row_sidebar {
+    color: $gantt-view-text-color;
+    border-bottom: 1px solid $gantt-view-border-color;
+    border-right: 1px solid $gantt-view-border-color;
+  }
+
+  // Main sidebar panel container — sticky left (stays visible on horizontal scroll)
+  .o_gantt_view_row_headers {
+    position: sticky;
+    left: 0;
+    z-index: 21;
+    background: $gantt-view-view-bg;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  // --------------------------------------------------------------------------
+  // Sidebar Resize Handle — draggable divider between sidebar and gantt grid
+  // --------------------------------------------------------------------------
+  .o_gantt_view_sidebar_resize {
+    width: 1px;
+    cursor: col-resize;
+    flex-shrink: 0;
+    background: $gantt-view-border-color;
+    position: relative;
+    z-index: 22;
+
+    &:hover,
+    &:active {
+      background: #1a73e8;
+    }
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -4px;
+      right: -4px;
+      bottom: 0;
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Sort Icon — visual indicator for sort direction (like list view)
+  // --------------------------------------------------------------------------
+
+  .o_gantt_view_row_header {
+    background: $gantt-view-view-bg;
+  }
+
+  // Sidebar header (div-based) — sticky left, top-aligned with column headers.
+  // The minor row is a CSS Grid sharing the same grid-template-columns as the
+  // sidebar body rows. Its cells reuse the grid minor header geometry (same
+  // vertical padding py-2, 12px text line-height and bottom border) so the two
+  // minor header rows start AND end at the same Y position.
+  .o_gantt_view_header_sidebar {
+    position: sticky;
+    top: 0;
+    left: 0;
+    background-color: $gantt-view-view-bg;
+    z-index: 501;
+    border-bottom: 1px solid $gantt-view-border-color;
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    .o_gantt_view_header_sidebar_major {
+      height: 25px;
+      background-color: $gantt-view-view-bg;
+      border-right: 1px solid $gantt-view-border-color;
+      border-top: 1px solid $gantt-view-border-color;
+      border-bottom: 1px solid $gantt-view-border-color;
+    }
+
+    .o_gantt_view_header_sidebar_minor {
+      display: grid;
+      position: relative; // anchors the absolutely-positioned fields toggle
+      background-color: $gantt-view-view-bg;
+
+      > .o_gantt_view_sidebar_name {
+        @include o-gantt-view-header-cell-base;
+        justify-content: flex-start;
+        padding-left: 8px;
+        padding-right: 4px;
+        overflow: hidden;
+        white-space: nowrap;
+
+        .o_gantt_view_header_title_clickable {
+          display: inline-block;
+          text-align: left;
+        }
+      }
+
+      @include o-gantt-view-sidebar-info-cols("> ") {
+        @include o-gantt-view-header-cell-base;
+        justify-content: center;
+        text-align: center;
+        border-left: 1px solid $gantt-view-border-color;
+        padding-left: 4px;
+        padding-right: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+    }
+
+    // Sidebar fields toggle: pinned to the top-right corner of the header
+    // row itself (position: absolute, taken out of the grid flow so it
+    // doesn't consume a grid-template-columns cell), so it lines up on the
+    // SAME line as the column headers instead of a separate row.
+    .o_gantt_view_sidebar_fields_toggle {
+      position: absolute;
+      top: 0;
+      right: 2px;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      z-index: 1;
+      background-color: white;
+
+      .btn-link {
+        padding: 0 4px;
+        color: #6c757d;
+        line-height: 1;
+        text-decoration: none;
+      }
+
+      // Positioned in JS (position: fixed, top/right computed from the
+      // button's rect) — see attachHeaderEvents in components/header/header.js.
+      .o_gantt_view_sidebar_fields_menu {
+        z-index: 1060; // above the sticky header (501) and other overlays
+        min-width: 160px;
+      }
+    }
+  }
+
+  // Sidebar body: stacked CSS Grid rows. Heights and column widths come from
+  // the SAME values as the gantt grid (item.height / buildSidebarCols); the
+  // last column is 1fr (see sidebarColsCss) so rows stretch exactly to the
+  // sidebar width while columns stay aligned with the header band.
+  .o_gantt_view_sidebar_grid {
+    display: grid;
+  }
+
+  // Sort button in header sidebar — hover effect for clickable title
+  .o_gantt_view_header_title_clickable {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s ease;
+    flex: 1 1 0%;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    text-align: center;
+
+    &:hover {
+      color: $gantt-view-brand-primary;
+    }
+  }
+
+  .o_gantt_view_row_title {
+    font-size: 13px;
+    color: $gantt-view-text-color;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Sidebar rows: the title column fills the remaining width so the "Start
+  // date" column and the title column share equal widths.
+  .o_gantt_view_row_sidebar .o_gantt_view_row_title {
+    flex: 1 1 0%;
+  }
+
+  // Task labels (sidebar_label_field) in the sidebar sub-rows use the small body size.
+  .o_gantt_view_sidebar_taskrow .o_gantt_view_row_title {
+    font-size: 12px;
+    color: $gantt-view-text-muted;
+  }
+
+  // Sidebar info columns (shared by the header band, group and band rows).
+  // Widths come from the shared grid-template-columns (sidebarColsCss); these
+  // rules carry only typography, the left column divider and alignment. Grid
+  // items stretch to the row height, and children (single text or the band
+  // lanes) are centered inside via flex.
+  @include o-gantt-view-sidebar-info-cols {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-left: 1px solid $gantt-view-border-color;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 12px;
+    color: $gantt-view-text-muted;
+    white-space: nowrap;
+    padding-right: 8px;
+  }
+
+  // Sidebar name cell — hosts the flex "outer" row (toggle, avatar, title,
+  // "+" button) and, for band rows, the absolute lane sub-rows.
+  .o_gantt_view_sidebar_name {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding-left: 8px;
+    padding-right: 4px;
+    min-width: 0;
+    overflow: hidden;
+
+    .o_gantt_view_sidebar_name_outer {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  // Band lane container — one per cell; the sub-rows (taskbar in the name
+  // cell, one value per info column) are positioned absolutely at their lane.
+  .o_gantt_view_band_lanes {
+    position: relative;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .o_gantt_view_lane_value {
+    position: absolute;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    padding-left: 8px;
+    padding-right: 8px;
+    box-sizing: border-box;
+    font-size: 12px;
+    color: $gantt-view-text-muted;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .o_gantt_view_sidebar_taskrow {
+    box-sizing: border-box;
+  }
+
+  // Lane separators: every lane (task name or info value) draws its own line,
+  // except the last lane of a band — the band row's own bottom border closes
+  // the group independently of the lanes.
+  .o_gantt_view_band_lanes > .o_gantt_view_lane_value,
+  .o_gantt_view_band_lanes > .o_gantt_view_sidebar_taskrow {
+    border-bottom: 1px solid $gantt-view-border-color;
+  }
+
+  .o_gantt_view_band_lanes > .o_gantt_view_lane_value:last-child,
+  .o_gantt_view_band_lanes > .o_gantt_view_sidebar_taskrow:last-child {
+    border-bottom: none;
+  }
+
+  .o_gantt_view_sidebar_swatch {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    margin-right: 5px;
+    flex-shrink: 0;
+  }
+
+  // --------------------------------------------------------------------------
+  // Groups
+  // --------------------------------------------------------------------------
+
+  // Group row — collapsible header
+  .o_gantt_view_group {
+    cursor: pointer;
+    background: $gantt-view-view-bg;
+    content-visibility: auto;
+    contain-intrinsic-size: 32px;
+  }
+
+  // Group labels share the unified sidebar typography, emphasized in bold.
+  .o_gantt_view_group .o_gantt_view_row_title,
+  .o_gantt_view_group_child .o_gantt_view_row_title {
+    font-size: 12px;
+    // font-weight: bold;
+  }
+
+  // Child group row — nested under a parent
+  .o_gantt_view_group_child {
+    background: $gantt-view-view-bg;
+    border-bottom: 1px solid $gantt-view-border-color;
+    font-size: 12px;
+    content-visibility: auto;
+    contain-intrinsic-size: 32px;
+  }
+
+  // Child group row in the gantt grid
+  .o_gantt_view_group_row_child {
+    background: transparent;
+    border: solid $gantt-view-border-color;
+    border-width: 0 0 1px 1px;
+  }
+
+  // Collapse/expand toggle icon — the expanded state (fa-play) and the
+  // collapsed state (fa-sort-desc) must render at the same size; the play
+  // triangle is optically reduced so both glyphs look identical.
+  .o_gantt_view_group_toggle {
+    display: inline-block;
+    font-size: 14px;
+
+    &.fa-play {
+      transform: scale(0.72);
+    }
+  }
+
+  // Overview bar on group rows — the group's duration is shown as a hatched
+  // (diagonal-stripe) band spanning the earliest start → latest end dates,
+  // acting as the row background instead of a solid pill.
+  .o_gantt_view_group_bar {
+    // position: absolute;
+    // top: 0;
+    // height: 100%;
+    // background: repeating-linear-gradient(
+    //   -45deg,
+    //   rgba(74, 144, 217, 0.32) 0,
+    //   rgba(74, 144, 217, 0.32) 5px,
+    //   rgba(74, 144, 217, 0.1) 5px,
+    //   rgba(74, 144, 217, 0.1) 10px
+    // );
+    // border-left: 1px solid rgba(74, 144, 217, 0.35);
+    // border-right: 1px solid rgba(74, 144, 217, 0.35);
+    // box-sizing: border-box;
+    pointer-events: none;
+  }
+
+  // Group rows in the sidebar — drag highlight while hovering a group target
+  .o_gantt_view_group.o_gantt_view_group_drag_hover {
+    background: rgba(13, 110, 253, 0.1);
+    border-color: #4a90d9;
+  }
+
+  // --------------------------------------------------------------------------
+  // Cells — CSS Grid column cells
+  // --------------------------------------------------------------------------
+  .o_gantt_view_cell {
+    border: solid $gantt-view-border-color;
+    border-width: 0 0 1px 1px;
+    min-height: 100%;
+    background-color: var(--Gantt__Day-background-color);
+    min-width: 0;
+
+    &.o_gantt_view_today {
+      background-color: $gantt-view-highlight-today-bg;
+    }
+
+    &.o_gantt_view_day_off {
+      background-color: var(--Gantt__DayOff-background-color);
+      &.o_gantt_view_today {
+        background-color: var(--Gantt__DayOffToday-background-color);
+      }
+    }
+
+    &.o_gantt-view_drag_hover {
+      background-color: $gantt-view-highlight-cell-color !important;
+    }
+  }
+
+  // Date grid — absolutely positioned background (CSS Grid)
+  .o_gantt_view_date_grid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  // Utility
+  .bg-view {
+    background-color: $gantt-view-view-bg;
+  }
+
+  // --------------------------------------------------------------------------
+  // Pills — task bars
+  // --------------------------------------------------------------------------
+  .o_gantt_view_pill_wrapper {
+    padding: 2px 2px 3px 3px;
+    min-height: var(--Gantt__Pill-height);
+    @include o-gantt-view-zindex(pill);
+  }
+
+  // A pill whose record lies entirely outside the visible date range (e.g.
+  // after navigating with the < / > buttons): hide it instead of showing a
+  // clamped sliver at the edge of the grid.
+  .o_gantt_view_pill_offscreen {
+    visibility: hidden;
+  }
+
+  // Label displayed to the right of a taskbar when the pill is too narrow to
+  // fit it. Anchored at the pill's right edge (left: 100% of the wrapper),
+  // vertically centered on the pill. Non-interactive so drag/click pass through.
+  .o_gantt_view_pill_label_outside {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    left: 100%;
+    margin-left: 6px;
+    white-space: nowrap;
+    font-size: 12px;
+    line-height: 1.2;
+    color: #495057;
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 2px;
+    padding: 4px 4px;
+    max-width: 760px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .o_gantt_view_pill {
+    overflow: visible;
+    user-select: none;
+    box-sizing: content-box;
+    cursor: pointer;
+    border-radius: 2px;
+    box-shadow: 1px 1px 2px rgb(75, 74, 74);
+    display: flex;
+    align-items: center;
+
+    // Highlight border shown on the taskbar that was just moved
+    &.o_gantt_view_pill_highlighted {
+      box-shadow:
+        0 0 0 2px #0d6efd,
+        0 0 10px 2px rgba(13, 110, 253, 0.5);
+      z-index: 3;
+      animation: o-gantt-view-highlight-pulse 1s ease-in-out 3;
+    }
+
+    // Task name label
+    .o_gantt_view_pill_title {
+      max-width: calc((100% - 50px) * 9999);
+      font-size: 12px;
+      font-weight: 500;
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    // Resize handle — right edge for duration change
+    .o_gantt_view_resize_handle {
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 10px;
+      height: 100%;
+      cursor: ew-resize;
+      z-index: 2;
+      border-radius: 0 4px 4px 0;
+      &::before {
+        content: "⦀";
+        font-size: 10px;
+        opacity: 0.4;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+      }
+      &:hover::before {
+        opacity: 0.8;
+      }
+    }
+
+    // Resize handle — left edge for start-date change
+    .o_gantt_view_resize_handle_left {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 10px;
+      height: 100%;
+      cursor: ew-resize;
+      z-index: 2;
+      border-radius: 4px 0 0 4px;
+      &::before {
+        content: "⦀";
+        font-size: 10px;
+        opacity: 0.4;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+      }
+      &:hover::before {
+        opacity: 0.8;
+      }
+    }
+
+    // Default color (first palette entry)
+    @include o-gantt-view-hoverable-colors(nth($gantt-view-colors-complete, 1));
+
+    // Color classes .o_gantt_view_color_0 through .o_gantt_view_color_11
+    @for $index from 1 through length($gantt-view-colors-complete) {
+      &.o_gantt_view_color_#{$index - 1} {
+        $gantt-view-color: nth($gantt-view-colors-complete, $index);
+        @include o-gantt-view-hoverable-colors($gantt-view-color);
+      }
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Group Row — collapsed/expanded indicator in the grid
+  // --------------------------------------------------------------------------
+  .o_gantt_view_group_row {
+    content-visibility: auto;
+    contain-intrinsic-size: 32px;
+
+    .o_gantt_view_pill_wrapper {
+      pointer-events: none;
+      min-height: auto;
+      display: flex;
+      align-items: center;
+      background: transparent;
+
+      .o_gantt_view_pill {
+        background-color: $gantt-view-brand-primary;
+        border-color: $gantt-view-brand-primary;
+        height: 2px;
+        min-width: 20px;
+        border-radius: 0;
+
+        &:before,
+        &:after {
+          content: "";
+          border-top: 4px solid transparent;
+          border-bottom: 5px solid transparent;
+        }
+
+        &:before {
+          border-left: 5px solid;
+          border-left-color: inherit;
+          @include o-gantt-position-absolute($top: -3px, $left: 0);
+        }
+
+        &:after {
+          border-right: 5px solid;
+          border-right-color: inherit;
+          @include o-gantt-position-absolute($top: -3px, $right: 0);
+        }
+      }
+    }
+  }
+  // Parent group row only (exclude child rows)
+  .o_gantt_view_group_row:not(.o_gantt_view_group_row_child) {
+    border-bottom: 1px solid $gantt-view-border-color;
+
+    .o_gantt_view_row_title {
+      font-weight: 600;
+    }
+  }
+  // --------------------------------------------------------------------------
+  // Group Wrappers — highlight entire group during drag
+  // --------------------------------------------------------------------------
+
+  // Parent group wrapper
+  .o_gantt_view_group_wrapper {
+    position: relative;
+    z-index: 1;
+
+    &.o_gantt-view_drag_hover {
+      background-color: rgba(13, 110, 253, 0.04);
+      box-shadow: inset 0 0 0 2px #4a90d9;
+      position: relative;
+      &::before {
+        content: "";
+        @include o-gantt-position-absolute(0, 0, 0, 0);
+        border: 2px solid #4a90d9;
+        pointer-events: none;
+        z-index: 1;
+      }
+    }
+  }
+
+  // Child group wrapper (gantt grid)
+  .o_gantt_view_child_wrapper {
+    position: relative;
+    z-index: 1;
+    &.o_gantt-view_drag_hover {
+      background-color: rgba(13, 110, 253, 0.04);
+      box-shadow: inset 0 0 0 2px #4a90d9;
+      &::before {
+        content: "";
+        @include o-gantt-position-absolute(0, 0, 0, 0);
+        border: 2px solid #4a90d9;
+        pointer-events: none;
+        z-index: 1;
+      }
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Drag States — ghost appearance
+  // --------------------------------------------------------------------------
+  .o_gantt-view_dragged_pill {
+    transform: rotate(-12deg) scale(1.03);
+    box-shadow:
+      0 15px 40px rgba(0, 0, 0, 0.3),
+      0 5px 15px rgba(0, 0, 0, 0.2);
+    cursor: grabbing !important;
+  }
+
+  // --------------------------------------------------------------------------
+  // Header Slots — CSS Grid row of date headers
+  // --------------------------------------------------------------------------
+  .o_gantt_view_header_slots {
+    width: 100%;
+    overflow: hidden;
+
+    .o_gantt_view_header_cell {
+      overflow: hidden;
+      min-width: 0;
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Totals Row — Chart.js bar chart of the overall count per visible column.
+  // Placed outside the vertical scroll area (the component's footer): only its
+  // content scrolls horizontally, synchronized with the main body. Since the
+  // scroll body above it is content-driven (`flex: 0 1 auto`), this row sits
+  // directly under the last rendered taskbar when the content is short, and
+  // stays pinned at the bottom of the view when the content overflows. The
+  // label width follows the sidebar width; the chart reuses the column widths
+  // of the canonical render (utils/chart_row.js). One bar per column shows
+  // the number of active tasks per column.
+  // --------------------------------------------------------------------------
+  .o_gantt_view_chart_row {
+    height: 80px;
+    flex-shrink: 0;
+    // Same background as the sidebar (o_gantt_view_row_headers) so the totals
+    // row visually continues onto the bottom cells.
+    background: $gantt-view-view-bg;
+    border-top: 2px solid $gantt-view-border-color;
+    border-bottom: 1px solid $gantt-view-border-color;
+    z-index: 3;
+    overflow: hidden;
+
+    .o_gantt_view_chart_row_label {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      color: $gantt-view-text-color;
+      background: $gantt-view-view-bg;
+      border-right: 1px solid $gantt-view-border-color;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .o_gantt_view_chart_row_scroll {
+      flex: 1;
+      min-width: 0;
+      // No scrollbar of its own: the cells follow the main body's horizontal
+      // scroll via a translate (`transform` set in JS).
+      overflow: hidden;
+    }
+
+    .o_gantt_view_chart_row_cells {
+      position: relative;
+      height: 100%;
+    }
+
+    .o_gantt_view_totals_canvas {
+      display: block;
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Empty-state rows — displayed when no tasks exist (keep the grid visible)
+  // --------------------------------------------------------------------------
+  .o_gantt_view_empty_row {
+    background-color: rgba(0, 0, 0, 0.02);
+    border-top: 1px dashed $gantt-view-border-color;
+    background-image: repeating-linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0) 0,
+      rgba(0, 0, 0, 0) calc(100% / var(--Gantt__Template-columns) - 1px),
+      $gantt-view-border-color calc(100% / var(--Gantt__Template-columns) - 1px),
+      $gantt-view-border-color calc(100% / var(--Gantt__Template-columns))
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // Live resize badge
+  // --------------------------------------------------------------------------
+  .o_gantt_view_resize_badge {
+    position: fixed;
+    z-index: 9999;
+    transform: translateX(-50%);
+    pointer-events: none;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 3px;
+    white-space: nowrap;
+    background: #fff;
+    color: #212529;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    border: 1px solid $gantt-view-border-color;
+  }
+
+  // Print
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+
+  // Toolbar — header reusing the calendar view style
+  // (o_calendar_header): neutral background separated from the content by a
+  // simple border-bottom (Bootstrap class), previous/next buttons grouped.
+  .o_gantt_view_toolbar {
+    background-color: $gantt-view-view-bg;
+
+    // Period title: discreet h5, aligned with the buttons row.
+    h5 {
+      font-weight: 500;
+      font-size: 1rem;
+      color: $gantt-view-text-color;
+      white-space: nowrap;
+    }
+
+    // Grouped navigation buttons: compact OI icons (same as calendar).
+    .o_gantt_view_navigation_buttons .btn {
+      padding: 0.375rem 0.6rem;
+    }
+
+    // Number-of-steps field and year-input (month/year zooms): same uniform
+    // height as the toolbar buttons, but compact numeric inputs.
+    .o_gantt_view_navigation_buttons .o_gantt_view_scroll_step,
+    .o_gantt_view_navigation_buttons .o_gantt_view_year_input {
+      height: 38px;
+      padding: 0 4px;
+      text-align: center;
+    }
+
+    .o_gantt_view_scroll_step::-webkit-inner-spin-button,
+    .o_gantt_view_scroll_step::-webkit-outer-spin-button,
+    .o_gantt_view_year_input::-webkit-inner-spin-button,
+    .o_gantt_view_year_input::-webkit-outer-spin-button {
+      opacity: 1;
+    }
+
+    // Rejected year in the year input: red tint + warning tooltip on hover.
+    .o_gantt_view_year_input_error {
+      border-color: #dc3545 !important;
+      color: #dc3545;
+      box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+    }
+
+    // Uniform height for every button and field of the toolbar.
+    .btn {
+      height: 38px;
+    }
+    button.btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  // Date field (day zoom): styled like the "Today" toolbar button (btn
+  // btn-secondary). The DateTimeInput root IS the <input class="o_input">.
+  .o_gantt_view_toolbar .o_datetime_input.o_input {
+    height: 38px;
+    width: 200px;
+    min-width: 200px;
+    max-width: 220px;
+    padding: 0 8px;
+    font-size: 14px;
+    color: #313539;
+    text-align: center;
+    background-color: #dee2e6;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+
+    &:hover {
+      background-color: #cfd4d8;
+    }
+    &:focus {
+      outline: 0;
+      background-color: #dee2e6;
+    }
+  }
+
+  // Two date fields of the custom range filter (start → end), same look as the
+  // day-zoom field but more compact.
+  .o_gantt_view_toolbar .o_gantt_view_custom_range .o_datetime_input.o_input {
+    height: 38px;
+    width: 110px;
+    min-width: 110px;
+    padding: 0 8px;
+    font-size: 14px;
+    color: #313539;
+    text-align: center;
+    background-color: #dee2e6;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+
+    &:hover {
+      background-color: #cfd4d8;
+    }
+    &:focus {
+      outline: 0;
+      background-color: #dee2e6;
+    }
+  }
+
+  .o_gantt_view_custom_range .o_gantt_view_range_sep {
+    color: #6c757d;
+    font-weight: 600;
+  }
+
+  // Custom range wider than the maximum supported span: the end date was
+  // clamped — tint the date fields red and show the warning icon.
+  .o_gantt_view_custom_range.o_gantt_view_range_clipped {
+    .o_datetime_input.o_input {
+      border-color: #dc3545 !important;
+      box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+    }
+    .o_gantt_view_range_warning {
+      color: #dc3545;
+      cursor: help;
+      font-size: 14px;
+    }
+  }
+
+  // Week-number cells in the datetime picker calendar are clickable.
+  .o_week_number_cell {
+    cursor: pointer;
+
+    &:hover {
+      color: var(--bs-primary, #714b67);
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Responsive — small screen toolbar
+  // --------------------------------------------------------------------------
+  @include media-breakpoint-down(md) {
+    .o_gantt_view_button_today {
+      font-size: 0;
+      .fa {
+        font-size: initial;
+      }
+    }
+  }
+
+  // Extra small screens (< 500px)
+  @media (max-width: 770px) {
+    .o_gantt_view_toolbar {
+      padding: 8px !important;
+      gap: 4px !important;
+
+      .btn {
+        padding: 4px 8px;
+        font-size: 12px;
+      }
+
+      .o_gantt_view_button_prev,
+      .o_gantt_view_button_next {
+        padding: 4px 6px;
+      }
+
+      .o_gantt_view_button_today {
+        padding: 4px 8px;
+        font-size: 12px;
+
+        .fa {
+          font-size: 12px;
+        }
+      }
+
+      h5 {
+        font-size: 11px;
+        padding: 4px 0 !important;
+        display: block !important;
+        text-align: center;
+      }
+
+      .dropdown {
+        width: 100%;
+
+        .btn {
+          width: 100%;
+        }
+      }
+    }
+  }
+}
+
+.o_gantt_view_status_badge_outside {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+  // background: rgba(238, 232, 232, 0.836);
+  border: 1px solid #696e6e;
+  color: #696e6e;
+  // text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+// Status badge on task pills
+.o_gantt_view_status_badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+// Overdue warning — red border + exclamation icon on the pill
+.o_gantt_view_pill_overdue .o_gantt_view_pill_interactive {
+  box-shadow: 0 0 0 2px var(--bs-warning, #fd7e14) inset;
+
+  &::after {
+    content: "\f071"; // fa-exclamation-triangle
+    font-family: "FontAwesome";
+    color: var(--bs-danger, #dc3545);
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    text-shadow: none;
+    pointer-events: none;
+  }
+
+  // When the warning icon is rendered next to the outside label (single-column
+  // overdue pill), hide the inline icon so the two never appear together.
+  &.o_gantt_view_pill_overdue_outside::after {
+    display: none;
+  }
+}
+
+// Warning icon shown after the outside label when the overdue pill is a
+// single column (label rendered to the right of a too-narrow taskbar).
+.o_gantt_view_pill_label_warn {
+  color: var(--bs-warning, #fd7e14);
+  font-size: 12px;
+  text-shadow: 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+// Popover — task detail popup (appended to document.body)
+// ============================================================================
+// The detail popover uses the global class
+// `o_cw_popover` (calendar style: 448px width, card-header/card-footer,
+// z-index). The content adjustments below are scoped under this class.
+
+.o_cw_popover {
+  .o_cw_body .popover-body {
+    max-height: 300px;
+    overflow-y: auto;
+
+    & > div,
+    & > span {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .o_cw_popover_close {
+    cursor: pointer;
+    opacity: 0.6;
+    transition:
+      opacity 0.2s ease,
+      color 0.2s ease;
+
+    &:hover {
+      opacity: 1;
+      color: var(--o-brand-primary);
+    }
+  }
+}
+
+// Totals row popover — overrides the width of the generic `o_cw_popover`
+// (448px): here the content is compact (task list), so the width is reduced
+// with a vertically scrollable list rather than text truncation.
+.o_gantt_view_chart_popover {
+  max-width: 400px;
+  width: 400px;
+  height: 400px;
+
+  // Collapse/expand toggle of the popover groups: the fa-play triangle is
+  // optically larger than fa-sort-desc, so squash it (same as the sidebar
+  // toggle) for the two icons to render at the same size.
+  .o_gantt_view_chart_popover_group_header .fa-play {
+    transform: scale(0.72);
+  }
+
+  .o_cw_body {
+    max-height: 350px;
+    overflow-y: auto;
+
+    & > div,
+    & > span {
+      max-width: 100%;
+      overflow: visible;
+      text-overflow: unset;
+      white-space: normal;
+    }
+  }
+
+  .o_gantt_view_chart_popover_item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0 4px 18px;
+    border-bottom: 1px solid $gantt-view-border-color;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .o_gantt_view_chart_popover_group {
+    &:not(:last-child) {
+      margin-bottom: 4px;
+    }
+  }
+
+  .o_gantt_view_chart_popover_group_header {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 4px 0;
+    user-select: none;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.03);
+    }
+  }
+
+  .o_gantt_view_chart_popover_item_name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .o_gantt_view_chart_popover_item_dates {
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: $text-muted;
+    white-space: nowrap;
+  }
+
+  .o_gantt_view_chart_popover_empty {
+    padding: 8px 0;
+    color: $text-muted;
+    font-style: italic;
+  }
+}
+
+// Status ribbon pinned to the top-left corner of the popover header (shown when
+// the view declares status_field). Slight diagonal fold for a ribbon look.
+.o_gantt_view_popover_ribbon {
+  position: absolute;
+  top: 0;
+  left: -10px;
+  padding: 3px 18px 3px 12px;
+  background: linear-gradient(135deg, #1a73e8, #0d52c4);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  z-index: 1;
+
+  // Folded tail (darker triangle under the left edge)
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 100%;
+    border: 6px solid transparent;
+    border-top-color: #0b3d9e;
+    border-right-color: #0b3d9e;
+  }
+}
+
+// Global: ghost date label (appended to document.body, outside renderer scope)
+.o_gantt-view_drag_date_label {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 4px;
+  pointer-events: none;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 2px;
+  white-space: nowrap;
+  background: #fff;
+  color: #212529;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+// Global: floating feedback dialog shown above the taskbar just moved/created
+// ("Task moved" / "Task created"). Lives on document.body (outside the renderer
+// scope) with position: fixed so it is never clipped by the row containers.
+.o_gantt_view_pill_feedback {
+  position: fixed;
+  z-index: 9999;
+  transform: translateX(-50%);
+  pointer-events: none;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  padding: 4px 10px;
+  border-radius: 4px;
+  white-space: nowrap;
+  background: #0d6efd;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #0d6efd;
+  }
+}
+
+// Keyframes for the moved-taskbar highlight pulse
+@keyframes o-gantt-view-highlight-pulse {
+  0% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.18);
+  }
+  100% {
+    filter: brightness(1);
+  }
+}
+
+// Drop highlight: the cells (date range) of the hovered band that would
+// receive the dragged taskbar are highlighted in blue, like the hovered-cell
+// highlight of the standard web_gantt view. Attached directly to the band row
+// (which is position: relative), it never pushes other rows and never inserts
+// an insertion line.
+.o_gantt_view_drop_cell {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  background: rgba(13, 110, 253, 0.12);
+  border-top: 2px solid rgba(13, 110, 253, 0.65);
+  border-bottom: 2px solid rgba(13, 110, 253, 0.65);
+  border-left: 2px solid rgba(13, 110, 253, 0.65);
+  border-right: 2px solid rgba(13, 110, 253, 0.65);
+  pointer-events: none;
+}

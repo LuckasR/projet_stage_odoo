@@ -148,6 +148,14 @@ class ProjectProject(models.Model):
     # ------------------------------------------------------------------
     construction_code = fields.Char(string="Code chantier")
 
+    # Photo de couverture de la carte du chantier (vue kanban). La version
+    # réduite est celle qu'affiche le kanban : une photo de chantier pèse
+    # souvent plusieurs Mo.
+    x_image = fields.Image("Photo du chantier", max_width=1920, max_height=1920)
+    x_image_512 = fields.Image(
+        "Photo du chantier (miniature)", related='x_image',
+        max_width=1024, max_height=1024, store=True)
+
     x_type_projet = fields.Selection([
         ('batiment', 'Projet bâtiment'),
         ('industriel', 'Industrielle'),

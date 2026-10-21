@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Équipes types et cadences de départ, tirées des rendements des
+         gabarits ; rattachement des employés à leur métier. Idempotent :
+         ne remplace jamais une valeur existante. -->
+    <function model="miro.crew" name="_install_defaults"/>
+</odoo>

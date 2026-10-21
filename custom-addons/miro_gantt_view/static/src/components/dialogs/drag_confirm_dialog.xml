@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="gantt_view.DragConfirmDialog">
+        <Dialog title="dialogTitle" size="'sm'">
+            <div class="text-muted mb-3" t-esc="message"/>
+
+            <label t-if="showStart" class="form-label mb-1" t-esc="labelStart"/>
+            <div t-if="showStart" class="w-100 mb-2">
+                <DateTimeInput
+                    id="'date-start-dialog'"
+                    value="state.start"
+                    format="'dd/MM/yyyy HH:mm'"
+                    type="'datetime'"
+                    onChange="onStartChange"
+                    onApply="onStartChange"
+                />
+            </div>
+
+            <label t-if="showEnd" class="form-label mb-1" t-esc="labelEnd"/>
+            <div t-if="showEnd" class="w-100 mb-2">
+                <DateTimeInput
+                    id="'date-end-dialog'"
+                    value="state.end"
+                    format="'dd/MM/yyyy HH:mm'"
+                    type="'datetime'"
+                    onChange="onEndChange"
+                    onApply="onEndChange"
+                />
+            </div>
+
+            <t t-set-slot="footer">
+                <button class="btn btn-primary" t-on-click="onConfirm">
+                    <t t-esc="confirmLabel"/>
+                </button>
+                <button class="btn btn-secondary" t-on-click="props.close">
+                    <t t-esc="cancelLabel"/>
+                </button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Le métier devient un choix dans la liste des métiers du planning -->
+    <record id="view_employee_form_miro_trade" model="ir.ui.view">
+        <field name="name">hr.employee.form.miro.trade</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="miro_hr_paie.view_employee_form_miro_paie"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='miro_trade']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <xpath expr="//field[@name='miro_trade']" position="after">
+                <field name="miro_trade_id" string="Métier" options="{'no_create_edit': True}"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

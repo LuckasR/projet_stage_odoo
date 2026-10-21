@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Phase : main-d'œuvre prévue, dans le suivi de chantier -->
+    <record id="view_task_form_labor" model="ir.ui.view">
+        <field name="name">project.task.form.labor</field>
+        <field name="model">project.task</field>
+        <field name="inherit_id" ref="miro_construction_project.view_project_task_form_construction"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='construction_suivi']/group[1]" position="before">
+                <field name="construction_element_id" invisible="1"/>
+                <group string="Main-d'œuvre prévue" invisible="not construction_element_id">
+                    <group>
+                        <field name="miro_crew_id"/>
+                        <field name="miro_headcount"/>
+                        <field name="miro_labor_cost"/>
+                    </group>
+                    <group>
+                        <field name="miro_duration_hours" widget="float_time"/>
+                        <field name="miro_duration_days"/>
+                        <field name="miro_min_lag_days" invisible="not miro_min_lag_days"/>
+                        <button name="action_miro_refresh_labor" type="object" string="Recalculer"
+                                class="btn-link" icon="fa-refresh" colspan="2"/>
+                    </group>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Projet : synthèse de la main-d'œuvre (deux formulaires de projet) -->
+    <record id="view_project_construction_form_labor" model="ir.ui.view">
+        <field name="name">project.project.construction.form.labor</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="miro_construction_project.view_project_project_construction_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Main-d'œuvre" name="miro_labor">
+                    <group>
+                        <group>
+                            <field name="miro_labor_cost"/>
+                            <field name="miro_person_hours"/>
+                            <field name="miro_crew_days"/>
+                        </group>
+                        <group>
+                            <field name="miro_daily_overhead"/>
+                            <field name="miro_phases_without_rate"
+                                   decoration-warning="miro_phases_without_rate &gt; 0"/>
+                            <field name="miro_phases_without_qty"
+                                   decoration-warning="miro_phases_without_qty &gt; 0"/>
+                            <button name="action_miro_refresh_labor" type="object"
+                                    string="Recalculer la main-d'œuvre" class="btn-secondary" colspan="2"/>
+                        </group>
+                    </group>
+                    <field name="miro_labor_summary" nolabel="1"/>
+                </page>
+            </xpath>
+        </field>
+    </record>
+    <record id="view_project_form_labor" model="ir.ui.view">
+        <field name="name">project.project.form.labor</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="project.edit_project"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Main-d'œuvre" name="miro_labor">
+                    <group>
+                        <group>
+                            <field name="miro_labor_cost"/>
+                            <field name="miro_person_hours"/>
+                            <field name="miro_crew_days"/>
+                        </group>
+                        <group>
+                            <field name="miro_daily_overhead"/>
+                            <field name="miro_phases_without_rate"/>
+                            <field name="miro_phases_without_qty"/>
+                            <button name="action_miro_refresh_labor" type="object"
+                                    string="Recalculer la main-d'œuvre" class="btn-secondary" colspan="2"/>
+                        </group>
+                    </group>
+                    <field name="miro_labor_summary" nolabel="1"/>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

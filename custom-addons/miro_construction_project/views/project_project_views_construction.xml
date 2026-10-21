@@ -86,6 +86,9 @@
                         </button>
                     </div>
 
+                    <!-- Photo de la carte du chantier (vue kanban) : cliquer pour importer -->
+                    <field name="x_image" widget="image" class="oe_avatar o_miro_chantier_photo"
+                        options="{'preview_image': 'x_image_512', 'size': [220, 140]}" />
                     <div class="oe_title">
                         <h1>
                             <field name="name" placeholder="Nom du chantier" />
@@ -204,17 +207,134 @@
     <!-- ============================================================= -->
     <!-- ACTION                                                        -->
     <!-- ============================================================= -->
+    <!-- ============================================================= -->
+    <!-- VUE KANBAN : grandes cartes, photo en haut, chantier en bas   -->
+    <!-- ============================================================= -->
+    <record id="view_project_project_construction_kanban" model="ir.ui.view">
+        <field name="name">project.project.construction.kanban</field>
+        <field name="model">project.project</field>
+        <field name="arch" type="xml">
+            <kanban class="o_miro_chantier_kanban" sample="1">
+                <field name="id"/>
+                <field name="name"/>
+                <field name="construction_code"/>
+                <field name="x_image_512"/>
+                <field name="x_status"/>
+                <field name="x_type_construction"/>
+                <field name="x_phase_projet"/>
+                <field name="x_ville_chantier"/>
+                <field name="x_adresse_chantier"/>
+                <field name="x_surface_totale"/>
+                <field name="x_date_debut_travaux"/>
+                <field name="x_date_fin_prevue"/>
+                <field name="x_avancement_global"/>
+                <field name="x_task_count_all"/>
+                <field name="x_task_en_retard_count"/>
+                <field name="x_budget_total"/>
+                <field name="currency_id"/>
+                <field name="partner_id"/>
+                <field name="x_responsable_chantier_id"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_global_click o_mck_card">
+                            <!-- Photo de couverture -->
+                            <div class="o_mck_cover">
+                                <img t-if="record.x_image_512.raw_value"
+                                     t-att-src="kanban_image('project.project', 'x_image_512', record.id.raw_value)"
+                                     alt="Photo du chantier"/>
+                                <div t-else="" class="o_mck_placeholder">
+                                    <i class="fa fa-building-o"/>
+                                    <span>Ajoutez une photo depuis la fiche du chantier</span>
+                                </div>
+                                <span t-attf-class="o_mck_status is-#{record.x_status.raw_value}">
+                                    <field name="x_status"/>
+                                </span>
+                                <span t-if="record.construction_code.raw_value" class="o_mck_code">
+                                    <field name="construction_code"/>
+                                </span>
+                            </div>
+
+                            <!-- Informations du chantier -->
+                            <div class="o_mck_body">
+                                <div class="o_mck_title"><field name="name"/></div>
+                                <div class="o_mck_place" t-if="record.x_ville_chantier.raw_value or record.x_adresse_chantier.raw_value">
+                                    <i class="fa fa-map-marker"/>
+                                    <t t-esc="record.x_adresse_chantier.value"/>
+                                    <t t-if="record.x_adresse_chantier.raw_value and record.x_ville_chantier.raw_value">, </t>
+                                    <t t-esc="record.x_ville_chantier.value"/>
+                                </div>
+                                <div class="o_mck_tags">
+                                    <span t-if="record.x_type_construction.raw_value" class="o_mck_tag">
+                                        <field name="x_type_construction"/>
+                                    </span>
+                                    <span t-if="record.x_phase_projet.raw_value" class="o_mck_tag is-phase">
+                                        <field name="x_phase_projet"/>
+                                    </span>
+                                    <span t-if="record.x_surface_totale.raw_value" class="o_mck_tag">
+                                        <t t-esc="record.x_surface_totale.value"/> m²
+                                    </span>
+                                </div>
+
+                                <div class="o_mck_progress">
+                                    <div class="o_mck_progress_head">
+                                        <span>Avancement</span>
+                                        <strong><t t-esc="(record.x_avancement_global.raw_value || 0).toFixed(0)"/> %</strong>
+                                    </div>
+                                    <div class="o_mck_track">
+                                        <div class="o_mck_fill" t-attf-style="width: #{record.x_avancement_global.raw_value &gt; 100 ? 100 : (record.x_avancement_global.raw_value || 0)}%"/>
+                                    </div>
+                                </div>
+
+                                <div class="o_mck_stats">
+                                    <div>
+                                        <span class="o_mck_stat_label">Début</span>
+                                        <span class="o_mck_stat_value"><t t-esc="record.x_date_debut_travaux.value or '—'"/></span>
+                                    </div>
+                                    <div>
+                                        <span class="o_mck_stat_label">Fin prévue</span>
+                                        <span class="o_mck_stat_value"><t t-esc="record.x_date_fin_prevue.value or '—'"/></span>
+                                    </div>
+                                    <div>
+                                        <span class="o_mck_stat_label">Tâches</span>
+                                        <span class="o_mck_stat_value"><t t-esc="record.x_task_count_all.value"/></span>
+                                    </div>
+                                    <div t-att-class="record.x_task_en_retard_count.raw_value ? 'is-late' : ''">
+                                        <span class="o_mck_stat_label">En retard</span>
+                                        <span class="o_mck_stat_value"><t t-esc="record.x_task_en_retard_count.value"/></span>
+                                    </div>
+                                </div>
+
+                                <div class="o_mck_footer">
+                                    <div class="o_mck_client">
+                                        <t t-if="record.partner_id.raw_value">
+                                            <i class="fa fa-user-o"/> <field name="partner_id"/>
+                                        </t>
+                                        <t t-elif="record.x_budget_total.raw_value">
+                                            Budget : <field name="x_budget_total" widget="monetary"/>
+                                        </t>
+                                    </div>
+                                    <field name="x_responsable_chantier_id" widget="many2one_avatar_user"/>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
     <record id="action_project_project_construction" model="ir.actions.act_window">
         <field name="name">Chantiers</field>
         <field name="res_model">project.project</field>
-        <field name="view_mode">tree,form,kanban</field>
+        <field name="view_mode">kanban,tree,form</field>
         <field name="view_ids"
             eval="[(5, 0, 0),
+                      (0, 0, {'view_mode': 'kanban',
+                              'view_id': ref('view_project_project_construction_kanban')}),
                       (0, 0, {'view_mode': 'tree',
                               'view_id': ref('view_project_project_construction_tree')}),
                       (0, 0, {'view_mode': 'form',
-                              'view_id': ref('view_project_project_construction_form')}),
-                      (0, 0, {'view_mode': 'kanban'})]" />
+                              'view_id': ref('view_project_project_construction_form')})]" />
         <field name="search_view_id" ref="view_project_project_construction_search" />
         <field name="context">{'search_default_filter_en_cours': 1}</field>
         <field name="help" type="html">

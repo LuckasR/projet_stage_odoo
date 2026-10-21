@@ -1,0 +1,6 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_miro_payslip_user,miro.payslip.user,model_miro_payslip,hr.group_hr_user,1,1,1,1
+access_miro_payslip_line_user,miro.payslip.line.user,model_miro_payslip_line,hr.group_hr_user,1,1,1,1
+access_miro_irsa_bracket_user,miro.irsa.bracket.user,model_miro_irsa_bracket,hr.group_hr_user,1,0,0,0
+access_miro_irsa_bracket_manager,miro.irsa.bracket.manager,model_miro_irsa_bracket,hr.group_hr_manager,1,1,1,1
+access_miro_payslip_generate_user,miro.payslip.generate.user,model_miro_payslip_generate,hr.group_hr_user,1,1,1,1

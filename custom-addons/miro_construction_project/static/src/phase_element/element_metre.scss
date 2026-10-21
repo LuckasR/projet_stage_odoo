@@ -1,0 +1,35 @@
+// Fiche élément : cartes de métré sous le schéma, et détail des calculs
+.o_metre_cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 10px;
+    margin: 4px 0 16px;
+}
+.o_metre_card {
+    display: flex;
+    flex-direction: column;
+    padding: 10px 14px;
+    border: 1px solid #e5e7eb;
+    border-top: 3px solid #e8a317;
+    border-radius: 8px;
+    background: #f7f8fa;
+    .o_metre_label {
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+        color: #6b7280;
+    }
+    .o_metre_value {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1b2a41;
+        small { font-size: 12px; font-weight: 500; color: #6b7280; }
+    }
+}
+.o_metre_table {
+    margin-top: 8px;
+    .o_metre_row_label { font-weight: 600; color: #1b2a41; white-space: nowrap; }
+    .o_metre_formula { color: #374151; font-family: monospace; }
+    .o_metre_result { text-align: right; font-weight: 700; white-space: nowrap; }
+}
