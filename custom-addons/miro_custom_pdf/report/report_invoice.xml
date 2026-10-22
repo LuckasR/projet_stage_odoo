@@ -2,8 +2,9 @@
 <odoo>
     <template id="report_invoice_document_inherit" inherit_id="account.report_invoice_document">
 
-        <!-- Exemple 1 : ajouter du texte après le nom du partenaire -->
-        <xpath expr="//div[@name='partner_header']" position="after">
+        <!-- Exemple 1 : ajouter du texte après le bloc des informations
+             (date de facture, échéance, origine...) -->
+        <xpath expr="//div[@id='informations']" position="after">
             <div class="mon-info-perso">
                 <span>Merci pour votre confiance !</span>
             </div>
@@ -13,7 +14,7 @@
         <xpath expr="//h2" position="replace">
             <h2>
                 <span>Facture N°</span>
-                <span t-field="doc.name"/>
+                <span t-if="o.name != '/'" t-field="o.name"/>
             </h2>
         </xpath>
 

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Projet : bouton des journaux et détail du coût réel (deux formulaires de projet) -->
+    <record id="view_project_construction_form_journal" model="ir.ui.view">
+        <field name="name">project.project.construction.form.journal</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="miro_construction_project.view_project_project_construction_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_open_site_journals" type="object"
+                    class="oe_stat_button" icon="fa-book">
+                    <div class="o_stat_info">
+                        <span class="o_stat_value"><field name="miro_journal_count"/></span>
+                        <span class="o_stat_text">Journaux</span>
+                    </div>
+                </button>
+            </xpath>
+            <xpath expr="//field[@name='x_cout_reel_total']" position="after">
+                <field name="x_cout_mo_reel_total" widget="monetary"/>
+                <field name="x_cout_matiere_reel_total" widget="monetary"/>
+                <field name="x_cout_materiel_reel_total" widget="monetary"/>
+                <field name="x_cout_divers_reel_total" widget="monetary"/>
+                <field name="miro_journal_to_validate"
+                    decoration-warning="miro_journal_to_validate &gt; 0"
+                    string="Journaux à valider"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_project_form_journal" model="ir.ui.view">
+        <field name="name">project.project.form.journal</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="project.edit_project"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_open_site_journals" type="object"
+                    class="oe_stat_button" icon="fa-book">
+                    <div class="o_stat_info">
+                        <span class="o_stat_value"><field name="miro_journal_count"/></span>
+                        <span class="o_stat_text">Journaux</span>
+                    </div>
+                </button>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Les montants du formulaire « Budget et avancement » hérité d'edit_project -->
+    <record id="view_project_form_journal_costs" model="ir.ui.view">
+        <field name="name">project.project.form.journal.costs</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="miro_construction_project.view_project_form_construction"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='x_cout_reel_total']" position="after">
+                <field name="x_cout_mo_reel_total"/>
+                <field name="x_cout_matiere_reel_total"/>
+                <field name="x_cout_materiel_reel_total"/>
+                <field name="x_cout_divers_reel_total"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Phase : détail du coût réel -->
+    <record id="view_task_form_journal_costs" model="ir.ui.view">
+        <field name="name">project.task.form.journal.costs</field>
+        <field name="model">project.task</field>
+        <field name="inherit_id" ref="miro_construction_project.view_project_task_form_construction"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='x_cout_reel']" position="after">
+                <field name="x_cout_mo_reel"/>
+                <field name="x_cout_matiere_reel"/>
+                <field name="x_cout_materiel_reel"/>
+                <field name="x_cout_divers_reel"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

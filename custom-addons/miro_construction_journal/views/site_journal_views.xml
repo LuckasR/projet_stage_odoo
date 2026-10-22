@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_miro_site_journal_form" model="ir.ui.view">
+        <field name="name">miro.site.journal.form</field>
+        <field name="model">miro.site.journal</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_submit" type="object" string="Soumettre"
+                        class="btn-primary" invisible="state != 'draft'"/>
+                    <!-- Le conducteur de travaux valide ; un brouillon peut aussi
+                         être validé directement par lui. -->
+                    <button name="action_validate" type="object" string="Valider"
+                        class="btn-primary" invisible="state != 'submitted'"
+                        groups="project.group_project_manager"
+                        confirm="Valider le journal ? Les matières sortiront du stock, l'avancement des phases sera mis à jour et le journal ne pourra plus être modifié."/>
+                    <button name="action_validate" type="object" string="Valider directement"
+                        invisible="state != 'draft'" groups="project.group_project_manager"
+                        confirm="Valider le journal ? Les matières sortiront du stock, l'avancement des phases sera mis à jour et le journal ne pourra plus être modifié."/>
+                    <button name="action_back_to_draft" type="object" string="Renvoyer en brouillon"
+                        invisible="state != 'submitted'"/>
+                    <button name="action_copy_previous_team" type="object"
+                        string="Reprendre les travaux du dernier journal" invisible="state != 'draft'"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="project_id" readonly="state != 'draft'"
+                                options="{'no_create': True}"/>
+                            <field name="date" readonly="state != 'draft'"/>
+                            <field name="user_id" readonly="state == 'validated'"/>
+                            <field name="location_id" readonly="state == 'validated'"/>
+                        </group>
+                        <group>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="headcount"/>
+                            <field name="labor_hours" widget="float_time"/>
+                            <field name="total_cost" widget="monetary"/>
+                            <field name="validated_by_id" invisible="state != 'validated'"/>
+                            <field name="validated_on" invisible="state != 'validated'"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Travaux du jour" name="works">
+                            <p class="text-muted">
+                                Une ligne par phase travaillée aujourd'hui. Ouvrez-la pour déclarer la
+                                quantité réalisée, les ouvriers, la consommation (pré-remplie avec les
+                                besoins de la phase), le matériel et les dépenses.
+                            </p>
+                            <field name="work_ids" readonly="state == 'validated'">
+                                <tree>
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="task_id"/>
+                                    <field name="element_id" optional="show"/>
+                                    <field name="qty_done"/>
+                                    <field name="phase_qty_label" string="Unité"/>
+                                    <field name="progress_after" widget="progressbar"/>
+                                    <field name="headcount" sum="Ouvriers"/>
+                                    <field name="labor_hours" widget="float_time" sum="Heures"/>
+                                    <field name="currency_id" column_invisible="1"/>
+                                    <field name="total_cost" sum="Total"/>
+                                </tree>
+                                <form>
+                                    <group>
+                                        <group string="Phase">
+                                            <field name="project_id" invisible="1"/>
+                                            <field name="state" invisible="1"/>
+                                            <field name="currency_id" invisible="1"/>
+                                            <field name="task_id" options="{'no_create': True}"
+                                                domain="[('project_id', '=', parent.project_id), ('child_ids', '=', False)]"/>
+                                            <field name="element_id"/>
+                                            <field name="note"/>
+                                        </group>
+                                        <group string="Réalisé">
+                                            <label for="qty_done" invisible="not phase_qty"/>
+                                            <div class="o_row" invisible="not phase_qty">
+                                                <field name="qty_done"/>
+                                                <span>sur <field name="phase_qty" class="oe_inline"/>
+                                                    <field name="phase_qty_label" class="oe_inline"/></span>
+                                            </div>
+                                            <field name="qty_before" invisible="not phase_qty"/>
+                                            <field name="progress_pct" invisible="phase_qty"/>
+                                            <field name="progress_after" widget="progressbar"/>
+                                        </group>
+                                    </group>
+                                    <notebook>
+                                        <page string="Main-d'œuvre" name="labor">
+                                            <field name="labor_line_ids">
+                                                <tree editable="bottom">
+                                                    <field name="currency_id" column_invisible="1"/>
+                                                    <field name="employee_id" options="{'no_create': True}"/>
+                                                    <field name="hours" widget="float_time" sum="Heures"/>
+                                                    <field name="hourly_cost" optional="show"/>
+                                                    <field name="cost" sum="Total"/>
+                                                </tree>
+                                            </field>
+                                        </page>
+                                        <page string="Consommation" name="materials">
+                                            <p class="text-muted">
+                                                Une ligne par besoin de la phase. « Théorique » est ce que la quantité
+                                                réalisée aurait dû consommer : corrigez « Consommé » avec le réel.
+                                            </p>
+                                            <field name="material_line_ids">
+                                                <tree editable="bottom" create="false"
+                                                    decoration-danger="planned_qty and quantity &gt; planned_qty">
+                                                    <field name="currency_id" column_invisible="1"/>
+                                                    <field name="task_id" column_invisible="1"/>
+                                                    <field name="need_id" column_invisible="1"/>
+                                                    <field name="category_id"/>
+                                                    <field name="product_id"/>
+                                                    <field name="need_qty" optional="hide"/>
+                                                    <field name="qty_remaining" optional="show"/>
+                                                    <field name="planned_qty"/>
+                                                    <field name="quantity"/>
+                                                    <field name="uom_id"/>
+                                                    <field name="unit_cost" optional="hide"/>
+                                                    <field name="cost" sum="Total"/>
+                                                </tree>
+                                            </field>
+                                        </page>
+                                        <page string="Matériel" name="equipment">
+                                            <field name="equipment_line_ids">
+                                                <tree editable="bottom">
+                                                    <field name="currency_id" column_invisible="1"/>
+                                                    <field name="equipment_id"/>
+                                                    <field name="hours" widget="float_time"/>
+                                                    <field name="hourly_cost" optional="show"/>
+                                                    <field name="cost" sum="Total"/>
+                                                </tree>
+                                            </field>
+                                        </page>
+                                        <page string="Dépenses" name="expenses">
+                                            <field name="expense_line_ids">
+                                                <tree editable="bottom">
+                                                    <field name="currency_id" column_invisible="1"/>
+                                                    <field name="name"/>
+                                                    <field name="partner_id" optional="show"/>
+                                                    <field name="amount" sum="Total"/>
+                                                </tree>
+                                            </field>
+                                        </page>
+                                    </notebook>
+                                </form>
+                            </field>
+                        </page>
+                        <page string="Frais du chantier" name="site_costs">
+                            <p class="text-muted">
+                                Matériel et dépenses qui ne concernent pas une phase en particulier
+                                (gardiennage, engin au service de tout le chantier...).
+                            </p>
+                            <separator string="Matériel"/>
+                            <field name="site_equipment_line_ids" readonly="state == 'validated'">
+                                <tree editable="bottom">
+                                    <field name="currency_id" column_invisible="1"/>
+                                    <field name="equipment_id"/>
+                                    <field name="hours" widget="float_time"/>
+                                    <field name="hourly_cost" optional="show"/>
+                                    <field name="cost" sum="Total"/>
+                                </tree>
+                            </field>
+                            <separator string="Dépenses"/>
+                            <field name="site_expense_line_ids" readonly="state == 'validated'">
+                                <tree editable="bottom">
+                                    <field name="currency_id" column_invisible="1"/>
+                                    <field name="name"/>
+                                    <field name="partner_id" optional="show"/>
+                                    <field name="amount" sum="Total"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Météo et incidents" name="weather">
+                            <group>
+                                <group>
+                                    <field name="weather" readonly="state == 'validated'"/>
+                                    <field name="hours_lost" widget="float_time"
+                                        readonly="state == 'validated'"/>
+                                </group>
+                            </group>
+                            <field name="notes" readonly="state == 'validated'"
+                                placeholder="Incidents, retards, visites, réserves..."/>
+                        </page>
+                        <page string="Coûts" name="costs">
+                            <group>
+                                <group>
+                                    <field name="labor_cost"/>
+                                    <field name="material_cost"/>
+                                    <field name="equipment_cost"/>
+                                    <field name="expense_cost"/>
+                                    <field name="total_cost" class="fw-bold"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_miro_site_journal_tree" model="ir.ui.view">
+        <field name="name">miro.site.journal.tree</field>
+        <field name="model">miro.site.journal</field>
+        <field name="arch" type="xml">
+            <tree decoration-info="state == 'submitted'" decoration-muted="state == 'draft'">
+                <field name="date"/>
+                <field name="project_id"/>
+                <field name="user_id" widget="many2one_avatar_user"/>
+                <field name="weather" optional="show"/>
+                <field name="headcount" sum="Ouvriers"/>
+                <field name="labor_hours" widget="float_time" sum="Heures"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="labor_cost" sum="Total" optional="show"/>
+                <field name="material_cost" sum="Total" optional="show"/>
+                <field name="equipment_cost" sum="Total" optional="hide"/>
+                <field name="expense_cost" sum="Total" optional="hide"/>
+                <field name="total_cost" sum="Total"/>
+                <field name="state" widget="badge" decoration-info="state == 'submitted'"
+                    decoration-success="state == 'validated'"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_miro_site_journal_calendar" model="ir.ui.view">
+        <field name="name">miro.site.journal.calendar</field>
+        <field name="model">miro.site.journal</field>
+        <field name="arch" type="xml">
+            <calendar date_start="date" mode="month" color="project_id" quick_create="0">
+                <field name="project_id"/>
+                <field name="headcount"/>
+                <field name="total_cost"/>
+                <field name="state"/>
+            </calendar>
+        </field>
+    </record>
+
+    <record id="view_miro_site_journal_search" model="ir.ui.view">
+        <field name="name">miro.site.journal.search</field>
+        <field name="model">miro.site.journal</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="project_id"/>
+                <field name="user_id"/>
+                <field name="date"/>
+                <filter string="Mes journaux" name="mine" domain="[('user_id', '=', uid)]"/>
+                <separator/>
+                <filter string="Brouillons" name="draft" domain="[('state', '=', 'draft')]"/>
+                <filter string="À valider" name="submitted" domain="[('state', '=', 'submitted')]"/>
+                <filter string="Validés" name="validated" domain="[('state', '=', 'validated')]"/>
+                <separator/>
+                <filter string="Date" name="filter_date" date="date"/>
+                <group expand="0" string="Regrouper par">
+                    <filter string="Chantier" name="group_project" context="{'group_by': 'project_id'}"/>
+                    <filter string="Chef de chantier" name="group_user" context="{'group_by': 'user_id'}"/>
+                    <filter string="Mois" name="group_month" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_miro_site_journal" model="ir.actions.act_window">
+        <field name="name">Journaux de chantier</field>
+        <field name="res_model">miro.site.journal</field>
+        <field name="view_mode">tree,calendar,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Créer le journal du jour</p>
+            <p>Chaque jour, le chef de chantier déclare qui a travaillé sur quelle phase,
+               les matières et le matériel utilisés, les dépenses et les quantités réalisées.
+               Une fois validé, le journal calcule le coût réel et l'avancement.</p>
+        </field>
+    </record>
+</odoo>

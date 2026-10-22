@@ -93,10 +93,15 @@
                         <h1>
                             <field name="name" placeholder="Nom du chantier" />
                         </h1>
+                        <div class="text-muted">
+                            <field name="construction_code" placeholder="Code chantier" class="oe_inline" />
+                        </div>
                     </div>
 
                     <group>
                         <group string="Informations chantier">
+                            <field name="company_id" invisible="1" />
+                            <field name="partner_id" string="Client" />
                             <field name="x_type_construction" />
                             <field name="x_phase_projet" />
                             <field name="x_responsable_chantier_id"
@@ -113,22 +118,23 @@
                         </group>
                     </group>
 
-                    <group>
-                        <group string="Budget &amp; coûts">
-                            <field name="currency_id" invisible="1" />
-                            <field name="x_budget_total" widget="monetary" />
-                            <field name="x_cout_prevue_total" widget="monetary" />
-                            <field name="x_cout_reel_total" widget="monetary" />
-                        </group>
-                        <group string="Avancement">
-                            <field name="x_avancement_global" widget="progressbar" />
-                            <field name="x_task_count_all" />
-                            <field name="x_task_en_retard_count"
-                                decoration-danger="x_task_en_retard_count &gt; 0" />
-                        </group>
-                    </group>
-
                     <notebook>
+                        <page string="Budget et avancement" name="budget">
+                            <group>
+                                <group string="Budget &amp; coûts">
+                                    <field name="currency_id" invisible="1" />
+                                    <field name="x_budget_total" widget="monetary" />
+                                    <field name="x_cout_prevue_total" widget="monetary" />
+                                    <field name="x_cout_reel_total" widget="monetary" />
+                                </group>
+                                <group string="Avancement">
+                                    <field name="x_avancement_global" widget="progressbar" />
+                                    <field name="x_task_count_all" />
+                                    <field name="x_task_en_retard_count"
+                                        decoration-danger="x_task_en_retard_count &gt; 0" />
+                                </group>
+                            </group>
+                        </page>
                         <page string="Tâches" name="tasks">
                             <field name="tasks"
                                 context="{'default_project_id': id}">

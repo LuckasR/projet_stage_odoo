@@ -16,6 +16,10 @@ class NeedConsumeWizard(models.TransientModel):
         default=lambda self: self.env['stock.warehouse'].search(
             [('company_id', '=', self.env.company.id)], limit=1).lot_stock_id)
     line_ids = fields.One2many('construction.need.consume.wizard.line', 'wizard_id')
+    update_progress = fields.Boolean(
+        "Mettre à jour l'avancement", default=True,
+        help="Porte l'avancement de la phase à la part des matériaux consommée "
+             "(pondérée par le coût prévu). Ne le fait jamais baisser.")
 
     @api.model
     def default_get(self, fields_list):
@@ -32,29 +36,14 @@ class NeedConsumeWizard(models.TransientModel):
         lines = self.line_ids.filtered(lambda l: l.quantity > 0)
         if not lines:
             raise UserError(_("Aucune quantité consommée saisie."))
-        destination = self.env.ref('miro_construction_bom.stock_location_site_consumption')
-        moves = self.env['stock.move']
-        for line in lines:
-            need = line.need_id
-            moves |= moves.create({
-                'name': _("%(task)s — %(mat)s") % {'task': self.task_id.name,
-                                                   'mat': need.category_id.name},
-                'origin': self.task_id.project_id.name,
-                'product_id': need.product_id.id,
-                'product_uom': need.product_id.uom_id.id,
-                'product_uom_qty': line.quantity,
-                'location_id': self.location_id.id,
-                'location_dest_id': destination.id,
-                'construction_need_id': need.id,
-            })
-        moves._action_confirm()
-        moves._action_assign()
-        for move, line in zip(moves, lines):
-            # Le chantier consomme ce qu'il a réellement mis en œuvre, même
-            # si le stock informatique ne le couvre pas entièrement.
-            move.quantity = line.quantity
-            move.picked = True
-        moves._action_done()
+        self.env['construction.material.need']._consume(
+            {line.need_id: line.quantity for line in lines}, self.location_id,
+            origin=self.task_id.project_id.name)
+        task = self.task_id
+        if self.update_progress and not task.child_ids:
+            progress = task._material_progress()
+            if progress is not None and progress > task.x_avancement_manuel:
+                task.x_avancement_manuel = round(progress, 1)
         return {'type': 'ir.actions.act_window_close'}
 
 

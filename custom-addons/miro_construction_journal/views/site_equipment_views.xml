@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_miro_site_equipment_tree" model="ir.ui.view">
+        <field name="name">miro.site.equipment.tree</field>
+        <field name="model">miro.site.equipment</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom">
+                <field name="name"/>
+                <field name="ownership"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="hourly_cost"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="active" widget="boolean_toggle"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_miro_site_equipment" model="ir.actions.act_window">
+        <field name="name">Matériel de chantier</field>
+        <field name="res_model">miro.site.equipment</field>
+        <field name="view_mode">tree</field>
+        <field name="context">{'active_test': False}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Ajouter un engin ou un matériel</p>
+            <p>Bétonnière, grue, vibreur, échafaudage... avec son coût horaire :
+               amortissement et carburant pour le matériel en propre, prix de location sinon.</p>
+        </field>
+    </record>
+</odoo>

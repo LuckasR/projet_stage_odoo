@@ -12,6 +12,7 @@
                 <group>
                     <field name="task_id" readonly="1"/>
                     <field name="location_id"/>
+                    <field name="update_progress"/>
                 </group>
                 <field name="line_ids">
                     <tree editable="bottom" create="false">
