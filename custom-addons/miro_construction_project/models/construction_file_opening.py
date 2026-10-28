@@ -118,7 +118,7 @@ class ConstructionDwgFileOpening(models.Model):
         try:
             service = OpeningDetectionService(
                 tmp_path, context=self._wall_detection_context(),
-                unit_scale=self._unit_scale())
+                unit_scale=self._unit_scale(), layer_config=self._layer_config())
             detected = service.detect_openings()
         finally:
             Path(tmp_path).unlink(missing_ok=True)

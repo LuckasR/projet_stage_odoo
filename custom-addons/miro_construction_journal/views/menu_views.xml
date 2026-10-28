@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_miro_site_journal" name="Journaux de chantier"
+              parent="miro_construction_project.menu_construction_root"
+              action="action_miro_site_journal" sequence="15"/>
+    <menuitem id="menu_miro_site_equipment" name="Matériel de chantier"
+              parent="miro_construction_project.menu_construction_config"
+              action="action_miro_site_equipment" sequence="70"/>
+</odoo>

@@ -183,11 +183,13 @@ class ConstructionDwgFile(models.Model):
         return analysis
 
     def _eligible_element_types(self):
-        """Types d'éléments cherchables sur ce plan : ils ont un mot-clé DXF et leurs
-        « types de plan concernés » recoupent ceux du fichier (vide = tous)."""
+        """Types d'éléments cherchables sur ce plan : ils ont un mot-clé de bloc
+        ou un nom de calque dans la convention du chantier, et leurs « types de
+        plan concernés » recoupent ceux du fichier (vide = tous)."""
         self.ensure_one()
+        with_layers = list(self._layer_config().element_types)
         types = self.env['construction.element.type'].search([
-            '|', ('dxf_block_keyword', '!=', False), ('dxf_layer_keyword', '!=', False)])
+            '|', ('dxf_block_keyword', '!=', False), ('id', 'in', with_layers)])
         if self.plan_type_ids:
             types = types.filtered(
                 lambda t: not t.plan_type_ids or (t.plan_type_ids & self.plan_type_ids))

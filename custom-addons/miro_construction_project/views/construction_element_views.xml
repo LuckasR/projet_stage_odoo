@@ -87,7 +87,6 @@
                 <field name="phase_template_id"/>
                 <field name="plan_type_ids" widget="many2many_tags"/>
                 <field name="dxf_block_keyword"/>
-                <field name="dxf_layer_keyword"/>
             </tree>
         </field>
     </record>
@@ -110,7 +109,6 @@
                         </group>
                         <group string="Détection dans le plan DXF">
                             <field name="dxf_block_keyword"/>
-                            <field name="dxf_layer_keyword"/>
                             <field name="steel_ratio_kg_m3"/>
                         </group>
                     </group>
@@ -135,6 +133,23 @@
                                 l'a pas donnée — c'est ainsi qu'on renseigne une hauteur
                                 que la vue en plan ne montre jamais.
                             </p>
+                        </page>
+                        <page string="Calques DXF" name="dxf_layers">
+                            <p class="text-muted">
+                                Moteur « blocs » : un bloc placé sur l'un de ces calques est
+                                détecté comme un élément de ce type. Chaque nom appartient à
+                                une convention de calques ; le chantier choisit laquelle
+                                appliquer (« All » par défaut). Joker accepté : <code>S-SEM*</code>.
+                            </p>
+                            <field name="dxf_layer_name_ids"
+                                context="{'default_role': 'element_type'}">
+                                <tree editable="bottom">
+                                    <field name="convention_id" options="{'no_create': True}"/>
+                                    <field name="name"/>
+                                    <field name="role" column_invisible="1"/>
+                                    <field name="active" widget="boolean_toggle"/>
+                                </tree>
+                            </field>
                         </page>
                     </notebook>
                 </sheet>

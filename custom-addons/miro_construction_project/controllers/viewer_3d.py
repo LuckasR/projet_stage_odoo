@@ -105,6 +105,8 @@ PAGE = r"""<!DOCTYPE html>
     <h2>Affichage</h2>
     <label class="row"><input type="checkbox" id="xray"/> Murs transparents</label>
     <label class="row"><input type="checkbox" id="explode"/> Écarter les niveaux</label>
+    <label class="row" title="Masque les éléments non commencés ; un élément en cours n'est dessiné qu'à hauteur de son avancement">
+      <input type="checkbox" id="built"/> Vue chantier (avancement réel)</label>
     <button class="plain" id="reset">Recentrer la vue</button>
 
     <div class="hint">
@@ -138,6 +140,7 @@ if (!items.length) document.getElementById("empty").style.display = "flex";
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.shadowMap.enabled = true;
+renderer.localClippingEnabled = true;     // vue chantier : éléments coupés à leur avancement
 stage.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color("#eef2f6");
@@ -241,7 +244,10 @@ for (const it of items) {
   if (obj.isMesh) addEdges(obj); else obj.children.filter((c) => c.material === mat).forEach(addEdges);
   obj.userData.baseY = obj.position.y;
   scene.add(obj);
-  objects.push({ it, obj, mat });
+  // Tous les matériaux de l'objet (arêtes, ouvertures) pour les couper ensemble
+  const mats = [];
+  obj.traverse((o) => { if (o.material) mats.push(o.material); });
+  objects.push({ it, obj, mat, mats, plane: new THREE.Plane(), clipped: false });
   bounds.expandByObject(obj);
 }
 
@@ -277,7 +283,7 @@ function resetView() {
 resetView();
 
 // ---------- Panneau latéral ----------
-const state = { types: {}, levels: {}, color: "type", xray: false, explode: false };
+const state = { types: {}, levels: {}, color: "type", xray: false, explode: false, built: false };
 const typeNames = SCENE.types || {};
 function checkboxList(containerId, values, store, colorOf, labelOf) {
   const box = document.getElementById(containerId);
@@ -305,14 +311,40 @@ function progressColor(p) {
                 : c.set("#f9a825").lerp(new THREE.Color("#2e7d32"), (p - 50) / 50);
 }
 
+// Vue chantier : un élément en cours est coupé à son avancement. Poteaux,
+// murs et éléments plus hauts que larges montent depuis leur base ; les
+// éléments couchés (poutres, dalles, semelles...) avancent le long de leur
+// plus grande longueur.
+function clipToProgress(entry) {
+  const { it, obj, mats, plane } = entry;
+  const p = Math.min(Math.max(it.progress || 0, 0), 100) / 100;
+  const partial = state.built && p > 0 && p < 1;
+  if (partial) {
+    obj.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(obj), size = box.getSize(new THREE.Vector3());
+    const axis = ["mur", "poteau"].includes(it.type) || size.y >= Math.max(size.x, size.z) ? "y"
+               : size.x >= size.z ? "x" : "z";
+    const normal = new THREE.Vector3();
+    normal[axis] = -1;          // garde ce qui est en deçà de la coupe
+    plane.set(normal, box.min[axis] + size[axis] * p);
+  }
+  if (partial !== entry.clipped) {
+    for (const m of mats) { m.clippingPlanes = partial ? [plane] : null; m.needsUpdate = true; }
+    entry.clipped = partial;
+  }
+}
+
 function refresh() {
-  for (const { it, obj, mat } of objects) {
-    obj.visible = state.types[it.type] && state.levels[it.level || ""];
+  for (const entry of objects) {
+    const { it, obj, mat } = entry;
+    obj.visible = state.types[it.type] && state.levels[it.level || ""]
+                  && (!state.built || (it.progress || 0) > 0);
     mat.color.set(state.color === "progress" ? progressColor(it.progress) : (COLORS[it.type] || "#78909c"));
     const see = state.xray && it.type === "mur";
     mat.transparent = see; mat.opacity = see ? 0.25 : 1; mat.depthWrite = !see;
     const rank = Math.max(levelOrder.indexOf(it.level || ""), 0);
     obj.position.y = obj.userData.baseY + (state.explode ? rank * 2.5 : 0);
+    clipToProgress(entry);
   }
 }
 document.querySelectorAll(".seg button").forEach((b) => b.addEventListener("click", () => {
@@ -323,6 +355,7 @@ document.querySelectorAll(".seg button").forEach((b) => b.addEventListener("clic
 }));
 document.getElementById("xray").addEventListener("change", (e) => { state.xray = e.target.checked; refresh(); });
 document.getElementById("explode").addEventListener("change", (e) => { state.explode = e.target.checked; refresh(); });
+document.getElementById("built").addEventListener("change", (e) => { state.built = e.target.checked; refresh(); });
 document.getElementById("reset").addEventListener("click", resetView);
 refresh();
 

@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vue d'ensemble de la fiche chantier, rendue côté serveur
+         (champ x_overview_html). Valeurs : ProjectProject._overview_values -->
+    <template id="project_overview">
+        <div class="o_mco">
+
+            <!-- ===================== Indicateurs ===================== -->
+            <div class="o_mco_kpis">
+                <div class="o_mco_kpi">
+                    <div class="o_mco_kpi_label">Avancement</div>
+                    <div class="o_mco_kpi_value"><t t-esc="num(progress)"/> %</div>
+                    <div class="o_mco_bar">
+                        <span class="is-ok" t-attf-style="width: {{ width(progress) }}%"/>
+                        <i t-if="expected is not None" class="o_mco_mark"
+                           t-attf-style="left: {{ width(expected) }}%" title="Attendu à ce jour"/>
+                    </div>
+                    <div class="o_mco_kpi_sub">
+                        <t t-if="expected is not None">
+                            Attendu à ce jour : <t t-esc="num(expected)"/> %
+                            <span t-attf-class="o_mco_delta {{ 'is-bad' if schedule_gap &lt; -10 else ('is-warn' if schedule_gap &lt; 0 else 'is-ok') }}">
+                                <t t-esc="'+' if schedule_gap &gt;= 0 else ''"/><t t-esc="num(schedule_gap)"/> pts
+                            </span>
+                        </t>
+                        <t t-else="">Dates de travaux non renseignées</t>
+                    </div>
+                </div>
+
+                <div class="o_mco_kpi">
+                    <div class="o_mco_kpi_label">Délai</div>
+                    <t t-if="days_left is not None">
+                        <div t-attf-class="o_mco_kpi_value {{ 'is-bad' if days_left &lt; 0 and progress &lt; 100 else '' }}">
+                            <t t-if="days_left &gt;= 0"><t t-esc="days_left"/> j restants</t>
+                            <t t-else=""><t t-esc="-days_left"/> j de dépassement</t>
+                        </div>
+                        <div class="o_mco_bar">
+                            <span class="is-info" t-attf-style="width: {{ width(100.0 * days_elapsed / days_total) }}%"/>
+                        </div>
+                        <div class="o_mco_kpi_sub">
+                            <t t-esc="date(project.x_date_debut_travaux)"/> → <t t-esc="date(project.x_date_fin_prevue)"/>
+                            · jour <t t-esc="days_elapsed"/> / <t t-esc="days_total"/>
+                        </div>
+                    </t>
+                    <t t-else="">
+                        <div class="o_mco_kpi_value o_mco_muted">—</div>
+                        <div class="o_mco_kpi_sub">Début et fin des travaux à renseigner</div>
+                    </t>
+                </div>
+
+                <div class="o_mco_kpi">
+                    <div class="o_mco_kpi_label">
+                        <t t-if="budget">Budget consommé</t><t t-else="">Coût prévu consommé</t>
+                    </div>
+                    <div t-attf-class="o_mco_kpi_value {{ 'is-bad' if budget_used and budget_used &gt; 100 else '' }}">
+                        <t t-if="budget_used is not None"><t t-esc="num(budget_used)"/> %</t>
+                        <t t-else="">—</t>
+                    </div>
+                    <div class="o_mco_bar">
+                        <span t-attf-class="{{ 'is-bad' if budget_used and budget_used &gt; 100 else 'is-warn' if budget_used and budget_used &gt; progress + 10 else 'is-ok' }}"
+                              t-attf-style="width: {{ width(budget_used) }}%"/>
+                    </div>
+                    <div class="o_mco_kpi_sub">
+                        <t t-esc="money(real_total)"/> sur <t t-esc="money(reference)"/>
+                    </div>
+                </div>
+
+                <div class="o_mco_kpi">
+                    <div class="o_mco_kpi_label">Coût final estimé</div>
+                    <t t-if="forecast">
+                        <div t-attf-class="o_mco_kpi_value {{ 'is-bad' if forecast &gt; reference * 1.05 else ('is-ok' if forecast &lt;= reference else '') }}">
+                            <t t-esc="money(forecast)"/>
+                        </div>
+                        <div class="o_mco_kpi_sub">
+                            Produit <t t-esc="money(earned)"/> pour <t t-esc="money(real_total)"/> dépensés
+                            <span t-attf-class="o_mco_delta {{ 'is-bad' if cpi &lt; 0.95 else ('is-ok' if cpi &gt;= 1 else 'is-warn') }}">
+                                <t t-esc="'%.2f' % cpi"/>
+                            </span>
+                        </div>
+                    </t>
+                    <t t-else="">
+                        <div class="o_mco_kpi_value o_mco_muted">—</div>
+                        <div class="o_mco_kpi_sub">Estimé dès les premiers coûts réels</div>
+                    </t>
+                </div>
+
+                <div class="o_mco_kpi">
+                    <div class="o_mco_kpi_label">Main-d'œuvre</div>
+                    <div class="o_mco_kpi_value"><t t-esc="num(hours_real)"/> h</div>
+                    <div class="o_mco_bar">
+                        <span class="is-info" t-attf-style="width: {{ width(100.0 * hours_real / hours_planned if hours_planned else 0) }}%"/>
+                    </div>
+                    <div class="o_mco_kpi_sub">
+                        sur <t t-esc="num(hours_planned)"/> h prévues
+                        · <t t-esc="num(avg_headcount, 1)"/> ouvriers/jour en moyenne
+                    </div>
+                </div>
+
+                <div class="o_mco_kpi">
+                    <div class="o_mco_kpi_label">Matériaux</div>
+                    <div class="o_mco_kpi_value"><t t-esc="num(materials['kpis']['pct_received'])"/> % reçus</div>
+                    <div class="o_mco_bar o_mco_bar_stack">
+                        <span class="is-ok" t-attf-style="width: {{ width(materials['kpis']['pct_consumed']) }}%"/>
+                        <span class="is-info" t-attf-style="width: {{ width(materials['kpis']['pct_received'] - materials['kpis']['pct_consumed']) }}%"/>
+                        <span class="is-light" t-attf-style="width: {{ width(materials['kpis']['pct_ordered'] - materials['kpis']['pct_received']) }}%"/>
+                    </div>
+                    <div class="o_mco_kpi_sub">
+                        <t t-esc="num(materials['kpis']['pct_ordered'])"/> % commandés
+                        · <t t-esc="num(materials['kpis']['pct_consumed'])"/> % consommés
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================== Alertes ===================== -->
+            <div t-if="alerts" class="o_mco_card">
+                <h3>Points d'attention <span class="o_mco_count" t-esc="len(alerts)"/></h3>
+                <ul class="o_mco_alerts">
+                    <li t-foreach="alerts" t-as="alert" t-attf-class="is-{{ alert['level'] }}">
+                        <i t-attf-class="fa {{ 'fa-exclamation-circle' if alert['level'] == 'danger' else 'fa-exclamation-triangle' if alert['level'] == 'warning' else 'fa-info-circle' }}"/>
+                        <span t-esc="alert['text']"/>
+                    </li>
+                </ul>
+            </div>
+            <div t-else="" class="o_mco_card o_mco_allgood">
+                <i class="fa fa-check-circle"/> Aucun point d'attention : le chantier est dans les clous.
+            </div>
+
+            <div class="o_mco_grid">
+                <!-- ===================== Ouvrages ===================== -->
+                <div class="o_mco_card">
+                    <h3>Avancement par ouvrage</h3>
+                    <table t-if="ouvrages" class="o_mco_table">
+                        <thead><tr>
+                            <th>Ouvrage</th><th class="text-end">Phases</th>
+                            <th style="width: 35%">Avancement</th><th class="text-end">Coût réel</th>
+                        </tr></thead>
+                        <tbody>
+                            <tr t-foreach="ouvrages" t-as="o">
+                                <td>
+                                    <span t-esc="o['task'].name"/>
+                                    <span t-if="o['late']" class="o_mco_tag is-bad"><t t-esc="o['late']"/> en retard</span>
+                                </td>
+                                <td class="text-end o_mco_num"><t t-esc="o['done']"/> / <t t-esc="o['phases']"/></td>
+                                <td>
+                                    <div class="o_mco_inline_bar">
+                                        <div class="o_mco_bar"><span t-attf-class="{{ 'is-ok' if o['progress'] &gt;= 100 else 'is-info' }}" t-attf-style="width: {{ width(o['progress']) }}%"/></div>
+                                        <span class="o_mco_num"><t t-esc="num(o['progress'])"/> %</span>
+                                    </div>
+                                </td>
+                                <td class="text-end o_mco_num" t-esc="money(o['real'])"/>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p t-else="" class="o_mco_muted">Aucun ouvrage : générez les éléments de construction depuis les plans.</p>
+                </div>
+
+                <!-- ===================== Coûts ===================== -->
+                <div class="o_mco_card">
+                    <h3>Coûts prévus et réels</h3>
+                    <table class="o_mco_table">
+                        <thead><tr>
+                            <th>Nature</th><th class="text-end">Prévu</th><th class="text-end">Réel</th>
+                            <th class="text-end">Consommé</th>
+                        </tr></thead>
+                        <tbody>
+                            <tr t-foreach="cost_rows" t-as="row">
+                                <td t-esc="row['name']"/>
+                                <td class="text-end o_mco_num">
+                                    <t t-if="row['planned']" t-esc="money(row['planned'])"/>
+                                    <span t-else="" class="o_mco_muted">non chiffré</span>
+                                </td>
+                                <td class="text-end o_mco_num" t-esc="money(row['real'])"/>
+                                <td class="text-end o_mco_num">
+                                    <span t-if="row['ratio'] is not None"
+                                          t-attf-class="{{ 'o_mco_delta is-bad' if row['ratio'] &gt; progress + 10 else '' }}">
+                                        <t t-esc="num(row['ratio'])"/> %
+                                    </span>
+                                    <span t-else="" class="o_mco_muted">—</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot><tr>
+                            <td>Total</td>
+                            <td class="text-end o_mco_num" t-esc="money(planned_total)"/>
+                            <td class="text-end o_mco_num" t-esc="money(real_total)"/>
+                            <td class="text-end o_mco_num">
+                                <t t-if="planned_total"><t t-esc="num(100.0 * real_total / planned_total)"/> %</t>
+                            </td>
+                        </tr></tfoot>
+                    </table>
+                    <div class="o_mco_foot">
+                        Budget du marché :
+                        <strong t-if="budget" t-esc="money(budget)"/>
+                        <span t-else="" class="o_mco_muted">non saisi</span>
+                        <t t-if="budget and planned_total">
+                            · marge prévue <strong t-esc="money(budget - planned_total)"/>
+                        </t>
+                    </div>
+                </div>
+
+                <!-- ===================== Matériaux ===================== -->
+                <div class="o_mco_card">
+                    <h3>Approvisionnement des matériaux</h3>
+                    <table t-if="materials['materials']" class="o_mco_table">
+                        <thead><tr>
+                            <th>Matériau</th><th class="text-end">Prévu</th>
+                            <th class="text-end">Reçu</th><th class="text-end">Consommé</th><th>État</th>
+                        </tr></thead>
+                        <tbody>
+                            <tr t-foreach="materials['materials'][:8]" t-as="m">
+                                <td t-esc="m['name']"/>
+                                <td class="text-end o_mco_num"><t t-esc="num(m['planned'], 2)"/> <span class="o_mco_muted" t-esc="m['uom']"/></td>
+                                <td class="text-end o_mco_num" t-esc="num(m['received'], 2)"/>
+                                <td class="text-end o_mco_num" t-esc="num(m['consumed'], 2)"/>
+                                <td><span t-attf-class="o_mco_tag is-{{ m['status_class'] }}" t-esc="m['status']"/></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p t-else="" class="o_mco_muted">Aucun besoin matériau calculé.</p>
+                    <div t-if="len(materials['materials']) &gt; 8" class="o_mco_foot o_mco_muted">
+                        + <t t-esc="len(materials['materials']) - 8"/> autres matériaux (bouton « Matériaux »)
+                    </div>
+                </div>
+
+                <!-- ===================== Activité ===================== -->
+                <div class="o_mco_card">
+                    <h3>Activité du chantier
+                        <span class="o_mco_muted o_mco_h3_sub"><t t-esc="journal_count"/> journée(s) validée(s)</span>
+                    </h3>
+                    <table t-if="journals" class="o_mco_table">
+                        <thead><tr>
+                            <th>Date</th><th>Chef de chantier</th><th class="text-end">Ouvriers</th>
+                            <th class="text-end">Heures</th><th class="text-end">Coût</th><th>État</th>
+                        </tr></thead>
+                        <tbody>
+                            <tr t-foreach="journals" t-as="j">
+                                <td t-esc="date(j.date)"/>
+                                <td t-esc="j.user_id.name or ''"/>
+                                <td class="text-end o_mco_num" t-esc="j.headcount"/>
+                                <td class="text-end o_mco_num" t-esc="num(j.labor_hours, 1)"/>
+                                <td class="text-end o_mco_num" t-esc="money(j.total_cost)"/>
+                                <td><span t-attf-class="o_mco_tag is-{{ 'ok' if j.state == 'validated' else 'info' if j.state == 'submitted' else 'neutral' }}" t-esc="label(j, 'state')"/></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p t-else="" class="o_mco_muted">Aucun journal de chantier pour l'instant.</p>
+                </div>
+
+                <!-- ===================== Incidents ===================== -->
+                <div class="o_mco_card">
+                    <h3>Incidents ouverts <span t-if="incidents" class="o_mco_count" t-esc="len(incidents)"/></h3>
+                    <table t-if="incidents" class="o_mco_table">
+                        <thead><tr><th>Incident</th><th>Tâche</th><th>Gravité</th><th>Date</th></tr></thead>
+                        <tbody>
+                            <tr t-foreach="incidents[:6]" t-as="i">
+                                <td t-esc="i.name"/>
+                                <td t-esc="i.task_id.name or ''"/>
+                                <td><span t-attf-class="o_mco_tag is-{{ 'bad' if i.gravite in ('critique', 'haute') else 'warn' if i.gravite == 'moyenne' else 'neutral' }}" t-esc="label(i, 'gravite')"/></td>
+                                <td t-esc="date(i.date_incident)"/>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p t-else="" class="o_mco_muted"><i class="fa fa-check"/> Aucun incident ouvert.</p>
+                </div>
+
+                <!-- ===================== Identité ===================== -->
+                <div class="o_mco_card">
+                    <h3>Fiche d'identité</h3>
+                    <dl class="o_mco_identity">
+                        <dt>Code</dt><dd t-esc="project.construction_code or '—'"/>
+                        <dt>Client</dt><dd t-esc="project.partner_id.display_name or '—'"/>
+                        <dt>Maître d'ouvrage</dt><dd t-esc="project.x_maitre_ouvrage or '—'"/>
+                        <dt>Architecte / BET</dt><dd t-esc="project.x_architecte or '—'"/>
+                        <dt>Chef de chantier</dt><dd t-esc="project.x_responsable_chantier_id.name or '—'"/>
+                        <dt>Type</dt><dd t-esc="label(project, 'x_type_construction') or '—'"/>
+                        <dt>Phase actuelle</dt><dd t-esc="label(project, 'x_phase_projet') or '—'"/>
+                        <dt>Lieu</dt><dd><t t-esc="project.x_adresse_chantier or ''"/> <t t-esc="project.x_ville_chantier or ''"/><t t-if="not (project.x_adresse_chantier or project.x_ville_chantier)">—</t></dd>
+                        <dt>Surface</dt><dd><t t-if="project.x_surface_totale"><t t-esc="num(project.x_surface_totale)"/> m²</t><t t-else="">—</t></dd>
+                        <dt>Tâches</dt><dd><t t-esc="project.x_task_count_all"/> dont <t t-esc="project.x_task_en_retard_count"/> en retard</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="o_mco_updated o_mco_muted">
+                Calculé le <t t-esc="date(today)"/> à l'ouverture de la fiche, depuis les tâches,
+                les besoins matériaux, la main-d'œuvre prévue et les journaux de chantier.
+            </div>
+        </div>
+    </template>
+</odoo>

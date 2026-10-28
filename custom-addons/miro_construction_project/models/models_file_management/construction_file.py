@@ -333,7 +333,8 @@ class ConstructionDwgFile(models.Model):
         try:
             service = WallDetectionService(
                 tmp_path, context=context,
-                merge_overlaps=self.merge_overlapping_walls)
+                merge_overlaps=self.merge_overlapping_walls,
+                layer_config=self._layer_config())
             detected_walls = service.detect_walls()
         finally:
             Path(tmp_path).unlink(missing_ok=True)

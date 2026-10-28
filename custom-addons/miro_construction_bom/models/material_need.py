@@ -107,8 +107,7 @@ class ConstructionMaterialNeed(models.Model):
                 share = min(need.product_qty / line.product_qty, 1.0)
                 ordered = need.product_qty if line.order_id.state in ('purchase', 'done') else 0.0
                 received = line.qty_received * share
-            consumed = sum(m.product_uom._compute_quantity(m.quantity, m.product_id.uom_id, round=False)
-                           for m in need.move_ids if m.state == 'done')
+            consumed = sum(m._miro_consumed_qty() for m in need.move_ids if m.state == 'done')
             need.qty_ordered = ordered
             need.qty_received = min(received, need.product_qty)
             need.qty_consumed = consumed
@@ -126,11 +125,50 @@ class ConstructionMaterialNeed(models.Model):
             else:
                 need.state = 'to_order'
 
+    @api.model
+    def _consumption_location(self):
+        return self.env.ref('miro_construction_bom.stock_location_site_consumption')
+
     def _is_locked(self):
         """Commandé ou déjà consommé : le besoin a servi, on ne le réécrit plus."""
         self.ensure_one()
         return bool((self.purchase_line_id and self.purchase_line_id.order_id.state != 'cancel')
                     or self.move_ids.filtered(lambda m: m.state == 'done'))
+
+    @api.model
+    def _consume(self, quantities, location, origin=False, reverse=False):
+        """Sort du stock `location` vers « Consommation chantier » les
+        quantités réellement mises en œuvre : {besoin: quantité dans l'unité
+        du produit}. Le coût du produit au jour de la sortie reste sur le
+        mouvement (price_unit) : il fait le coût réel de la phase.
+        `reverse` fait revenir la matière dans `location` (consommation
+        annulée) : le mouvement retour se déduit du consommé."""
+        consumption = self._consumption_location()
+        source, destination = (consumption, location) if reverse else (location, consumption)
+        moves = self.env['stock.move']
+        quantities = {need: qty for need, qty in quantities.items() if qty > 0}
+        for need, qty in quantities.items():
+            moves |= moves.create({
+                'name': _("%(task)s — %(mat)s") % {'task': need.task_id.name,
+                                                   'mat': need.category_id.name},
+                'origin': origin or need.project_id.name,
+                'product_id': need.product_id.id,
+                'product_uom': need.product_id.uom_id.id,
+                'product_uom_qty': qty,
+                'price_unit': need.product_id.standard_price,
+                'location_id': source.id,
+                'location_dest_id': destination.id,
+                'construction_need_id': need.id,
+            })
+        moves._action_confirm()
+        moves._action_assign()
+        for move, qty in zip(moves, quantities.values()):
+            # Le chantier consomme ce qu'il a réellement mis en œuvre, même
+            # si le stock informatique ne le couvre pas entièrement.
+            move.quantity = qty
+            move.picked = True
+        moves._action_done()
+        return moves
 
 
 class ProjectTask(models.Model):
@@ -204,17 +242,24 @@ class ProjectTask(models.Model):
             refreshed |= task
         return refreshed
 
+    def _material_progress(self):
+        """Part des matériaux de la phase déjà mise en œuvre (%), pondérée par
+        le coût prévu ; à coût nul, moyenne des ratios en quantité. Une
+        surconsommation ne compte pas au-delà du prévu. None sans besoin.
+        Sert à contrôler l'avancement déclaré, jamais à le fixer."""
+        self.ensure_one()
+        needs = self.material_need_ids.filtered(lambda n: n.product_id and n.product_qty > 0)
+        if not needs:
+            return None
+        ratios = [(min(n.qty_consumed / n.product_qty, 1.0), n.planned_cost) for n in needs]
+        total_cost = sum(cost for _ratio, cost in ratios)
+        if total_cost:
+            return 100.0 * sum(ratio * cost for ratio, cost in ratios) / total_cost
+        return 100.0 * sum(ratio for ratio, _cost in ratios) / len(ratios)
+
     def action_refresh_material_needs(self):
         self._refresh_material_needs(force=True)
         return True
-
-    def action_declare_consumption(self):
-        self.ensure_one()
-        return {
-            'type': 'ir.actions.act_window', 'name': _("Déclarer la consommation"),
-            'res_model': 'construction.need.consume.wizard', 'view_mode': 'form',
-            'target': 'new', 'context': {'default_task_id': self.id},
-        }
 
 
 class ConstructionElement(models.Model):
@@ -250,3 +295,11 @@ class StockMove(models.Model):
     construction_need_id = fields.Many2one(
         'construction.material.need', string="Besoin chantier", index=True,
         ondelete='set null')
+
+    def _miro_consumed_qty(self):
+        """Quantité consommée par le mouvement, dans l'unité du produit :
+        négative pour un retour depuis « Consommation chantier »."""
+        self.ensure_one()
+        qty = self.product_uom._compute_quantity(self.quantity, self.product_id.uom_id, round=False)
+        consumption = self.env['construction.material.need']._consumption_location()
+        return -qty if self.location_id == consumption else qty

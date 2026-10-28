@@ -75,20 +75,18 @@ from shapely.ops import unary_union
 try:
     from .plan_analysis import (
         VIEW_ELEVATION, VIEW_PLAN, DxfPlanReader, Outline, PlanContext,
-        normalize_text,
     )
     from .facade_detection_service import (
-        GENERIC_OPENING_LAYERS, MAX_OPENING_WIDTH, MIN_OPENING_WIDTH,
-        OPENING_LABEL_PATTERN, OPENING_LAYERS, FacadeDetectionService,
+        GENERIC_OPENING_ROLE, MAX_OPENING_WIDTH, MIN_OPENING_WIDTH,
+        OPENING_LABEL_PATTERN, OPENING_ROLES, FacadeDetectionService,
     )
 except ImportError:  # exécution directe du module en ligne de commande
     from plan_analysis import (  # type: ignore[no-redef]
         VIEW_ELEVATION, VIEW_PLAN, DxfPlanReader, Outline, PlanContext,
-        normalize_text,
     )
     from facade_detection_service import (  # type: ignore[no-redef]
-        GENERIC_OPENING_LAYERS, MAX_OPENING_WIDTH, MIN_OPENING_WIDTH,
-        OPENING_LABEL_PATTERN, OPENING_LAYERS, FacadeDetectionService,
+        GENERIC_OPENING_ROLE, MAX_OPENING_WIDTH, MIN_OPENING_WIDTH,
+        OPENING_LABEL_PATTERN, OPENING_ROLES, FacadeDetectionService,
     )
 
 logger = logging.getLogger("opening_detection_service")
@@ -102,16 +100,16 @@ logger = logging.getLogger("opening_detection_service")
 # ouverture coupée, sans pouvoir dire laquelle : elle n'apporte rien ici.
 SUPPORTED_VIEWS = (VIEW_PLAN, VIEW_ELEVATION)
 
-# Calques des murs : ils donnent l'emprise du bâtiment (côté de façade) et
-# l'épaisseur du mur traversé par une porte. Les deux conventions de nommage
-# rencontrées sont acceptées.
-WALL_LAYERS = ("A-MUR-EXT", "A-MUR-INT", "MURS_EXT", "MURS_INT")
+# Murs (rôles de calque, cf. dxf_layers) : ils donnent l'emprise du bâtiment
+# (côté de façade) et l'épaisseur du mur traversé par une porte.
+WALL_ROLES = ("wall_ext", "wall_int")
 
 # Calques des symboles d'ouverture (arc de débattement, trait du vantail).
 # Ils ne portent pas l'ouverture elle-même, seulement son fonctionnement :
 # un arc y désigne une porte, mais un rectangle n'y est jamais une baie
-# (c'est le dessin du vitrage ou du dormant, déjà tracé sur A-OUV-FEN).
-SYMBOL_LAYERS = ("A-OUV-SYMB",)
+# (c'est le dessin du vitrage ou du dormant, déjà tracé sur le calque des
+# fenêtres).
+SYMBOL_ROLE = "opening_symbol"
 
 # Épaisseur plausible d'un mur, donc de la feuillure d'une ouverture (m)
 MIN_OPENING_DEPTH = 0.05
@@ -252,11 +250,10 @@ class OpeningDetectionService(DxfPlanReader):
     le nombre de mètres par unité de dessin, relevé à l'import ($INSUNITS)."""
 
     def __init__(self, dxf_path: str, context: Optional[PlanContext] = None,
-                 unit_scale: float = 1.0):
-        super().__init__(dxf_path)
+                 unit_scale: float = 1.0, layer_config=None):
+        super().__init__(dxf_path, layer_config=layer_config)
         self.context = context or PlanContext()
         self.unit_scale = unit_scale or 1.0
-        self._layer_index = self._build_layer_index()
 
     # --------------------------------------------------------
     # POINT D'ENTRÉE — aiguillage selon le type de vue
@@ -301,35 +298,16 @@ class OpeningDetectionService(DxfPlanReader):
                 opening.match_key = "%s-%d" % (opening.match_key, count + 1)
 
     # --------------------------------------------------------
-    # CALQUES : correspondance tolérante
+    # CALQUES
     # --------------------------------------------------------
-
-    def _build_layer_index(self) -> Dict[str, str]:
-        """Calques présents, indexés par leur nom normalisé : la casse et les
-        accents varient d'un bureau d'études à l'autre."""
-        index: Dict[str, str] = {}
-        try:
-            for layer in self.doc.layers:
-                index[normalize_text(layer.dxf.name)] = layer.dxf.name
-        except Exception as exc:
-            logger.debug("Lecture de la table des calques impossible : %s", exc)
-        return index
-
-    def _layers(self, wanted: Sequence[str]) -> List[str]:
-        found = []
-        for name in wanted:
-            real = self._layer_index.get(normalize_text(name))
-            if real and real not in found:
-                found.append(real)
-        return found
 
     def _opening_layer_types(self) -> Dict[str, str]:
         """{calque réel: nature} ; « unknown » pour un calque générique."""
         types: Dict[str, str] = {}
-        for opening_type, names in OPENING_LAYERS.items():
-            for layer in self._layers(names):
+        for opening_type, role in OPENING_ROLES.items():
+            for layer in self.layers(role):
                 types[layer] = opening_type
-        for layer in self._layers(GENERIC_OPENING_LAYERS):
+        for layer in self.layers(GENERIC_OPENING_ROLE):
             types.setdefault(layer, "unknown")
         return types
 
@@ -365,16 +343,15 @@ class OpeningDetectionService(DxfPlanReader):
 
     def _detect_from_plan_view(self) -> List[DetectedOpening]:
         layer_types = self._opening_layer_types()
-        if not layer_types and not self._layers(SYMBOL_LAYERS):
+        if not layer_types and not self.layers(SYMBOL_ROLE):
             logger.warning("Aucun calque d'ouvertures dans %s (attendus : %s)",
-                           self.dxf_path, ", ".join(
-                               [n for names in OPENING_LAYERS.values() for n in names]
-                               + list(GENERIC_OPENING_LAYERS) + list(SYMBOL_LAYERS)))
+                           self.dxf_path, self.describe_layers(
+                               *OPENING_ROLES.values(), GENERIC_OPENING_ROLE, SYMBOL_ROLE))
             return []
 
         host_walls = self._collect_host_walls()
         opening_layers = list(layer_types)
-        symbol_layers = self._layers(SYMBOL_LAYERS)
+        symbol_layers = self.layers(SYMBOL_ROLE)
 
         windows = self._detect_plan_windows(opening_layers, layer_types)
         doors = self._detect_plan_doors(opening_layers + symbol_layers,
@@ -402,7 +379,7 @@ class OpeningDetectionService(DxfPlanReader):
     def _collect_host_walls(self) -> List[_HostWall]:
         """Murs vus en plan : deux faces parallèles écartées d'une épaisseur
         plausible (même règle que la détection de murs)."""
-        segments = self._segments_m(self._layers(WALL_LAYERS))
+        segments = self._segments_m(self.layers(*WALL_ROLES))
         if not segments:
             return []
         return [
@@ -423,7 +400,7 @@ class OpeningDetectionService(DxfPlanReader):
         englobante est son nu extérieur. Un DXF qui porte le RDC et l'étage
         côte à côte donne ainsi deux emprises distinctes."""
         shapes = [line.buffer(ENVELOPE_JOIN)
-                  for line, _layer in self._segments_m(self._layers(WALL_LAYERS))]
+                  for line, _layer in self._segments_m(self.layers(*WALL_ROLES))]
         shapes += [o.axis.buffer(ENVELOPE_JOIN + (o.thickness or 0.0) / 2.0)
                    for o in openings]
         if not shapes:
@@ -805,7 +782,8 @@ class OpeningDetectionService(DxfPlanReader):
         la façade ; ici on les ramène au sol de l'étage, seule cote de pose
         comparable d'un niveau à l'autre."""
         facade_service = FacadeDetectionService(
-            self.dxf_path, context=self.context, unit_scale=self.unit_scale)
+            self.dxf_path, context=self.context, unit_scale=self.unit_scale,
+            layer_config=self.layer_config)
         openings: List[DetectedOpening] = []
 
         for index, facade in enumerate(facade_service.detect_facades()):

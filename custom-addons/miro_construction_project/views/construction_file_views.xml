@@ -68,6 +68,7 @@
                     <group>
                         <group string="Fichier source">
                             <field name="project_id" />
+                            <field name="dxf_layer_convention_id" invisible="not project_id"/>
                             <field name="filename" />
                             <field name="file" filename="filename" />
                         </group>

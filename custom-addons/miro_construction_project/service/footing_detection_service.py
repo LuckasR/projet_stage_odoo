@@ -75,14 +75,14 @@ logging.basicConfig(level=logging.INFO)
 # CONFIGURATION
 # ============================================================
 
-# Calques de fondation — correspondance EXACTE (S-SEM ne capte pas S-SEM-FIL)
-ISOLATED_FOOTING_LAYER = "S-SEM"
-STRIP_FOOTING_LAYER = "S-SEM-FIL"
-TIE_BEAM_LAYER = "S-LON"
-COLUMN_LAYER = "S-POT"
+# Rôles de calque des fondations (noms : convention de calques du chantier,
+# cf. dxf_layers). Les noms livrés sont exacts : S-SEM ne capte pas S-SEM-FIL.
+ISOLATED_FOOTING_ROLE = "footing_isolated"
+STRIP_FOOTING_ROLE = "footing_strip"
+TIE_BEAM_ROLE = "tie_beam"
+COLUMN_ROLE = "column"
 
-FOOTING_LAYERS = (ISOLATED_FOOTING_LAYER, STRIP_FOOTING_LAYER,
-                  TIE_BEAM_LAYER, COLUMN_LAYER)
+FOOTING_ROLES = (ISOLATED_FOOTING_ROLE, STRIP_FOOTING_ROLE, TIE_BEAM_ROLE, COLUMN_ROLE)
 
 # Codes de construction.element.type auxquels sont rattachés les ouvrages.
 # Ils doivent exister dans Construction > Configuration > Types d'éléments.
@@ -154,7 +154,7 @@ TYPE_SLAB = "dalle"
 # du plancher haut du même niveau (cf. is_ground_slab).
 GROUND_SLAB_KEY = "DALLAGE"
 # Fond de plan des murs du rez-de-chaussée, repris sur le plan de fondation
-WALL_REF_LAYER = "S-REF"
+WALL_REF_ROLE = "wall_ref"
 MIN_WALL_WIDTH = 0.05
 MAX_WALL_WIDTH = 0.60
 # Les murs sont interrompus par les baies, les longrines par les semelles :
@@ -285,8 +285,8 @@ class FootingDetectionService(DxfPlanReader):
     SUPPORTED_VIEWS = (VIEW_PLAN,)
 
     def __init__(self, dxf_path: str, context: Optional[PlanContext] = None,
-                 unit_scale: float = 1.0):
-        super().__init__(dxf_path)
+                 unit_scale: float = 1.0, layer_config=None):
+        super().__init__(dxf_path, layer_config=layer_config)
         self.context = context or PlanContext()
         self.unit_scale = unit_scale or 1.0
         self._labels: Optional[List[Tuple[str, float, float]]] = None
@@ -310,9 +310,9 @@ class FootingDetectionService(DxfPlanReader):
             self._detect_isolated_footings()
             + self._detect_columns()
             + self._detect_linear_footings(
-                STRIP_FOOTING_LAYER, TYPE_STRIP, MIN_STRIP_WIDTH, MAX_STRIP_WIDTH)
+                STRIP_FOOTING_ROLE, TYPE_STRIP, MIN_STRIP_WIDTH, MAX_STRIP_WIDTH)
             + self._detect_linear_footings(
-                TIE_BEAM_LAYER, TYPE_TIE_BEAM, MIN_TIE_BEAM_WIDTH, MAX_TIE_BEAM_WIDTH)
+                TIE_BEAM_ROLE, TYPE_TIE_BEAM, MIN_TIE_BEAM_WIDTH, MAX_TIE_BEAM_WIDTH)
         )
 
         before = len(footings)
@@ -342,8 +342,8 @@ class FootingDetectionService(DxfPlanReader):
         """Dallage sur terre-plein : L x l de la maison, au nu intérieur des
         murs extérieurs. L'emprise est cherchée, dans l'ordre, sur :
 
-          1. les murs (S-REF)         leur nu extérieur, épaisseur lue ;
-          2. les longrines (S-LON)    elles courent sous les murs ;
+          1. les murs de refend       leur nu extérieur, épaisseur lue ;
+          2. les longrines            elles courent sous les murs ;
           3. les semelles filantes    idem, plus larges que le mur ;
           4. poteaux / semelles       enveloppe de leurs centres (axes).
 
@@ -352,14 +352,14 @@ class FootingDetectionService(DxfPlanReader):
         coupes la complète."""
         slab = DetectedGroundSlab(level=self.context.level_label)
 
-        walls = self._band_footprint(WALL_REF_LAYER, MIN_WALL_WIDTH, MAX_WALL_WIDTH)
+        walls = self._band_footprint(WALL_REF_ROLE, MIN_WALL_WIDTH, MAX_WALL_WIDTH)
         wall_thickness = walls[1] if walls else None
         candidates = [
-            ("des murs (%s)" % WALL_REF_LAYER, walls, 0.75),
-            ("des longrines (%s)" % TIE_BEAM_LAYER, self._band_footprint(
-                TIE_BEAM_LAYER, MIN_TIE_BEAM_WIDTH, MAX_TIE_BEAM_WIDTH), 0.70),
-            ("des semelles filantes (%s)" % STRIP_FOOTING_LAYER, self._band_footprint(
-                STRIP_FOOTING_LAYER, MIN_STRIP_WIDTH, MAX_STRIP_WIDTH), 0.65),
+            ("des murs (%s)" % self.describe_layers(WALL_REF_ROLE), walls, 0.75),
+            ("des longrines (%s)" % self.describe_layers(TIE_BEAM_ROLE), self._band_footprint(
+                TIE_BEAM_ROLE, MIN_TIE_BEAM_WIDTH, MAX_TIE_BEAM_WIDTH), 0.70),
+            ("des semelles filantes (%s)" % self.describe_layers(STRIP_FOOTING_ROLE),
+             self._band_footprint(STRIP_FOOTING_ROLE, MIN_STRIP_WIDTH, MAX_STRIP_WIDTH), 0.65),
             ("des poteaux et semelles isolées (axes)", self._point_footprint(footings), 0.45),
         ]
         for label, found, confidence in candidates:
@@ -391,16 +391,18 @@ class FootingDetectionService(DxfPlanReader):
         logger.info("Dallage : emprise du bâtiment introuvable sur ce plan")
         return slab
 
-    def _band_footprint(self, layer: str, min_width: float, max_width: float
+    def _band_footprint(self, role: str, min_width: float, max_width: float
                         ) -> Optional[Tuple[Polygon, float]]:
         """(contour extérieur, largeur de l'ouvrage en m) des ouvrages
-        linéaires d'un calque, réunis et refermés par-dessus leurs coupures."""
+        linéaires d'un rôle de calque, réunis et refermés par-dessus leurs
+        coupures."""
         s = self.unit_scale
+        layers = self.layers(role)
         shapes = [Polygon(o.points).buffer(0)
-                  for o in self.collect_closed_outlines([layer], include_blocks=True)
+                  for o in self.collect_closed_outlines(layers, include_blocks=True)
                   if len(o.points) >= 3]
         pairs = self.find_parallel_pairs(
-            self.collect_segments([layer], include_blocks=True),
+            self.collect_segments(layers, include_blocks=True),
             min_width=min_width / s, max_width=max_width / s,
             min_length=MIN_LINEAR_LENGTH / s, angle_tolerance=PARALLEL_ANGLE_TOLERANCE)
         shapes += [p.axis.buffer(p.width / 2.0, cap_style=2, join_style=2) for p in pairs]
@@ -441,12 +443,12 @@ class FootingDetectionService(DxfPlanReader):
         return outer
 
     # ========================================================
-    # OUVRAGES PONCTUELS — contours fermés (S-SEM, S-POT)
+    # OUVRAGES PONCTUELS — contours fermés (semelles isolées, poteaux)
     # ========================================================
 
     def _detect_isolated_footings(self) -> List[DetectedFooting]:
         return self._detect_outline_elements(
-            ISOLATED_FOOTING_LAYER, TYPE_ISOLATED,
+            ISOLATED_FOOTING_ROLE, TYPE_ISOLATED,
             MIN_ISOLATED_SIDE, MAX_ISOLATED_SIDE, MAX_ISOLATED_RATIO,
             base_confidence=0.75, label="les semelles isolées")
 
@@ -456,22 +458,24 @@ class FootingDetectionService(DxfPlanReader):
         superposent mais restent deux ouvrages distincts, sur deux calques
         distincts et de tailles très différentes."""
         return self._detect_outline_elements(
-            COLUMN_LAYER, TYPE_COLUMN,
+            COLUMN_ROLE, TYPE_COLUMN,
             MIN_COLUMN_SIDE, MAX_COLUMN_SIDE, MAX_COLUMN_RATIO,
             base_confidence=0.75, label="les poteaux")
 
-    def _detect_outline_elements(self, layer: str, type_code: str,
+    def _detect_outline_elements(self, role: str, type_code: str,
                                  min_side: float, max_side: float,
                                  max_ratio: float, base_confidence: float,
                                  label: str) -> List[DetectedFooting]:
         """Ouvrage ponctuel dessiné comme un contour fermé : sa boîte
         englobante donne directement ses deux côtés."""
-        outlines = self.collect_closed_outlines([layer], include_blocks=True)
+        layers = self.layers(role)
+        layer = ", ".join(layers) or self.describe_layers(role)
+        outlines = self.collect_closed_outlines(layers, include_blocks=True)
 
         if not outlines:
             # Diagnostic utile : distinguer « calque absent » de « calque
             # présent mais dessiné en traits séparés ».
-            if self.collect_segments([layer], include_blocks=True):
+            if self.collect_segments(layers, include_blocks=True):
                 logger.warning(
                     "Calque %s présent mais sans contour fermé : %s doivent "
                     "être des polylignes fermées", layer, label)
@@ -511,10 +515,12 @@ class FootingDetectionService(DxfPlanReader):
     # SEMELLES FILANTES ET LONGRINES — paires de bords parallèles
     # ========================================================
 
-    def _detect_linear_footings(self, layer: str, type_code: str,
+    def _detect_linear_footings(self, role: str, type_code: str,
                                 min_width: float, max_width: float
                                 ) -> List[DetectedFooting]:
-        segments = self.collect_segments([layer], include_blocks=True)
+        layers = self.layers(role)
+        layer = layers[0] if len(layers) == 1 else ", ".join(layers)
+        segments = self.collect_segments(layers, include_blocks=True)
         if not segments:
             return []
 
@@ -537,7 +543,7 @@ class FootingDetectionService(DxfPlanReader):
             cx, cy = pair.center
             footing = self._build(
                 type_code=type_code,
-                layer=layer,
+                layer=pair.layer_a,
                 geometry_type="line_pair",
                 center=(cx, cy),
                 length=pair.length * scale,

@@ -53,13 +53,14 @@ logger = logging.getLogger("formwork_detection_service")
 # CONFIGURATION
 # ============================================================
 
-COLUMN_LAYER = "S-POT"
-BEAM_LAYERS = ("S-POU", "S-POU-CACHE")
-SLAB_LAYER = "S-DAL"
-SLAB_OPENING_LAYER = "S-TREMIE"
-WALL_LAYERS = ("S-REF",)
+# Rôles de calque (noms : convention de calques du chantier, cf. dxf_layers)
+COLUMN_ROLE = "column"
+BEAM_ROLE = "beam"
+SLAB_ROLE = "slab"
+SLAB_OPENING_ROLE = "slab_opening"
+WALL_ROLE = "wall_ref"
 
-FORMWORK_LAYERS = (COLUMN_LAYER,) + BEAM_LAYERS + (SLAB_LAYER,) + WALL_LAYERS
+FORMWORK_ROLES = (COLUMN_ROLE, BEAM_ROLE, SLAB_ROLE, WALL_ROLE)
 
 # Codes de construction.element.type
 TYPE_COLUMN = "poteau"
@@ -353,8 +354,8 @@ class FormworkDetectionService(ExecutionPlanReader):
     SUPPORTED_VIEWS = (VIEW_PLAN,)
 
     def __init__(self, dxf_path: str, context: Optional[PlanContext] = None,
-                 unit_scale: float = 1.0):
-        super().__init__(dxf_path)
+                 unit_scale: float = 1.0, layer_config=None):
+        super().__init__(dxf_path, layer_config=layer_config)
         self.context = context or PlanContext()
         self.unit_scale = unit_scale or 1.0
         self._placed_texts = None
@@ -395,7 +396,7 @@ class FormworkDetectionService(ExecutionPlanReader):
     def _detect_columns(self) -> List[DetectedFormwork]:
         s = self.unit_scale
         found = []
-        for outline in self.collect_closed_outlines([COLUMN_LAYER], include_blocks=True):
+        for outline in self.collect_closed_outlines(self.layers(COLUMN_ROLE), include_blocks=True):
             a, b = sorted((outline.width * s, outline.height * s))
             if a < MIN_COLUMN_SIDE or b > MAX_COLUMN_SIDE or b / a > MAX_COLUMN_RATIO:
                 continue
@@ -409,7 +410,7 @@ class FormworkDetectionService(ExecutionPlanReader):
                         "de détail (coupes) ou à saisir"],
             ))
         self._label(found, TYPE_COLUMN)
-        logger.info("Calque %s : %d poteau(x)", COLUMN_LAYER, len(found))
+        logger.info("Calque %s : %d poteau(x)", self.describe_layers(COLUMN_ROLE), len(found))
         return found
 
     # --------------------------------------------------------
@@ -418,7 +419,7 @@ class FormworkDetectionService(ExecutionPlanReader):
 
     def _detect_beams(self, columns: List[DetectedFormwork]) -> List[DetectedFormwork]:
         s = self.unit_scale
-        segments = self.collect_segments(list(BEAM_LAYERS), include_blocks=True)
+        segments = self.collect_segments(self.layers(BEAM_ROLE), include_blocks=True)
         if not segments:
             return []
         bands = self.merge_bands(
@@ -445,7 +446,7 @@ class FormworkDetectionService(ExecutionPlanReader):
                     issues.append("Hauteur de poutre absente de la nomenclature : "
                                   "reprise du plan de détail ou à saisir")
                 found.append(DetectedFormwork(
-                    key="", type_code=TYPE_BEAM, layer=BEAM_LAYERS[0],
+                    key="", type_code=TYPE_BEAM, layer=self._first_layer(BEAM_ROLE),
                     center_x=(x1 + x2) / 2.0, center_y=(y1 + y2) / 2.0,
                     bbox=(min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2)),
                     dimensions=dims,
@@ -454,7 +455,7 @@ class FormworkDetectionService(ExecutionPlanReader):
                 ))
         self._label(found, TYPE_BEAM)
         logger.info("Calques %s : %d bande(s) -> %d travée(s) de poutre",
-                    "/".join(BEAM_LAYERS), len(bands), len(found))
+                    self.describe_layers(BEAM_ROLE), len(bands), len(found))
         return found
 
     def _spans(self, band: Band, columns: List[DetectedFormwork]):
@@ -495,10 +496,10 @@ class FormworkDetectionService(ExecutionPlanReader):
     def _detect_slabs(self) -> List[DetectedFormwork]:
         s = self.unit_scale
         openings = [Polygon(o.points) for o in
-                    self.collect_closed_outlines([SLAB_OPENING_LAYER], include_blocks=True)
+                    self.collect_closed_outlines(self.layers(SLAB_OPENING_ROLE), include_blocks=True)
                     if len(o.points) >= 3]
         found = []
-        for outline in self.collect_closed_outlines([SLAB_LAYER], include_blocks=True):
+        for outline in self.collect_closed_outlines(self.layers(SLAB_ROLE), include_blocks=True):
             if len(outline.points) < 3:
                 continue
             poly = Polygon(outline.points).buffer(0)
@@ -536,7 +537,7 @@ class FormworkDetectionService(ExecutionPlanReader):
                 item.key, item.label_found = self._clean_label(match.group(1)), True
             found.append(item)
         self._label(found, TYPE_SLAB)
-        logger.info("Calque %s : %d dalle(s)", SLAB_LAYER, len(found))
+        logger.info("Calque %s : %d dalle(s)", self.describe_layers(SLAB_ROLE), len(found))
         return found
 
     def _tremie(self, hole: Polygon, slab) -> dict:
@@ -567,7 +568,7 @@ class FormworkDetectionService(ExecutionPlanReader):
         sinon tout texte « Dxx » qu'elle contient."""
         from shapely.geometry import Point
         inside = [t for t in self.placed_texts() if poly.contains(Point(t.x, t.y))]
-        for text in sorted(inside, key=lambda t: t.layer != SLAB_LAYER):
+        for text in sorted(inside, key=lambda t: t.layer not in self.layers(SLAB_ROLE)):
             if LABEL_PATTERNS[TYPE_SLAB].match(text.text):
                 return text.text
         return None
@@ -592,7 +593,7 @@ class FormworkDetectionService(ExecutionPlanReader):
 
     def _detect_walls(self) -> List[DetectedFormwork]:
         s = self.unit_scale
-        segments = self.collect_segments(list(WALL_LAYERS), include_blocks=True)
+        segments = self.collect_segments(self.layers(WALL_ROLE), include_blocks=True)
         if not segments:
             return []
         bands = self.merge_bands(
@@ -612,7 +613,7 @@ class FormworkDetectionService(ExecutionPlanReader):
             if openings:
                 dims["ouvertures_m"] = band.gap_length(MIN_OPENING_WIDTH / s) * s
             found.append(DetectedFormwork(
-                key="", type_code=TYPE_WALL, layer=WALL_LAYERS[0],
+                key="", type_code=TYPE_WALL, layer=self._first_layer(WALL_ROLE),
                 center_x=(x1 + x2) / 2.0, center_y=(y1 + y2) / 2.0,
                 bbox=(min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2)),
                 dimensions=dims, confidence=0.60, axis=(x1, y1, x2, y2),
@@ -622,7 +623,7 @@ class FormworkDetectionService(ExecutionPlanReader):
                         "de détail (coupes) ou à saisir"],
             ))
         self._label(found, TYPE_WALL)
-        logger.info("Calque(s) %s : %d mur(s)", "/".join(WALL_LAYERS), len(found))
+        logger.info("Calque(s) %s : %d mur(s)", self.describe_layers(WALL_ROLE), len(found))
         return found
 
     # --------------------------------------------------------

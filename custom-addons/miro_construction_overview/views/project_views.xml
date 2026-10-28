@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_project_construction_form_overview" model="ir.ui.view">
+        <field name="name">project.project.construction.form.overview</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="miro_construction_project.view_project_project_construction_form"/>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <!-- Accès directs du quotidien -->
+            <xpath expr="//header" position="inside">
+                <button name="action_open_today_journal" type="object" string="Journal du jour"
+                    class="btn-primary" icon="fa-book"/>
+                <button name="action_open_material_dashboard" type="object" string="Matériaux"
+                    class="btn-secondary" icon="fa-cubes"/>
+                <button name="action_open_3d_view" type="object" string="Maquette 3D"
+                    class="btn-secondary" icon="fa-cube"/>
+                <button name="action_print_material_report" type="object" string="Rapport matériaux"
+                    class="btn-secondary" icon="fa-print"/>
+            </xpath>
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_open_elements" type="object" class="oe_stat_button" icon="fa-building-o">
+                    <field name="x_element_count" widget="statinfo" string="Éléments"/>
+                </button>
+                <button name="action_open_open_incidents" type="object" class="oe_stat_button"
+                    icon="fa-exclamation-triangle">
+                    <field name="x_incident_open_count" widget="statinfo" string="Incidents ouverts"/>
+                </button>
+            </xpath>
+            <!-- Premier onglet : Odoo ouvre la fiche dessus -->
+            <xpath expr="//notebook/page[@name='budget']" position="before">
+                <page string="Vue d'ensemble" name="overview">
+                    <field name="x_overview_html" nolabel="1" readonly="1"/>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

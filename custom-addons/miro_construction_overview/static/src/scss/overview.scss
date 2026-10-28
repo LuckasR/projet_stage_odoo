@@ -1,0 +1,197 @@
+// Vue d'ensemble de la fiche chantier (miro_construction_overview)
+.o_mco {
+    --mco-ok: #2e7d32;
+    --mco-info: #1565c0;
+    --mco-warn: #ef6c00;
+    --mco-bad: #c62828;
+    --mco-light: #90caf9;
+    --mco-line: #e3e8ee;
+    --mco-track: #edf1f5;
+    --mco-muted: #6b7785;
+    --mco-card: #ffffff;
+    width: 100%;
+    font-size: 13px;
+
+    .o_mco_muted { color: var(--mco-muted); }
+    .o_mco_num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+    // --- Indicateurs ----------------------------------------------------
+    .o_mco_kpis {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+    .o_mco_kpi {
+        background: var(--mco-card);
+        border: 1px solid var(--mco-line);
+        border-radius: 8px;
+        padding: 12px 14px;
+    }
+    .o_mco_kpi_label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        color: var(--mco-muted);
+        font-weight: 600;
+    }
+    .o_mco_kpi_value {
+        font-size: 22px;
+        font-weight: 700;
+        margin: 4px 0 6px;
+        font-variant-numeric: tabular-nums;
+        &.is-bad { color: var(--mco-bad); }
+        &.is-ok { color: var(--mco-ok); }
+    }
+    .o_mco_kpi_sub { font-size: 12px; color: var(--mco-muted); margin-top: 6px; line-height: 1.4; }
+
+    // --- Barres ---------------------------------------------------------
+    .o_mco_bar {
+        position: relative;
+        display: flex;
+        height: 8px;
+        background: var(--mco-track);
+        border-radius: 4px;
+        overflow: visible;
+        > span { display: block; height: 100%; }
+        > span:first-child { border-radius: 4px 0 0 4px; }
+        > span:only-child { border-radius: 4px; }
+        .is-ok { background: var(--mco-ok); }
+        .is-info { background: var(--mco-info); }
+        .is-warn { background: var(--mco-warn); }
+        .is-bad { background: var(--mco-bad); }
+        .is-light { background: var(--mco-light); }
+    }
+    .o_mco_mark {
+        position: absolute;
+        top: -3px;
+        width: 2px;
+        height: 14px;
+        background: #263238;
+        border-radius: 1px;
+    }
+    .o_mco_inline_bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        .o_mco_bar { flex: 1; }
+        .o_mco_num { width: 44px; text-align: right; }
+    }
+
+    .o_mco_delta {
+        display: inline-block;
+        margin-left: 4px;
+        padding: 0 6px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 11px;
+        &.is-ok { background: #e8f5e9; color: var(--mco-ok); }
+        &.is-warn { background: #fff3e0; color: var(--mco-warn); }
+        &.is-bad { background: #ffebee; color: var(--mco-bad); }
+    }
+
+    // --- Cartes ---------------------------------------------------------
+    .o_mco_grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+        gap: 14px;
+    }
+    .o_mco_card {
+        background: var(--mco-card);
+        border: 1px solid var(--mco-line);
+        border-radius: 8px;
+        padding: 14px 16px;
+        margin-bottom: 14px;
+        min-width: 0;
+        overflow-x: auto;
+        .o_mco_grid & { margin-bottom: 0; }
+        h3 {
+            font-size: 14px;
+            font-weight: 700;
+            margin: 0 0 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+    }
+    .o_mco_h3_sub { font-weight: 400; font-size: 12px; margin-left: auto; }
+    .o_mco_count {
+        background: var(--mco-track);
+        border-radius: 10px;
+        padding: 0 8px;
+        font-size: 12px;
+    }
+    .o_mco_allgood {
+        color: var(--mco-ok);
+        font-weight: 600;
+        .fa { margin-right: 6px; }
+    }
+
+    // --- Alertes --------------------------------------------------------
+    .o_mco_alerts {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+        gap: 6px 16px;
+        li {
+            display: flex;
+            gap: 8px;
+            align-items: baseline;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border-left: 3px solid;
+            .fa { flex: none; }
+        }
+        .is-danger { background: #ffebee; border-color: var(--mco-bad); .fa { color: var(--mco-bad); } }
+        .is-warning { background: #fff3e0; border-color: var(--mco-warn); .fa { color: var(--mco-warn); } }
+        .is-info { background: #e3f2fd; border-color: var(--mco-info); .fa { color: var(--mco-info); } }
+    }
+
+    // --- Tableaux -------------------------------------------------------
+    .o_mco_table {
+        width: 100%;
+        border-collapse: collapse;
+        th {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .03em;
+            color: var(--mco-muted);
+            font-weight: 600;
+            padding: 4px 6px 6px;
+            border-bottom: 1px solid var(--mco-line);
+        }
+        td { padding: 6px; border-bottom: 1px solid var(--mco-line); vertical-align: middle; }
+        tbody tr:last-child td { border-bottom: 0; }
+        tfoot td { font-weight: 700; border-top: 2px solid var(--mco-line); border-bottom: 0; }
+    }
+    .o_mco_tag {
+        display: inline-block;
+        padding: 1px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+        background: var(--mco-track);
+        color: var(--mco-muted);
+        &.is-ok { background: #e8f5e9; color: var(--mco-ok); }
+        &.is-info { background: #e3f2fd; color: var(--mco-info); }
+        &.is-warn { background: #fff3e0; color: var(--mco-warn); }
+        &.is-bad { background: #ffebee; color: var(--mco-bad); }
+    }
+    .o_mco_tag + .o_mco_tag, td > span + .o_mco_tag { margin-left: 6px; }
+    .o_mco_foot { margin-top: 10px; font-size: 12px; }
+
+    // --- Identité -------------------------------------------------------
+    .o_mco_identity {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 6px 16px;
+        margin: 0;
+        dt { color: var(--mco-muted); font-weight: 600; }
+        dd { margin: 0; }
+    }
+
+    .o_mco_updated { font-size: 11px; margin-top: 12px; }
+}

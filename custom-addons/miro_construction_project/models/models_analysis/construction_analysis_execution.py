@@ -10,9 +10,8 @@ from odoo.exceptions import UserError, ValidationError
 
 from ...service.detail_analysis_service import DetailAnalysisService
 from ...service.formwork_detection_service import (
-    FORMWORK_LAYERS,
+    FORMWORK_ROLES,
     TYPE_WALL,
-    WALL_LAYERS,
     FormworkDetectionService,
 )
 from ...service.footing_detection_service import is_ground_slab
@@ -122,17 +121,20 @@ class ConstructionAnalysisExecution(models.Model):
         if self.engine == 'formwork':
             service = self._load_service(
                 dwg, lambda path: FormworkDetectionService(
-                    path, context=self._plan_context(dwg), unit_scale=unit_scale))
+                    path, context=self._plan_context(dwg), unit_scale=unit_scale,
+                    layer_config=dwg._layer_config()))
             items = service.detect()
             if not items:
                 raise ValidationError(_(
                     "Aucun ouvrage détecté sur ce plan de coffrage. Vérifiez que "
-                    "les ouvrages sont dessinés sur les calques %s et que le plan "
-                    "est classé en vue « Plan ».") % ", ".join(FORMWORK_LAYERS))
+                    "les ouvrages sont dessinés sur les calques %s (convention de "
+                    "calques du chantier) et que le plan est classé en vue « Plan ».")
+                    % service.describe_layers(*FORMWORK_ROLES))
             return self._formwork_result(service, items, unit_scale)
 
         service = self._load_service(
-            dwg, lambda path: DetailAnalysisService(path, unit_scale=unit_scale))
+            dwg, lambda path: DetailAnalysisService(
+                path, unit_scale=unit_scale, layer_config=dwg._layer_config()))
         profile = service.analyze()
         if not (profile.get('storeys') or profile.get('sections')
                 or profile.get('reinforcement')):
@@ -300,7 +302,7 @@ class ConstructionAnalysisExecution(models.Model):
                     dwg_file_id=dwg.id,
                     level_id=level.id or False,
                     match_key=match_key,
-                    layer=WALL_LAYERS[0],
+                    layer=item.layer,
                     wall_type=('partition' if thickness <= PARTITION_MAX_THICKNESS
                                else 'unknown'),
                     geometry_type='line_pair',

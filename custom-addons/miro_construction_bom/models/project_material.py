@@ -1,4 +1,5 @@
 from odoo import _, api, fields, models
+from odoo.tools import float_round
 
 
 class ConstructionProjectMaterial(models.Model):
@@ -157,6 +158,11 @@ class ProjectProject(models.Model):
             product = sample.product_id
             stock = product.qty_available if product else 0.0
             shortage = max(row['remaining'] - stock - max(row['ordered'] - row['received'], 0.0), 0.0)
+            # La somme de dizaines de besoins traîne des résidus flottants
+            # (7406,7400000001 contre 7406,74 en stock) : sans arrondi à la
+            # précision de l'unité, on afficherait « Stock insuffisant, manque 0 ».
+            shortage = float_round(shortage, precision_rounding=(
+                product.uom_id.rounding if product else 0.01) or 0.01)
             rows.append({
                 'key': '%s%s' % (kind, res_id),
                 'product_id': product.id or False,
@@ -214,6 +220,7 @@ class ProjectProject(models.Model):
         return {
             'type': 'ir.actions.act_window', 'name': _("Besoins matériaux — %s") % self.name,
             'res_model': 'construction.material.need', 'view_mode': 'tree,pivot,form',
+            'views': [(False, 'tree'), (False, 'pivot'), (False, 'form')],
             'domain': [('project_id', '=', self.id)],
             'context': {'search_default_group_product': 1},
         }
@@ -237,5 +244,5 @@ class ProjectProject(models.Model):
         return {
             'type': 'ir.actions.act_window', 'name': _("Demandes de prix matériaux"),
             'res_model': 'construction.need.purchase.wizard', 'view_mode': 'form',
-            'target': 'new', 'context': {'default_project_id': self.id},
+            'views': [(False, 'form')], 'target': 'new', 'context': {'default_project_id': self.id},
         }

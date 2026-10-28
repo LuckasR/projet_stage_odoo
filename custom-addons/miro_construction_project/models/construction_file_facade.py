@@ -119,7 +119,7 @@ class ConstructionDwgFileFacade(models.Model):
         try:
             service = FacadeDetectionService(
                 tmp_path, context=self._wall_detection_context(),
-                unit_scale=unit_scale)
+                unit_scale=unit_scale, layer_config=self._layer_config())
             detected = service.detect_facades()
         finally:
             Path(tmp_path).unlink(missing_ok=True)

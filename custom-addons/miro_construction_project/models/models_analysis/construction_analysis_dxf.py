@@ -75,8 +75,9 @@ class ConstructionAnalysisDxf(models.Model):
         levels = dwg.level_ids
 
         items = []
+        layer_config = dwg._layer_config()
         for block in dwg.block_ids:
-            etype = self._match_type(types, block.block_name, block.layer)
+            etype = self._match_type(types, block.block_name, block.layer, layer_config)
             if not etype:
                 continue
             items.append(self._block_to_item(block, etype, to_m, levels))
@@ -89,12 +90,14 @@ class ConstructionAnalysisDxf(models.Model):
         return {'schema_version': 1, 'elements': items}
 
     @staticmethod
-    def _match_type(types, block_name, layer):
-        bname, lname = (block_name or '').lower(), (layer or '').lower()
+    def _match_type(types, block_name, layer, layer_config):
+        """Type d'un bloc : par mot-clé dans le nom du bloc, ou par le calque
+        sur lequel il est placé (noms de la convention de calques du
+        chantier)."""
+        bname = (block_name or '').lower()
         for etype in types:
             kb = (etype.dxf_block_keyword or '').lower()
-            kl = (etype.dxf_layer_keyword or '').lower()
-            if (kb and kb in bname) or (kl and kl in lname):
+            if (kb and kb in bname) or layer_config.element_type_matches(etype.id, layer or ''):
                 return etype
         return None
 

@@ -1,0 +1,9 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_miro_site_equipment_user,miro.site.equipment.user,model_miro_site_equipment,base.group_user,1,0,0,0
+access_miro_site_equipment_manager,miro.site.equipment.manager,model_miro_site_equipment,project.group_project_manager,1,1,1,1
+access_miro_site_journal_user,miro.site.journal.user,model_miro_site_journal,base.group_user,1,1,1,1
+access_miro_site_journal_labor_user,miro.site.journal.labor.user,model_miro_site_journal_labor,base.group_user,1,1,1,1
+access_miro_site_journal_material_user,miro.site.journal.material.user,model_miro_site_journal_material,base.group_user,1,1,1,1
+access_miro_site_journal_equipment_user,miro.site.journal.equipment.user,model_miro_site_journal_equipment,base.group_user,1,1,1,1
+access_miro_site_journal_expense_user,miro.site.journal.expense.user,model_miro_site_journal_expense,base.group_user,1,1,1,1
+access_miro_site_journal_work_user,miro.site.journal.work.user,model_miro_site_journal_work,base.group_user,1,1,1,1

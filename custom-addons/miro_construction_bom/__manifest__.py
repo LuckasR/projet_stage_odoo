@@ -19,8 +19,8 @@ nomenclatures natives d'Odoo (mrp.bom) et les catégories de matériaux
 * choix du produit réel par projet pour chaque besoin générique ;
 * synthèse par élément, ouvrage, niveau, projet ; comparaison au stock ;
 * demandes de prix fournisseurs générées depuis les besoins ;
-* déclaration des consommations réelles (mouvements de stock vers le
-  chantier) et écart prévu / réel.
+* sorties de stock vers le chantier (déclarées dans le journal de chantier,
+  miro_construction_journal) et écart prévu / réel.
 """,
     'author': "Votre Entreprise",
     'license': 'LGPL-3',
@@ -34,7 +34,6 @@ nomenclatures natives d'Odoo (mrp.bom) et les catégories de matériaux
         'views/construction_bom_link_views.xml',
         'views/project_views.xml',
         'wizard/need_purchase_wizard_views.xml',
-        'wizard/need_consume_wizard_views.xml',
         'views/menu_views.xml',
         'report/material_needs_report.xml',
         'data/default_boms.xml',

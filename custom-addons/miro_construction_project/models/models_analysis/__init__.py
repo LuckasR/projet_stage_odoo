@@ -9,3 +9,5 @@ from . import construction_analysis_opening
 from . import construction_element_draft
 # Plans d'exécution (coffrage, coupes et détails) : aiguillage le plus extérieur.
 from . import construction_analysis_execution
+# Conventions de calques DXF (noms cherchés par tous les moteurs)
+from . import construction_dxf_layer

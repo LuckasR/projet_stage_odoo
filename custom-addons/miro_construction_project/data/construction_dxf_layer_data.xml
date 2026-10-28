@@ -1,0 +1,386 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Conventions de calques livrées : « All » (réunit toutes les conventions,
+     convention par défaut des chantiers) et la convention Miro, qui reprend
+     les noms que les moteurs cherchaient jusqu'ici. noupdate : les noms
+     ajoutés ou retirés par l'utilisateur ne sont jamais écrasés. -->
+<odoo noupdate="1">
+    <record id="dxf_layer_convention_all" model="construction.dxf.layer.convention">
+        <field name="name">All</field>
+        <field name="sequence">0</field>
+        <field name="is_all" eval="True"/>
+        <field name="note">Réunit les noms de calque de toutes les conventions.</field>
+    </record>
+
+    <record id="dxf_layer_convention_miro" model="construction.dxf.layer.convention">
+        <field name="name">Convention Miro</field>
+        <field name="sequence">10</field>
+        <field name="note">Noms de calque des plans Miro Construction (A- architecture, S- structure).</field>
+    </record>
+
+    <!-- Murs — Mur extérieur -->
+    <record id="dxf_layer_miro_wall_ext_a_mur_ext" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">wall_ext</field>
+        <field name="name">A-MUR-EXT</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="dxf_layer_miro_wall_ext_murs_ext" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">wall_ext</field>
+        <field name="name">MURS_EXT</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <!-- Murs — Mur intérieur -->
+    <record id="dxf_layer_miro_wall_int_a_mur_int" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">wall_int</field>
+        <field name="name">A-MUR-INT</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="dxf_layer_miro_wall_int_murs_int" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">wall_int</field>
+        <field name="name">MURS_INT</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <!-- Murs — Hachures de mur -->
+    <record id="dxf_layer_miro_wall_hatch_a_mur_hach" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">wall_hatch</field>
+        <field name="name">A-MUR-HACH</field>
+        <field name="sequence">10</field>
+    </record>
+
+    <!-- Façades — Contour de façade -->
+    <record id="dxf_layer_miro_facade_outline_a_fac_cont" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">facade_outline</field>
+        <field name="name">A-FAC-CONT</field>
+        <field name="sequence">10</field>
+    </record>
+
+    <!-- Façades — Détails de façade (dalles, menuiseries) -->
+    <record id="dxf_layer_miro_facade_detail_a_fac_det" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">facade_detail</field>
+        <field name="name">A-FAC-DET</field>
+        <field name="sequence">10</field>
+    </record>
+
+    <!-- Ouvertures — Fenêtre -->
+    <record id="dxf_layer_miro_opening_window_a_ouv_fen" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">opening_window</field>
+        <field name="name">A-OUV-FEN</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="dxf_layer_miro_opening_window_a_fen" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">opening_window</field>
+        <field name="name">A-FEN</field>
+        <field name="sequence">20</field>
+    </record>
+    <record id="dxf_layer_miro_opening_window_a_fenetre" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">opening_window</field>
+        <field name="name">A-FENETRE</field>
+        <field name="sequence">30</field>
+    </record>
+
+    <!-- Ouvertures — Porte -->
+    <record id="dxf_layer_miro_opening_door_a_ouv_prt" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">opening_door</field>
+        <field name="name">A-OUV-PRT</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="dxf_layer_miro_opening_door_a_porte" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">opening_door</field>
+        <field name="name">A-PORTE</field>
+        <field name="sequence">20</field>
+    </record>
+    <record id="dxf_layer_miro_opening_door_a_pte" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">opening_door</field>
+        <field name="name">A-PTE</field>
+        <field name="sequence">30</field>
+    </record>
+
+    <!-- Ouvertures — Porte-fenêtre -->
+    <record id="dxf_layer_miro_opening_french_window_a_porte_fen" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">opening_french_window</field>
+        <field name="name">A-PORTE-FEN</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="dxf_layer_miro_opening_french_window_a_pfen" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">opening_french_window</field>
+        <field name="name">A-PFEN</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <!-- Ouvertures — Baie -->
+    <record id="dxf_layer_miro_opening_bay_a_baie" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">opening_bay</field>
+        <field name="name">A-BAIE</field>
+        <field name="sequence">10</field>
+    </record>
+
+    <!-- Ouvertures — Porte de garage -->
+    <record id="dxf_layer_miro_opening_garage_door_a_porte_gar" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">opening_garage_door</field>
+        <field name="name">A-PORTE-GAR</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="dxf_layer_miro_opening_garage_door_a_pgar" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">opening_garage_door</field>
+        <field name="name">A-PGAR</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <!-- Ouvertures — Ouverture (nature déduite de la géométrie) -->
+    <record id="dxf_layer_miro_opening_generic_ouvertures" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">opening_generic</field>
+        <field name="name">OUVERTURES</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="dxf_layer_miro_opening_generic_a_ouv" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">opening_generic</field>
+        <field name="name">A-OUV</field>
+        <field name="sequence">20</field>
+    </record>
+    <record id="dxf_layer_miro_opening_generic_a_ouverture" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">opening_generic</field>
+        <field name="name">A-OUVERTURE</field>
+        <field name="sequence">30</field>
+    </record>
+    <record id="dxf_layer_miro_opening_generic_a_ouvertures" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">opening_generic</field>
+        <field name="name">A-OUVERTURES</field>
+        <field name="sequence">40</field>
+    </record>
+    <record id="dxf_layer_miro_opening_generic_a_menuiserie" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">opening_generic</field>
+        <field name="name">A-MENUISERIE</field>
+        <field name="sequence">50</field>
+    </record>
+    <record id="dxf_layer_miro_opening_generic_menuiseries" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">opening_generic</field>
+        <field name="name">MENUISERIES</field>
+        <field name="sequence">60</field>
+    </record>
+
+    <!-- Ouvertures — Symbole d'ouverture (débattement) -->
+    <record id="dxf_layer_miro_opening_symbol_a_ouv_symb" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">opening_symbol</field>
+        <field name="name">A-OUV-SYMB</field>
+        <field name="sequence">10</field>
+    </record>
+
+    <!-- Éléments de façade — Balcon -->
+    <record id="dxf_layer_miro_feature_balcony_a_balcon" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">feature_balcony</field>
+        <field name="name">A-BALCON</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="dxf_layer_miro_feature_balcony_a_bal" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">feature_balcony</field>
+        <field name="name">A-BAL</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <!-- Éléments de façade — Terrasse -->
+    <record id="dxf_layer_miro_feature_terrace_a_terrasse" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">feature_terrace</field>
+        <field name="name">A-TERRASSE</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="dxf_layer_miro_feature_terrace_a_ter" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">feature_terrace</field>
+        <field name="name">A-TER</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <!-- Éléments de façade — Garde-corps -->
+    <record id="dxf_layer_miro_feature_railing_a_garde_corps" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">feature_railing</field>
+        <field name="name">A-GARDE-CORPS</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="dxf_layer_miro_feature_railing_a_gc" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">feature_railing</field>
+        <field name="name">A-GC</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <!-- Éléments de façade — Corniche -->
+    <record id="dxf_layer_miro_feature_cornice_a_corniche" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">feature_cornice</field>
+        <field name="name">A-CORNICHE</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="dxf_layer_miro_feature_cornice_a_corn" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">feature_cornice</field>
+        <field name="name">A-CORN</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <!-- Éléments de façade — Toiture -->
+    <record id="dxf_layer_miro_feature_roof_a_toiture" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">feature_roof</field>
+        <field name="name">A-TOITURE</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="dxf_layer_miro_feature_roof_a_toit" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">feature_roof</field>
+        <field name="name">A-TOIT</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <!-- Éléments de façade — Auvent -->
+    <record id="dxf_layer_miro_feature_canopy_a_auvent" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">feature_canopy</field>
+        <field name="name">A-AUVENT</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="dxf_layer_miro_feature_canopy_a_auv" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">feature_canopy</field>
+        <field name="name">A-AUV</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <!-- Éléments de façade — Escalier -->
+    <record id="dxf_layer_miro_feature_stairs_a_escalier" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">feature_stairs</field>
+        <field name="name">A-ESCALIER</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="dxf_layer_miro_feature_stairs_a_esc" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">feature_stairs</field>
+        <field name="name">A-ESC</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <!-- Éléments de façade — Volet -->
+    <record id="dxf_layer_miro_feature_shutter_a_volet" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">feature_shutter</field>
+        <field name="name">A-VOLET</field>
+        <field name="sequence">10</field>
+    </record>
+
+    <!-- Structure — Semelle isolée -->
+    <record id="dxf_layer_miro_footing_isolated_s_sem" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">footing_isolated</field>
+        <field name="name">S-SEM</field>
+        <field name="sequence">10</field>
+    </record>
+
+    <!-- Structure — Semelle filante -->
+    <record id="dxf_layer_miro_footing_strip_s_sem_fil" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">footing_strip</field>
+        <field name="name">S-SEM-FIL</field>
+        <field name="sequence">10</field>
+    </record>
+
+    <!-- Structure — Longrine -->
+    <record id="dxf_layer_miro_tie_beam_s_lon" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">tie_beam</field>
+        <field name="name">S-LON</field>
+        <field name="sequence">10</field>
+    </record>
+
+    <!-- Structure — Poteau -->
+    <record id="dxf_layer_miro_column_s_pot" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">column</field>
+        <field name="name">S-POT</field>
+        <field name="sequence">10</field>
+    </record>
+
+    <!-- Structure — Poutre -->
+    <record id="dxf_layer_miro_beam_s_pou" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">beam</field>
+        <field name="name">S-POU</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="dxf_layer_miro_beam_s_pou_cache" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">beam</field>
+        <field name="name">S-POU-CACHE</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <!-- Structure — Dalle -->
+    <record id="dxf_layer_miro_slab_s_dal" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">slab</field>
+        <field name="name">S-DAL</field>
+        <field name="sequence">10</field>
+    </record>
+
+    <!-- Structure — Trémie -->
+    <record id="dxf_layer_miro_slab_opening_s_tremie" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">slab_opening</field>
+        <field name="name">S-TREMIE</field>
+        <field name="sequence">10</field>
+    </record>
+
+    <!-- Structure — Mur de refend (structure) -->
+    <record id="dxf_layer_miro_wall_ref_s_ref" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">wall_ref</field>
+        <field name="name">S-REF</field>
+        <field name="sequence">10</field>
+    </record>
+
+    <!-- Détails — Niveaux (cotes altimétriques) -->
+    <record id="dxf_layer_miro_level_s_niv" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">level</field>
+        <field name="name">S-NIV</field>
+        <field name="sequence">10</field>
+    </record>
+
+    <!-- Détails — Hypothèses à vérifier -->
+    <record id="dxf_layer_miro_warning_x_hyp" model="construction.dxf.layer.name">
+        <field name="convention_id" ref="dxf_layer_convention_miro"/>
+        <field name="role">warning</field>
+        <field name="name">X-HYP</field>
+        <field name="sequence">10</field>
+    </record>
+
+</odoo>

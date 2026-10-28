@@ -89,10 +89,12 @@ class ConstructionPlanType(models.Model):
     # Mots-clés DXF livrés par une version antérieure du module. On ne retire
     # QUE ces valeurs-là : un mot-clé que l'utilisateur a choisi lui-même est
     # toujours respecté.
+    # (Les mots-clés de calque sont devenus des noms de calque rangés par
+    # convention : construction.dxf.layer.name.)
     _SHIPPED_DXF_KEYWORDS = {
-        'semelle': {'dxf_block_keyword': 'SEMELLE', 'dxf_layer_keyword': 'SEMELLE'},
-        'semelle_filante': {'dxf_layer_keyword': 'S-SEM-FIL'},
-        'longrine': {'dxf_layer_keyword': 'S-LON'},
+        'semelle': {'dxf_block_keyword': 'SEMELLE'},
+        'semelle_filante': {},
+        'longrine': {},
         'poteau': {},
     }
 
