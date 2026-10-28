@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_construction_dxf_layer_convention_tree" model="ir.ui.view">
+        <field name="name">construction.dxf.layer.convention.tree</field>
+        <field name="model">construction.dxf.layer.convention</field>
+        <field name="arch" type="xml">
+            <tree decoration-bf="is_all">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="is_all" column_invisible="1"/>
+                <field name="note"/>
+                <field name="line_count"/>
+                <field name="project_count"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_construction_dxf_layer_convention_form" model="ir.ui.view">
+        <field name="name">construction.dxf.layer.convention.form</field>
+        <field name="model">construction.dxf.layer.convention</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_projects" type="object" class="oe_stat_button"
+                            icon="fa-building">
+                            <field name="project_count" widget="statinfo" string="Chantiers"/>
+                        </button>
+                    </div>
+                    <widget name="web_ribbon" title="Archivée" bg_color="text-bg-danger"
+                        invisible="active"/>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="is_all" placeholder="Ex. : Cabinet Rakoto"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="is_all" invisible="1"/>
+                            <field name="note" placeholder="Bureau d'études, architecte, type de plans…"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="sequence" invisible="is_all"/>
+                            <field name="line_count"/>
+                        </group>
+                    </group>
+
+                    <div class="alert alert-info" role="status" invisible="not is_all">
+                        <b>All</b> réunit les noms de calque de toutes les conventions actives.
+                        C'est la convention par défaut d'un chantier : l'analyse y cherche
+                        tous les noms connus. Pour limiter un chantier aux noms d'un seul
+                        bureau d'études, choisissez cette convention sur la fiche du chantier.
+                        Les noms s'ajoutent dans les conventions précises, pas ici.
+                    </div>
+                    <div class="text-muted mb-2" invisible="is_all">
+                        Pour chaque chose que cherche l'analyse des plans, les noms de calque
+                        utilisés par ce bureau d'études. Un nom peut contenir le joker
+                        <code>*</code> : <code>A-MUR-EXT*</code> reconnaît aussi
+                        <code>A-MUR-EXT-RDC</code>. Majuscules et accents ne comptent pas.
+                    </div>
+
+                    <notebook>
+                        <page string="Noms de calque" name="lines" invisible="is_all">
+                            <field name="line_ids" context="{'default_convention_id': id}">
+                                <tree editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="role"/>
+                                    <field name="element_type_id"
+                                        invisible="role != 'element_type'"
+                                        required="role == 'element_type'"
+                                        options="{'no_create': True}"/>
+                                    <field name="name"/>
+                                    <field name="active" widget="boolean_toggle"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Noms pris en compte" name="effective" invisible="not is_all">
+                            <field name="effective_line_ids">
+                                <tree>
+                                    <field name="role"/>
+                                    <field name="element_type_id" optional="show"/>
+                                    <field name="name"/>
+                                    <field name="convention_id"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_construction_dxf_layer_convention_search" model="ir.ui.view">
+        <field name="name">construction.dxf.layer.convention.search</field>
+        <field name="model">construction.dxf.layer.convention</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="line_ids" string="Nom de calque"
+                    filter_domain="[('line_ids.name', 'ilike', self)]"/>
+                <filter name="archived" string="Archivées" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_construction_dxf_layer_convention" model="ir.actions.act_window">
+        <field name="name">Conventions de calques DXF</field>
+        <field name="res_model">construction.dxf.layer.convention</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Créer une convention de calques</p>
+            <p>Une convention regroupe les noms de calque d'un bureau d'études : murs,
+               poteaux, semelles, ouvertures… L'analyse des plans DXF cherche ces noms.
+               « All » les réunit toutes.</p>
+        </field>
+    </record>
+
+    <!-- Tous les noms, toutes conventions : retrouver qui utilise « MURS_EXT » -->
+    <record id="view_construction_dxf_layer_name_tree" model="ir.ui.view">
+        <field name="name">construction.dxf.layer.name.tree</field>
+        <field name="model">construction.dxf.layer.name</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom">
+                <field name="convention_id" options="{'no_create': True}"/>
+                <field name="role"/>
+                <field name="element_type_id" invisible="role != 'element_type'"
+                    required="role == 'element_type'" options="{'no_create': True}"/>
+                <field name="name"/>
+                <field name="active" widget="boolean_toggle"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_construction_dxf_layer_name_search" model="ir.ui.view">
+        <field name="name">construction.dxf.layer.name.search</field>
+        <field name="model">construction.dxf.layer.name</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="convention_id"/>
+                <field name="role"/>
+                <filter name="archived" string="Archivés" domain="[('active', '=', False)]"/>
+                <group expand="1" string="Regrouper par">
+                    <filter name="group_role" string="Ce que cherche l'analyse"
+                        context="{'group_by': 'role'}"/>
+                    <filter name="group_convention" string="Convention"
+                        context="{'group_by': 'convention_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_construction_dxf_layer_name" model="ir.actions.act_window">
+        <field name="name">Noms de calque DXF</field>
+        <field name="res_model">construction.dxf.layer.name</field>
+        <field name="view_mode">tree</field>
+        <field name="context">{'search_default_group_role': 1}</field>
+    </record>
+
+    <menuitem id="menu_construction_dxf_layer_convention" name="Conventions de calques DXF"
+        parent="menu_construction_config" action="action_construction_dxf_layer_convention"
+        sequence="35"/>
+    <menuitem id="menu_construction_dxf_layer_name" name="Noms de calque DXF"
+        parent="menu_construction_config" action="action_construction_dxf_layer_name"
+        sequence="36"/>
+</odoo>

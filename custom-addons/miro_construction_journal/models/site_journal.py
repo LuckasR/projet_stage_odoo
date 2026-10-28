@@ -1,17 +1,42 @@
-from collections import defaultdict
-
 from odoo import Command, _, api, fields, models
-from odoo.exceptions import UserError, ValidationError
+from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.tools import format_date
+
+# Phase sans métré : son avancement suit l'état déclaré
+STATUS_PROGRESS = {'todo': 0.0, 'doing': 50.0, 'done': 100.0}
+
+LINE_STATES = [('draft', "Brouillon"), ('validated', "Validé")]
+
+# Ce qu'on peut encore écrire sur une ligne validée sans la déverrouiller
+LINE_LOCK_FREE = {'sequence'}
+
+
+def _line_validation_fields(self):
+    return {'state': 'validated', 'validated_by_id': self.env.uid,
+            'validated_on': fields.Datetime.now()}
+
+
+def _line_reset_fields():
+    return {'state': 'draft', 'validated_by_id': False, 'validated_on': False}
+
+
+def _check_can_reset(env):
+    if not env.user.has_group('project.group_project_manager'):
+        raise AccessError(_("Seul le conducteur de travaux peut remettre une ligne validée en brouillon."))
 
 
 class MiroSiteJournal(models.Model):
     """Journal de chantier : la journée d'un chantier, déclarée par le chef
-    de chantier. Il regroupe les travaux du jour, un par phase, chacun avec
-    sa main-d'œuvre, sa consommation, son matériel et ses dépenses. À la
-    validation (conducteur de travaux) il est figé : les matières sortent du
-    stock, l'avancement des phases est mis à jour, et ses lignes comptent
-    dans le coût réel."""
+    de chantier. Il regroupe les travaux du jour (une phase peut en avoir
+    plusieurs), chacun avec sa main-d'œuvre, sa consommation, son matériel
+    et ses dépenses.
+
+    Le chef de chantier valide les lignes au fil de la journée : une ligne
+    validée est figée et compte aussitôt (les matières sortent du stock,
+    l'avancement et le coût réel sont mis à jour). On peut ajouter des
+    lignes tant que le journal n'est pas validé ; soumettre ne fait que
+    prévenir le conducteur. À la validation du journal (conducteur), les
+    lignes restantes sont validées et plus rien ne bouge."""
     _name = 'miro.site.journal'
     _description = "Journal de chantier"
     _inherit = ['mail.thread', 'mail.activity.mixin']
@@ -113,7 +138,18 @@ class MiroSiteJournal(models.Model):
     def unlink(self):
         if self.filtered(lambda j: j.state == 'validated'):
             raise UserError(_("Un journal validé ne peut pas être supprimé."))
+        if self._validated_lines():
+            raise UserError(_("Ce journal a des lignes validées : il ne peut plus être supprimé."))
         return super().unlink()
+
+    def _validated_lines(self):
+        """Lignes validées du journal, tous types confondus (une liste de
+        recordsets : ils sont de modèles différents)."""
+        works = self.work_ids
+        lines = [works, works.labor_line_ids, works.material_line_ids, works.equipment_line_ids,
+                 works.expense_line_ids, self.site_equipment_line_ids, self.site_expense_line_ids]
+        return [validated for validated in (l.filtered(lambda r: r.state == 'validated') for l in lines)
+                if validated]
 
     # ------------------------------------------------------------------
     # Workflow
@@ -138,25 +174,17 @@ class MiroSiteJournal(models.Model):
         self.write({'state': 'draft'})
 
     def action_validate(self):
-        """Fige le journal : sortie de stock des matières, avancement des
-        phases. Les coûts réels se recalculent d'eux-mêmes."""
+        """Fige le journal : les lignes pas encore validées le sont (leurs
+        matières sortent du stock), puis plus rien ne bouge."""
         self._check_state('draft', 'submitted')
         self._check_not_empty()
         for journal in self.sorted('date'):
-            per_need = defaultdict(float)
-            for line in journal.work_ids.material_line_ids:
-                per_need[line.need_id] += line.quantity
-            self.env['construction.material.need']._consume(
-                per_need, journal.location_id, origin=journal.name)
-            # Avancement calculé AVANT de passer validé : le cumul antérieur
-            # ne compte que les journaux déjà validés.
-            reached = {work.task_id: work.progress_after for work in journal.work_ids}
+            journal.work_ids.action_validate_line()
+            journal.site_equipment_line_ids.action_validate_line()
+            journal.site_expense_line_ids.action_validate_line()
             journal.with_context(miro_journal_unlocked=True).write({
                 'state': 'validated', 'validated_by_id': self.env.uid,
                 'validated_on': fields.Datetime.now()})
-            for task, progress in reached.items():
-                if progress > task.x_avancement_manuel:
-                    task.x_avancement_manuel = round(progress, 1)
         return True
 
     def action_copy_previous_team(self):
@@ -186,9 +214,19 @@ class MiroSiteJournal(models.Model):
 
 
 class MiroSiteJournalWork(models.Model):
-    """Travail du jour sur une phase : ce qui a été réalisé (quantité dans
-    l'unité de la phase, ou % pour une phase sans métré), et ce que ça a
-    demandé — ouvriers, matières de la phase, matériel, dépenses."""
+    """Travail du jour sur une phase : ce qui a été réalisé, et ce que ça a
+    demandé — ouvriers, matières de la phase, matériel, dépenses. Une phase
+    peut avoir plusieurs travaux le même jour (le matin validé, l'après-midi
+    dans une nouvelle ligne).
+
+    Valider le travail le fige avec toutes ses lignes ; son réalisé compte
+    alors dans l'avancement de la phase. Chaque ligne (un ouvrier, une
+    matière...) peut aussi être validée seule, avant le travail.
+
+    Le réalisé est la seule source de l'avancement d'une phase : une
+    quantité dans l'unité de la phase (m³ coulés...), ou pour une phase sans
+    métré un état (pas commencé / en cours / fini). Une erreur se corrige
+    par une quantité négative, avec son motif, dans un journal suivant."""
     _name = 'miro.site.journal.work'
     _description = "Travail du journal de chantier"
     _order = 'journal_id, sequence, id'
@@ -198,7 +236,11 @@ class MiroSiteJournalWork(models.Model):
     sequence = fields.Integer(default=10)
     project_id = fields.Many2one(related='journal_id.project_id', store=True, string="Chantier")
     date = fields.Date(related='journal_id.date', store=True)
-    state = fields.Selection(related='journal_id.state', store=True, string="État")
+    state = fields.Selection(LINE_STATES, string="État", default='draft', required=True,
+                             readonly=True, copy=False, index=True)
+    journal_state = fields.Selection(related='journal_id.state', string="État du journal")
+    validated_by_id = fields.Many2one('res.users', string="Validé par", readonly=True, copy=False)
+    validated_on = fields.Datetime("Validé le", readonly=True, copy=False)
     currency_id = fields.Many2one(related='journal_id.currency_id')
     task_id = fields.Many2one(
         'project.task', string="Phase", required=True, index=True,
@@ -211,11 +253,18 @@ class MiroSiteJournalWork(models.Model):
     qty_before = fields.Float(
         "Déjà réalisé", compute='_compute_progress', digits=(16, 3),
         help="Cumul des journaux validés avant celui-ci.")
-    qty_done = fields.Float("Réalisé ce jour", digits=(16, 3))
-    progress_pct = fields.Float(
-        "Avancement atteint (%)",
-        help="Pour une phase sans métré : avancement atteint à la fin de la journée.")
+    qty_done = fields.Float(
+        "Réalisé ce jour", digits=(16, 3),
+        help="Négatif pour corriger un réalisé déclaré en trop (motif obligatoire).")
+    correction_reason = fields.Char("Motif de la correction")
+    status = fields.Selection([
+        ('todo', "Pas commencé"),
+        ('doing', "En cours"),
+        ('done', "Fini"),
+    ], string="État de la phase", default='doing',
+        help="Pour une phase sans métré : état à la fin de la journée.")
     progress_after = fields.Float("Avancement après (%)", compute='_compute_progress')
+    check_html = fields.Html("Contrôles", compute='_compute_check_html', sanitize=False)
     note = fields.Char("Remarque")
 
     # --- Ce que le travail a demandé ---------------------------------------
@@ -228,12 +277,7 @@ class MiroSiteJournalWork(models.Model):
     labor_hours = fields.Float("Heures", compute='_compute_totals', store=True)
     total_cost = fields.Monetary("Coût", compute='_compute_totals', store=True)
 
-    _sql_constraints = [
-        ('journal_task_uniq', 'unique(journal_id, task_id)',
-         "Une phase ne figure qu'une fois par journal : regroupez ses travaux."),
-    ]
-
-    @api.depends('task_id', 'qty_done', 'progress_pct', 'date')
+    @api.depends('task_id', 'qty_done', 'status', 'date')
     def _compute_progress(self):
         Work = self.env['miro.site.journal.work']
         for work in self:
@@ -242,10 +286,27 @@ class MiroSiteJournalWork(models.Model):
                 ('id', '!=', work._origin.id or 0)]) if work.task_id else Work
             work.qty_before = sum(before.mapped('qty_done'))
             if work.phase_qty:
-                work.progress_after = min(
-                    100.0, 100.0 * (work.qty_before + work.qty_done) / work.phase_qty)
+                work.progress_after = min(max(
+                    100.0 * (work.qty_before + work.qty_done) / work.phase_qty, 0.0), 100.0)
             else:
-                work.progress_after = min(max(work.progress_pct, 0.0), 100.0)
+                work.progress_after = STATUS_PROGRESS.get(work.status, 0.0)
+
+    @api.depends('task_id', 'qty_done', 'status', 'labor_line_ids.hours',
+                 'material_line_ids.quantity', 'state')
+    def _compute_check_html(self):
+        """Ce que donnerait la phase avec ce travail : les contrôles de
+        cohérence de la phase, avant même la validation."""
+        for work in self:
+            if not work.task_id:
+                work.check_html = False
+                continue
+            pending = work.state != 'validated'
+            alerts = work.task_id._progress_checks(
+                progress=work.progress_after,
+                extra_hours=sum(work.labor_line_ids.mapped('hours')) if pending else 0.0,
+                extra_material={l.need_id: l.quantity for l in work.material_line_ids} if pending else None,
+                extra_qty=work.qty_done if pending else 0.0)
+            work.check_html = work.task_id._progress_checks_html(alerts)
 
     @api.depends('labor_line_ids.employee_id', 'labor_line_ids.hours', 'labor_line_ids.cost',
                  'material_line_ids.cost', 'equipment_line_ids.cost', 'expense_line_ids.amount')
@@ -276,18 +337,34 @@ class MiroSiteJournalWork(models.Model):
         for line in self.material_line_ids:
             line.quantity = line.planned_qty
 
-    @api.constrains('qty_done', 'progress_pct')
+    @api.constrains('qty_done', 'correction_reason')
     def _check_values(self):
         for work in self:
-            if work.qty_done < 0 or not 0 <= work.progress_pct <= 100:
-                raise ValidationError(_("Quantité réalisée ou avancement invalide sur %s.")
-                                      % work.task_id.display_name)
+            if work.qty_done >= 0:
+                continue
+            if not (work.correction_reason or '').strip():
+                raise ValidationError(_(
+                    "%s : une quantité négative corrige un réalisé déclaré en trop ; "
+                    "indiquez le motif de la correction.") % work.task_id.display_name)
+            if work.qty_before + work.qty_done < -1e-6:
+                raise ValidationError(_(
+                    "%(task)s : la correction (%(qty)s) dépasse ce qui a été réalisé (%(done)s).")
+                    % {'task': work.task_id.display_name, 'qty': work.qty_done,
+                       'done': work.qty_before})
 
-    def _check_unlocked(self):
+    def _sub_lines(self):
+        return [self.labor_line_ids, self.material_line_ids, self.equipment_line_ids,
+                self.expense_line_ids]
+
+    def _check_unlocked(self, vals=None):
         if self.env.context.get('miro_journal_unlocked'):
             return
         if self.journal_id.filtered(lambda j: j.state == 'validated'):
             raise UserError(_("Un journal validé ne peut plus être modifié."))
+        validated = self.filtered(lambda w: w.state == 'validated')
+        if validated and (vals is None or set(vals) - LINE_LOCK_FREE):
+            raise UserError(_("%s : ce travail est validé, il ne peut plus être modifié. "
+                              "Ajoutez une nouvelle ligne.") % validated[0].task_id.display_name)
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -296,18 +373,46 @@ class MiroSiteJournalWork(models.Model):
         return works
 
     def write(self, vals):
-        self._check_unlocked()
+        self._check_unlocked(vals)
         return super().write(vals)
 
     def unlink(self):
         self._check_unlocked()
+        if any(lines.filtered(lambda l: l.state == 'validated') for lines in self._sub_lines()):
+            raise UserError(_("Ce travail a des lignes validées : il ne peut plus être supprimé."))
         return super().unlink()
+
+    def action_validate_line(self):
+        """Valide le travail et toutes ses lignes : il est figé, son réalisé
+        compte dans l'avancement, ses matières sortent du stock."""
+        works = self.filtered(lambda w: w.state == 'draft')
+        if works.journal_id.filtered(lambda j: j.state == 'validated'):
+            raise UserError(_("Le journal est validé."))
+        for work in works:
+            for lines in work._sub_lines():
+                lines.action_validate_line()
+            work.with_context(miro_journal_unlocked=True).write(_line_validation_fields(work))
+        return True
+
+    def action_reset_line(self):
+        """Conducteur de travaux : remet le travail et ses lignes en
+        brouillon ; les matières sorties reviennent en stock."""
+        _check_can_reset(self.env)
+        works = self.filtered(lambda w: w.state == 'validated')
+        if works.journal_id.filtered(lambda j: j.state == 'validated'):
+            raise UserError(_("Le journal est validé : ses lignes ne peuvent plus être remises en brouillon."))
+        for work in works:
+            work.with_context(miro_journal_unlocked=True).write(_line_reset_fields())
+            for lines in work._sub_lines():
+                lines.action_reset_line()
+        return True
 
 
 class MiroSiteJournalLine(models.AbstractModel):
     """Ce que toutes les lignes d'un journal ont en commun : rattachées à un
     travail (donc à sa phase) ou, pour le matériel et les dépenses, au
-    chantier entier ; et le verrou des journaux validés."""
+    chantier entier ; leur validation une à une, et les verrous (ligne
+    validée, travail validé, journal validé)."""
     _name = 'miro.site.journal.line'
     _description = "Ligne de journal de chantier"
 
@@ -318,7 +423,11 @@ class MiroSiteJournalLine(models.AbstractModel):
     task_id = fields.Many2one(related='work_id.task_id', store=True, string="Phase", index=True)
     project_id = fields.Many2one(related='journal_id.project_id', store=True, string="Chantier")
     date = fields.Date(related='journal_id.date', store=True)
-    state = fields.Selection(related='journal_id.state', store=True, string="État")
+    state = fields.Selection(LINE_STATES, string="État", default='draft', required=True,
+                             readonly=True, copy=False, index=True)
+    journal_state = fields.Selection(related='journal_id.state', string="État du journal")
+    validated_by_id = fields.Many2one('res.users', string="Validé par", readonly=True, copy=False)
+    validated_on = fields.Datetime("Validé le", readonly=True, copy=False)
     currency_id = fields.Many2one(related='journal_id.currency_id')
 
     @api.depends('work_id')
@@ -326,11 +435,15 @@ class MiroSiteJournalLine(models.AbstractModel):
         for line in self.filtered('work_id'):
             line.journal_id = line.work_id.journal_id
 
-    def _check_unlocked(self):
+    def _check_unlocked(self, vals=None):
         if self.env.context.get('miro_journal_unlocked'):
             return
         if self.journal_id.filtered(lambda j: j.state == 'validated'):
             raise UserError(_("Un journal validé ne peut plus être modifié."))
+        if self.work_id.filtered(lambda w: w.state == 'validated'):
+            raise UserError(_("Ce travail est validé : ajoutez une nouvelle ligne de travail."))
+        if self.filtered(lambda l: l.state == 'validated') and (vals is None or set(vals) - LINE_LOCK_FREE):
+            raise UserError(_("Cette ligne est validée : elle ne peut plus être modifiée."))
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -339,12 +452,40 @@ class MiroSiteJournalLine(models.AbstractModel):
         return lines
 
     def write(self, vals):
-        self._check_unlocked()
+        self._check_unlocked(vals)
         return super().write(vals)
 
     def unlink(self):
         self._check_unlocked()
         return super().unlink()
+
+    def action_validate_line(self):
+        lines = self.filtered(lambda l: l.state == 'draft')
+        if lines.journal_id.filtered(lambda j: j.state == 'validated'):
+            raise UserError(_("Le journal est validé."))
+        for line in lines:
+            line._on_validate()
+            line.with_context(miro_journal_unlocked=True).write(_line_validation_fields(line))
+        return True
+
+    def action_reset_line(self):
+        _check_can_reset(self.env)
+        lines = self.filtered(lambda l: l.state == 'validated')
+        if lines.journal_id.filtered(lambda j: j.state == 'validated'):
+            raise UserError(_("Le journal est validé : ses lignes ne peuvent plus être remises en brouillon."))
+        if not self.env.context.get('miro_journal_unlocked') \
+                and lines.work_id.filtered(lambda w: w.state == 'validated'):
+            raise UserError(_("Remettez d'abord le travail en brouillon."))
+        for line in lines:
+            line._on_reset()
+            line.with_context(miro_journal_unlocked=True).write(_line_reset_fields())
+        return True
+
+    def _on_validate(self):
+        """Ce que la validation déclenche, en plus de figer la ligne."""
+
+    def _on_reset(self):
+        """Annule ce que _on_validate a déclenché."""
 
 
 class MiroSiteJournalLabor(models.Model):
@@ -406,6 +547,7 @@ class MiroSiteJournalMaterial(models.Model):
         help="Ce que la quantité réalisée du jour aurait dû consommer d'après "
              "la nomenclature de la phase.")
     quantity = fields.Float("Consommé", digits='Product Unit of Measure')
+    move_ids = fields.Many2many('stock.move', string="Sorties de stock", readonly=True, copy=False)
     unit_cost = fields.Monetary(
         "Coût unitaire", compute='_compute_unit_cost', store=True, readonly=False)
     cost = fields.Monetary("Coût", compute='_compute_cost', store=True)
@@ -431,6 +573,22 @@ class MiroSiteJournalMaterial(models.Model):
     def _check_quantity(self):
         if any(line.quantity < 0 for line in self):
             raise ValidationError(_("Une quantité consommée ne peut pas être négative."))
+
+    def _on_validate(self):
+        Need = self.env['construction.material.need']
+        for line in self.filtered(lambda l: l.quantity > 0):
+            moves = Need._consume({line.need_id: line.quantity}, line.journal_id.location_id,
+                                  origin=line.journal_id.name)
+            line.with_context(miro_journal_unlocked=True).move_ids = moves
+
+    def _on_reset(self):
+        """La matière sortie revient dans l'emplacement d'où elle était partie."""
+        Need = self.env['construction.material.need']
+        for line in self.filtered('move_ids'):
+            done = line.move_ids.filtered(lambda m: m.state == 'done')
+            Need._consume({line.need_id: sum(done.mapped('quantity'))}, line.journal_id.location_id,
+                          origin=_("Annulation — %s") % line.journal_id.name, reverse=True)
+            line.with_context(miro_journal_unlocked=True).move_ids = False
 
 
 class MiroSiteJournalEquipment(models.Model):

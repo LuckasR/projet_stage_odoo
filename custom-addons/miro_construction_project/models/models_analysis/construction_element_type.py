@@ -44,10 +44,6 @@ class ConstructionElementType(models.Model):
         "Mot-clé du bloc DXF",
         help="Un bloc dont le nom contient ce mot (insensible à la casse) est détecté "
              "comme un élément de ce type. Ex. : SEMELLE.")
-    dxf_layer_keyword = fields.Char(
-        "Mot-clé du calque DXF",
-        help="Un bloc placé sur un calque dont le nom contient ce mot est détecté "
-             "comme un élément de ce type. Ex. : FOND.")
     steel_ratio_kg_m3 = fields.Float(
         "Ratio d'acier (kg/m³)", default=0.0,
         help="Si le plan ne donne pas le poids d'acier, il est estimé : béton (m³) × ratio.")

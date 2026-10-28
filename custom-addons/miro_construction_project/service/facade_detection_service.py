@@ -50,7 +50,7 @@ import logging
 import math
 import re
 from dataclasses import asdict, dataclass, field
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Tuple
 
 try:
     from .plan_analysis import (
@@ -71,47 +71,43 @@ logging.basicConfig(level=logging.INFO)
 # CALQUES
 # ============================================================
 
+# Les calques sont désignés par leur RÔLE ; leurs noms viennent de la
+# convention de calques du chantier (cf. dxf_layers).
+
 # Contour de la façade. Sur un vrai plan d'élévation le mur n'est pas
-# redessiné sur les calques A-MUR-* : il est tracé sur un calque dédié à la
+# redessiné sur les calques des murs : il est tracé sur un calque dédié à la
 # vue. On cherche donc les deux familles, sans a priori sur celle que le
 # bureau d'études a utilisée.
-FACADE_OUTLINE_LAYERS = ("A-FAC-CONT", "A-MUR-EXT", "A-MUR-INT", "MURS_EXT", "MURS_INT")
+FACADE_OUTLINE_ROLES = ("facade_outline", "wall_ext", "wall_int")
 
 # Détails de façade : dalles de plancher (qui séparent les étages),
 # appuis, linteaux.
-FACADE_DETAIL_LAYERS = ("A-FAC-DET",)
+FACADE_DETAIL_ROLE = "facade_detail"
 
 # Ouvertures : un calque par nature, c'est ce qui donne leur type.
-OPENING_LAYERS: Dict[str, Tuple[str, ...]] = {
-    "window": ("A-OUV-FEN", "A-FEN", "A-FENETRE"),
-    "door": ("A-OUV-PRT", "A-PORTE", "A-PTE"),
-    "french_window": ("A-PORTE-FEN", "A-PFEN"),
-    "bay": ("A-BAIE",),
-    "garage_door": ("A-PORTE-GAR", "A-PGAR"),
+OPENING_ROLES: Dict[str, str] = {
+    "window": "opening_window",
+    "door": "opening_door",
+    "french_window": "opening_french_window",
+    "bay": "opening_bay",
+    "garage_door": "opening_garage_door",
 }
 
 # Calques d'ouvertures qui ne disent pas leur nature : elle est alors déduite
 # de la géométrie (une ouverture qui part du sol de l'étage est une porte).
-GENERIC_OPENING_LAYERS: Tuple[str, ...] = (
-    "OUVERTURES", "A-OUV", "A-OUVERTURE", "A-OUVERTURES", "A-MENUISERIE",
-    "MENUISERIES")
+GENERIC_OPENING_ROLE = "opening_generic"
 
 # Éléments architecturaux : idem, le calque porte la nature de l'ouvrage.
-FEATURE_LAYERS: Dict[str, Tuple[str, ...]] = {
-    "balcony": ("A-BALCON", "A-BAL"),
-    "terrace": ("A-TERRASSE", "A-TER"),
-    "railing": ("A-GARDE-CORPS", "A-GC"),
-    "cornice": ("A-CORNICHE", "A-CORN"),
-    "roof": ("A-TOITURE", "A-TOIT"),
-    "canopy": ("A-AUVENT", "A-AUV"),
-    "stairs": ("A-ESCALIER", "A-ESC"),
-    "shutter": ("A-VOLET",),
+FEATURE_ROLES: Dict[str, str] = {
+    "balcony": "feature_balcony",
+    "terrace": "feature_terrace",
+    "railing": "feature_railing",
+    "cornice": "feature_cornice",
+    "roof": "feature_roof",
+    "canopy": "feature_canopy",
+    "stairs": "feature_stairs",
+    "shutter": "feature_shutter",
 }
-
-# Cotes et annotations : ces calques ne servent qu'à filtrer, la nature
-# réelle est déduite du contenu (entité DIMENSION, texte altimétrique...).
-DIMENSION_LAYERS = ("A-COTE", "A-COTES", "COTES", "COTATION")
-ANNOTATION_LAYERS = ("A-TEXTE", "A-TXT", "A-ANNO", "A-REPERE", "TEXTE")
 
 
 # ============================================================
@@ -417,38 +413,10 @@ class FacadeDetectionService(DxfPlanReader):
     relevé à l'import depuis $INSUNITS."""
 
     def __init__(self, dxf_path: str, context: Optional[PlanContext] = None,
-                 unit_scale: float = 1.0):
-        super().__init__(dxf_path)
+                 unit_scale: float = 1.0, layer_config=None):
+        super().__init__(dxf_path, layer_config=layer_config)
         self.context = context or PlanContext()
         self.unit_scale = unit_scale or 1.0
-        self._layer_index = self._build_layer_index()
-
-    # --------------------------------------------------------
-    # CALQUES : correspondance tolérante
-    # --------------------------------------------------------
-
-    def _build_layer_index(self) -> Dict[str, str]:
-        """Calques réellement présents, indexés par leur nom normalisé.
-
-        La casse et les accents varient d'un bureau d'études à l'autre
-        (« A-Fen », « a-fenetre ») : chercher le nom exact ferait manquer
-        des ouvrages pour une simple majuscule."""
-        index: Dict[str, str] = {}
-        try:
-            for layer in self.doc.layers:
-                index[normalize_text(layer.dxf.name)] = layer.dxf.name
-        except Exception as exc:
-            logger.debug("Lecture de la table des calques impossible : %s", exc)
-        return index
-
-    def _layers(self, wanted: Sequence[str]) -> List[str]:
-        """Noms réels des calques du dessin correspondant aux noms attendus."""
-        found = []
-        for name in wanted:
-            real = self._layer_index.get(normalize_text(name))
-            if real and real not in found:
-                found.append(real)
-        return found
 
     def _scale(self, value: float) -> float:
         return value * self.unit_scale
@@ -495,7 +463,7 @@ class FacadeDetectionService(DxfPlanReader):
 
     def _detect_facade_blocks(self) -> List[DetectedFacade]:
         outlines = [
-            o for o in self.collect_closed_outlines(self._layers(FACADE_OUTLINE_LAYERS))
+            o for o in self.collect_closed_outlines(self.layers(*FACADE_OUTLINE_ROLES))
             if self._is_plausible_facade(o)
         ]
         if not outlines:
@@ -519,7 +487,7 @@ class FacadeDetectionService(DxfPlanReader):
     def _detect_facade_fallback(self) -> List[DetectedFacade]:
         """Plan dessiné en traits ouverts : pas de contour fermé exploitable.
         On retombe sur l'emprise globale, une seule façade et sans découpe."""
-        segments = self.collect_segments(self._layers(FACADE_OUTLINE_LAYERS))
+        segments = self.collect_segments(self.layers(*FACADE_OUTLINE_ROLES))
         box = self.segments_bounding_box(segments)
         if not box:
             return []
@@ -697,7 +665,7 @@ class FacadeDetectionService(DxfPlanReader):
         horizontaux parallèles traversant presque toute sa largeur. Un linteau
         est bien plus court — c'est ce qui les distingue, bien plus que leur
         épaisseur."""
-        layers = self._layers(FACADE_DETAIL_LAYERS)
+        layers = self.layers(FACADE_DETAIL_ROLE)
         if not layers:
             return []
 
@@ -749,9 +717,9 @@ class FacadeDetectionService(DxfPlanReader):
             if OPENING_LABEL_PATTERN.match(text or "")
         ]
 
-        groups = list(OPENING_LAYERS.items()) + [(None, GENERIC_OPENING_LAYERS)]
-        for layer_type, layer_names in groups:
-            layers = self._layers(layer_names)
+        groups = list(OPENING_ROLES.items()) + [(None, GENERIC_OPENING_ROLE)]
+        for layer_type, role in groups:
+            layers = self.layers(role)
             if not layers:
                 continue
             for outline in self.collect_closed_outlines(layers):
@@ -835,8 +803,8 @@ class FacadeDetectionService(DxfPlanReader):
     # --------------------------------------------------------
 
     def _attach_features(self, facades: List[DetectedFacade]) -> None:
-        for feature_type, layer_names in FEATURE_LAYERS.items():
-            layers = self._layers(layer_names)
+        for feature_type, role in FEATURE_ROLES.items():
+            layers = self.layers(role)
             if not layers:
                 continue
 

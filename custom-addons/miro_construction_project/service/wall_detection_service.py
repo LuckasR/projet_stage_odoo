@@ -36,7 +36,9 @@ vides des murs déjà connus, sans jamais écraser une valeur déjà renseignée
 
 Détection géométrique (vue en plan)
 -----------------------------------
-Seuls les calques A-MUR-EXT et A-MUR-INT sont analysés. Sur ces calques, les
+Seuls les calques des rôles « mur extérieur » et « mur intérieur » sont
+analysés (A-MUR-EXT, A-MUR-INT... selon la convention de calques du chantier,
+cf. dxf_layers). Sur ces calques, les
 murs peuvent être dessinés soit comme POLYLINE fermée traçant le contour du
 mur, soit comme LINE simple. On décompose donc toutes ces entités en segments
 et on détecte les paires de segments parallèles distants d'une épaisseur de
@@ -60,14 +62,12 @@ from shapely.ops import unary_union, linemerge
 try:
     from .plan_analysis import (
         LEVEL_WILDCARD, ORIENTATIONS, VIEW_ELEVATION, VIEW_PLAN, VIEW_SECTION,
-        DxfPlanReader, Outline, PlanContext, find_orientation, normalize_text,
-        normalize_view,
+        DxfPlanReader, Outline, PlanContext, find_orientation, normalize_view,
     )
 except ImportError:  # exécution directe du module en ligne de commande
     from plan_analysis import (  # type: ignore[no-redef]
         LEVEL_WILDCARD, ORIENTATIONS, VIEW_ELEVATION, VIEW_PLAN, VIEW_SECTION,
-        DxfPlanReader, Outline, PlanContext, find_orientation, normalize_text,
-        normalize_view,
+        DxfPlanReader, Outline, PlanContext, find_orientation, normalize_view,
     )
 
 logger = logging.getLogger("wall_detection_service")
@@ -78,20 +78,19 @@ logging.basicConfig(level=logging.INFO)
 # CONFIGURATION
 # ============================================================
 
-# Calques contenant les murs — correspondance EXACTE (insensible à la casse)
-WALL_LAYERS = ["A-MUR-EXT", "A-MUR-INT"]
+# Rôles de calque (noms : convention de calques du chantier, cf. dxf_layers)
+WALL_ROLES = ("wall_ext", "wall_int")
 
-# Calques du contour de façade : sur un vrai plan de façade, le mur n'est
-# JAMAIS redessiné sur les calques A-MUR-* (ceux-ci restent vides sur ce
-# type de plan) — il est tracé sur un calque dédié à la vue. On cherche donc
-# les deux familles en vue façade et en coupe, sans a priori sur laquelle
-# le bureau d'études a utilisée.
-FACADE_LAYERS = ["A-FAC-CONT"]
-ELEVATION_SECTION_LAYERS = WALL_LAYERS + FACADE_LAYERS
+# Contour de façade : sur un vrai plan de façade, le mur n'est JAMAIS
+# redessiné sur les calques des murs (ceux-ci restent vides sur ce type de
+# plan) — il est tracé sur un calque dédié à la vue. On cherche donc les deux
+# familles en vue façade et en coupe, sans a priori sur laquelle le bureau
+# d'études a utilisée.
+ELEVATION_SECTION_ROLES = WALL_ROLES + ("facade_outline",)
 
-# Calque des détails de façade : fenêtres, portes, ET la dalle de plancher
-# entre deux niveaux, dessinée comme deux traits horizontaux parallèles.
-FACADE_DETAIL_LAYERS = ["A-FAC-DET"]
+# Détails de façade : fenêtres, portes, ET la dalle de plancher entre deux
+# niveaux, dessinée comme deux traits horizontaux parallèles.
+FACADE_DETAIL_ROLE = "facade_detail"
 
 # Distance max entre le centre d'un bloc de façade et le texte qui porte son
 # orientation (« FACADE NORD »), en mètres.
@@ -106,8 +105,8 @@ SLAB_MAX_THICKNESS = 0.50
 # Tolérance angulaire pour juger une dalle « horizontale » (degrés depuis 0°)
 SLAB_ANGLE_TOLERANCE = 10.0
 
-# Calque des hachures de mur (utilisé uniquement pour valider la confiance)
-WALL_HATCH_LAYER = "A-MUR-HACH"
+# Hachures de mur (utilisées uniquement pour valider la confiance)
+WALL_HATCH_ROLE = "wall_hatch"
 
 # Épaisseur plausible d'un mur, en mètres
 MIN_WALL_THICKNESS = 0.05    # 5 cm
@@ -246,8 +245,8 @@ class WallDetectionService(DxfPlanReader):
     """Lit un DXF et en extrait des murs, selon ce que la vue permet de voir."""
 
     def __init__(self, dxf_path: str, context: Optional[PlanContext] = None,
-                 merge_overlaps: bool = False):
-        super().__init__(dxf_path)
+                 merge_overlaps: bool = False, layer_config=None):
+        super().__init__(dxf_path, layer_config=layer_config)
         self.context = context or PlanContext()
         # Regrouper en un seul mur les murs qui se chevauchent sur un même axe
         # (cf. _merge_overlapping_walls). Vue en plan uniquement.
@@ -294,7 +293,7 @@ class WallDetectionService(DxfPlanReader):
 
     def _detect_from_plan_view(self) -> List[DetectedWall]:
         segments = self._collect_wall_segments()
-        logger.info("Segments collectés sur %s : %d", WALL_LAYERS, len(segments))
+        logger.info("Segments collectés sur %s : %d", self.layers(*WALL_ROLES), len(segments))
 
         if not segments:
             logger.warning("Aucun segment trouvé sur les calques murs — "
@@ -333,19 +332,21 @@ class WallDetectionService(DxfPlanReader):
     # --------------------------------------------------------
 
     def _collect_wall_segments(self):
-        return self.collect_segments(WALL_LAYERS)
+        return self.collect_segments(self.layers(*WALL_ROLES))
 
     def _collect_hatch_points(self) -> List[Point]:
-        """Points médians des petites lignes de hachure sur A-MUR-HACH.
-        Sert uniquement à valider la position d'un mur (bonus de confiance)."""
+        """Points médians des petites lignes de hachure (rôle « hachures de
+        mur »). Sert uniquement à valider la position d'un mur (bonus de
+        confiance)."""
         points: List[Point] = []
-        try:
-            for e in self.msp.query(f'LINE[layer=="{WALL_HATCH_LAYER}"]'):
-                mx = (e.dxf.start.x + e.dxf.end.x) / 2.0
-                my = (e.dxf.start.y + e.dxf.end.y) / 2.0
-                points.append(Point(mx, my))
-        except Exception as exc:
-            logger.debug("Erreur collecte hachures : %s", exc)
+        for layer in self.layers(WALL_HATCH_ROLE):
+            try:
+                for e in self.msp.query(f'LINE[layer=="{layer}"]'):
+                    mx = (e.dxf.start.x + e.dxf.end.x) / 2.0
+                    my = (e.dxf.start.y + e.dxf.end.y) / 2.0
+                    points.append(Point(mx, my))
+            except Exception as exc:
+                logger.debug("Erreur collecte hachures : %s", exc)
         return points
 
     # --------------------------------------------------------
@@ -393,9 +394,9 @@ class WallDetectionService(DxfPlanReader):
         return walls
 
     def _is_exterior_layer(self, layer: Optional[str]) -> bool:
-        """« A-MUR-EXT », « MURS_EXT »... : la convention de nommage varie d'un
-        bureau d'études à l'autre, seul le marqueur « ext » est constant."""
-        return "ext" in normalize_text(layer)
+        """Calque du rôle « mur extérieur » dans la convention du chantier
+        (« A-MUR-EXT », « MURS_EXT »...)."""
+        return bool(layer) and layer in self.layers("wall_ext")
 
     def _best_layer(self, la: str, lb: str) -> str:
         """Une paire de segments à cheval sur les deux calques décrit la face
@@ -791,7 +792,7 @@ class WallDetectionService(DxfPlanReader):
 
     def _detect_from_elevation_view(self) -> List[DetectedWall]:
         blocks = [
-            outline for outline in self.collect_closed_outlines(ELEVATION_SECTION_LAYERS)
+            outline for outline in self.collect_closed_outlines(self.layers(*ELEVATION_SECTION_ROLES))
             if MIN_WALL_HEIGHT <= outline.height <= MAX_WALL_HEIGHT
         ]
 
@@ -856,7 +857,7 @@ class WallDetectionService(DxfPlanReader):
         d'origine, pour les plans dessinés en traits ouverts)."""
         ctx = self.context
         orientation = find_orientation(ctx.title, *self.collect_texts())
-        box = self.segments_bounding_box(self.collect_segments(ELEVATION_SECTION_LAYERS))
+        box = self.segments_bounding_box(self.collect_segments(self.layers(*ELEVATION_SECTION_ROLES)))
         if not box:
             logger.warning("Aucune géométrie de mur trouvée sur la façade %s",
                            self.dxf_path)
@@ -919,7 +920,7 @@ class WallDetectionService(DxfPlanReader):
         bien plus que leur épaisseur."""
         pad = 0.5
         segments = [
-            (line, layer) for line, layer in self.collect_segments(FACADE_DETAIL_LAYERS)
+            (line, layer) for line, layer in self.collect_segments(self.layers(FACADE_DETAIL_ROLE))
             if self._segment_in_bounds(
                 line, block.minx - pad, block.miny - pad,
                 block.maxx + pad, block.maxy + pad)
@@ -963,7 +964,7 @@ class WallDetectionService(DxfPlanReader):
         ctx = self.context
         heights, thicknesses = [], []
 
-        for outline in self.collect_closed_outlines(ELEVATION_SECTION_LAYERS):
+        for outline in self.collect_closed_outlines(self.layers(*ELEVATION_SECTION_ROLES)):
             if not (MIN_WALL_HEIGHT <= outline.height <= MAX_WALL_HEIGHT):
                 continue
             heights.append(outline.height)
@@ -971,7 +972,7 @@ class WallDetectionService(DxfPlanReader):
                 thicknesses.append(outline.width)
 
         if not heights:
-            box = self.segments_bounding_box(self.collect_segments(ELEVATION_SECTION_LAYERS))
+            box = self.segments_bounding_box(self.collect_segments(self.layers(*ELEVATION_SECTION_ROLES)))
             if not box:
                 logger.warning("Aucune géométrie de mur trouvée sur la coupe %s",
                                self.dxf_path)

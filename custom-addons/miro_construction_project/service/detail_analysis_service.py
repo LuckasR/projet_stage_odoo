@@ -51,9 +51,10 @@ logger = logging.getLogger("detail_analysis_service")
 # CONFIGURATION
 # ============================================================
 
-LEVEL_LAYER = "S-NIV"
-SLAB_LAYER = "S-DAL"
-WARNING_LAYERS = ("X-HYP",)
+# Rôles de calque (noms : convention de calques du chantier, cf. dxf_layers)
+LEVEL_ROLE = "level"
+SLAB_ROLE = "slab"
+WARNING_ROLE = "warning"
 
 # Valeur d'un repère de niveau : « +2.80 », « -0.15 TN », « ±0.00 »
 LEVEL_PATTERN = re.compile(r"^\s*([+\-±]?\s*\d+(?:[.,]\d+)?)\b")
@@ -109,7 +110,7 @@ MAX_STOREY_HEIGHT = 6.0
 # Ouvertures coupées dans les coupes, et leur repère : « F-N0-05 » =
 # fenêtre, niveau 0, n° 05 ; P porte, PF porte-fenêtre, PG porte de garage,
 # B baie libre.
-OPENING_LAYERS = ("A-OUV-FEN", "A-OUV-PRT")
+OPENING_ROLES = ("opening_window", "opening_door")
 OPENING_MARK = re.compile(
     r"^\s*(PF|PG|P|F|B)[\s\-_]?(?:N(\d+)[\s\-_]?)?(\d+)\s*$", re.I)
 OPENING_TYPES = {"F": "window", "P": "door", "PF": "french_window",
@@ -170,8 +171,8 @@ class SectionView:
 
 class DetailAnalysisService(ExecutionPlanReader):
 
-    def __init__(self, dxf_path: str, unit_scale: float = 1.0):
-        super().__init__(dxf_path)
+    def __init__(self, dxf_path: str, unit_scale: float = 1.0, layer_config=None):
+        super().__init__(dxf_path, layer_config=layer_config)
         self.unit_scale = unit_scale or 1.0
         self._placed_texts = None
 
@@ -218,15 +219,17 @@ class DetailAnalysisService(ExecutionPlanReader):
     # --------------------------------------------------------
 
     def _level_marks(self) -> List[LevelMark]:
+        level_layers = self.layers(LEVEL_ROLE)
         lines = []
-        for e in self.msp.query(f'LINE[layer=="{LEVEL_LAYER}"]'):
-            (x1, y1), (x2, y2) = (e.dxf.start.x, e.dxf.start.y), (e.dxf.end.x, e.dxf.end.y)
-            if abs(y1 - y2) < 1e-6 and abs(x2 - x1) > 1e-6:
-                lines.append((min(x1, x2), max(x1, x2), y1))
+        for layer in level_layers:
+            for e in self.msp.query(f'LINE[layer=="{layer}"]'):
+                (x1, y1), (x2, y2) = (e.dxf.start.x, e.dxf.start.y), (e.dxf.end.x, e.dxf.end.y)
+                if abs(y1 - y2) < 1e-6 and abs(x2 - x1) > 1e-6:
+                    lines.append((min(x1, x2), max(x1, x2), y1))
 
         marks = []
         for text in self.placed_texts():
-            if text.layer != LEVEL_LAYER:
+            if text.layer not in level_layers:
                 continue
             match = LEVEL_PATTERN.match(text.text)
             if not match:
@@ -316,10 +319,10 @@ class DetailAnalysisService(ExecutionPlanReader):
         cuts = self._cut_positions()
         labels = [(t, OPENING_MARK.match(t.text)) for t in self.placed_texts()]
         labels = [(t, m) for t, m in labels if m]
-        slabs = self.collect_closed_outlines([SLAB_LAYER])
+        slabs = self.collect_closed_outlines(self.layers(SLAB_ROLE))
 
         found, seen = [], set()
-        for outline in self.collect_closed_outlines(list(OPENING_LAYERS)):
+        for outline in self.collect_closed_outlines(self.layers(*OPENING_ROLES)):
             view = next((v for v in sections if v.contains(outline)), None)
             if not view:
                 continue
@@ -376,7 +379,7 @@ class DetailAnalysisService(ExecutionPlanReader):
         self._name_sections(sections)
         cuts = self._cut_positions()
         spans: Dict[str, float] = {}
-        for outline in self.collect_closed_outlines([SLAB_LAYER]):
+        for outline in self.collect_closed_outlines(self.layers(SLAB_ROLE)):
             view = next((v for v in sections if v.contains(outline)), None)
             cut = cuts.get(view.name or "") if view else None
             if not cut or abs(view.elevation(outline.maxy) - top) > 0.03:
@@ -388,7 +391,7 @@ class DetailAnalysisService(ExecutionPlanReader):
     def _section_slabs(self, sections: List[SectionView]) -> List[Tuple[float, float, float]]:
         """(altitude basse, altitude haute, épaisseur) de chaque plancher coupé."""
         slabs = {}
-        for outline in self.collect_closed_outlines([SLAB_LAYER]):
+        for outline in self.collect_closed_outlines(self.layers(SLAB_ROLE)):
             for view in sections:
                 if view.contains(outline):
                     bottom = round(view.elevation(outline.miny), 2)
@@ -576,7 +579,7 @@ class DetailAnalysisService(ExecutionPlanReader):
         seen, warnings = set(), []
         for text in self.placed_texts():
             norm = normalize_text(text.text)
-            if text.layer not in WARNING_LAYERS and "non conforme" not in norm:
+            if text.layer not in self.layers(WARNING_ROLE) and "non conforme" not in norm:
                 continue
             body = re.sub(r"^(non conforme\s*:?\s*|-\s*)", "", norm).strip(" -:")
             if len(body) < 5:

@@ -13,14 +13,14 @@
                     <button name="action_validate" type="object" string="Valider"
                         class="btn-primary" invisible="state != 'submitted'"
                         groups="project.group_project_manager"
-                        confirm="Valider le journal ? Les matières sortiront du stock, l'avancement des phases sera mis à jour et le journal ne pourra plus être modifié."/>
+                        confirm="Valider le journal ? Les lignes pas encore validées le seront (leurs matières sortiront du stock) et le journal ne pourra plus être modifié."/>
                     <button name="action_validate" type="object" string="Valider directement"
                         invisible="state != 'draft'" groups="project.group_project_manager"
-                        confirm="Valider le journal ? Les matières sortiront du stock, l'avancement des phases sera mis à jour et le journal ne pourra plus être modifié."/>
+                        confirm="Valider le journal ? Les lignes pas encore validées le seront (leurs matières sortiront du stock) et le journal ne pourra plus être modifié."/>
                     <button name="action_back_to_draft" type="object" string="Renvoyer en brouillon"
                         invisible="state != 'submitted'"/>
                     <button name="action_copy_previous_team" type="object"
-                        string="Reprendre les travaux du dernier journal" invisible="state != 'draft'"/>
+                        string="Reprendre les travaux du dernier journal" invisible="state == 'validated'"/>
                     <field name="state" widget="statusbar"/>
                 </header>
                 <sheet>
@@ -47,55 +47,105 @@
                     <notebook>
                         <page string="Travaux du jour" name="works">
                             <p class="text-muted">
-                                Une ligne par phase travaillée aujourd'hui. Ouvrez-la pour déclarer la
-                                quantité réalisée, les ouvriers, la consommation (pré-remplie avec les
-                                besoins de la phase), le matériel et les dépenses.
+                                Une ligne par travail sur une phase (une phase peut en avoir plusieurs
+                                dans la journée). Ouvrez-la pour déclarer la quantité réalisée, les
+                                ouvriers, la consommation, le matériel et les dépenses. Une ligne validée
+                                est figée et compte aussitôt : ses matières sortent du stock et son
+                                réalisé entre dans l'avancement. On peut ajouter des lignes jusqu'à la
+                                validation du journal.
                             </p>
                             <field name="work_ids" readonly="state == 'validated'">
-                                <tree>
+                                <tree decoration-muted="state == 'validated'">
                                     <field name="sequence" widget="handle"/>
+                                    <field name="journal_state" column_invisible="1"/>
                                     <field name="task_id"/>
                                     <field name="element_id" optional="show"/>
-                                    <field name="qty_done"/>
+                                    <field name="phase_qty" column_invisible="1"/>
+                                    <field name="qty_done" invisible="not phase_qty"
+                                        decoration-danger="qty_done &lt; 0"/>
                                     <field name="phase_qty_label" string="Unité"/>
+                                    <field name="status" invisible="phase_qty"/>
                                     <field name="progress_after" widget="progressbar"/>
                                     <field name="headcount" sum="Ouvriers"/>
                                     <field name="labor_hours" widget="float_time" sum="Heures"/>
                                     <field name="currency_id" column_invisible="1"/>
                                     <field name="total_cost" sum="Total"/>
+                                    <field name="state" widget="badge" decoration-success="state == 'validated'"/>
+                                    <button name="action_validate_line" type="object" icon="fa-check"
+                                        title="Valider le travail et toutes ses lignes"
+                                        invisible="state == 'validated' or journal_state == 'validated'"
+                                        confirm="Valider ce travail ? Il sera figé avec toutes ses lignes, ses matières sortiront du stock et son réalisé comptera dans l'avancement."/>
+                                    <button name="action_reset_line" type="object" icon="fa-undo"
+                                        title="Remettre en brouillon" groups="project.group_project_manager"
+                                        invisible="state != 'validated' or journal_state == 'validated'"
+                                        confirm="Remettre ce travail en brouillon ? Ses matières reviendront en stock."/>
                                 </tree>
                                 <form>
+                                    <div class="d-flex gap-2 align-items-center mb-2">
+                                        <field name="journal_state" invisible="1"/>
+                                        <field name="state" widget="badge" decoration-success="state == 'validated'"/>
+                                        <span class="text-muted" invisible="state != 'validated'">
+                                            par <field name="validated_by_id" class="oe_inline" readonly="1"/>
+                                            le <field name="validated_on" class="oe_inline" readonly="1"/>
+                                        </span>
+                                        <button name="action_validate_line" type="object" string="Valider le travail"
+                                            class="btn-primary" invisible="state == 'validated' or journal_state == 'validated'"
+                                            confirm="Valider ce travail ? Il sera figé avec toutes ses lignes, ses matières sortiront du stock et son réalisé comptera dans l'avancement."/>
+                                        <button name="action_reset_line" type="object" string="Remettre en brouillon"
+                                            groups="project.group_project_manager"
+                                            invisible="state != 'validated' or journal_state == 'validated'"
+                                            confirm="Remettre ce travail en brouillon ? Ses matières reviendront en stock."/>
+                                    </div>
                                     <group>
                                         <group string="Phase">
                                             <field name="project_id" invisible="1"/>
                                             <field name="state" invisible="1"/>
                                             <field name="currency_id" invisible="1"/>
-                                            <field name="task_id" options="{'no_create': True}"
+                                            <field name="task_id" options="{'no_create': True}" readonly="state == 'validated'"
                                                 domain="[('project_id', '=', parent.project_id), ('child_ids', '=', False)]"/>
                                             <field name="element_id"/>
-                                            <field name="note"/>
+                                            <field name="note" readonly="state == 'validated'"/>
                                         </group>
                                         <group string="Réalisé">
                                             <label for="qty_done" invisible="not phase_qty"/>
                                             <div class="o_row" invisible="not phase_qty">
-                                                <field name="qty_done"/>
+                                                <field name="qty_done" readonly="state == 'validated'"/>
                                                 <span>sur <field name="phase_qty" class="oe_inline"/>
                                                     <field name="phase_qty_label" class="oe_inline"/></span>
                                             </div>
+                                            <field name="correction_reason"
+                                                readonly="state == 'validated'"
+                                                invisible="not phase_qty or qty_done &gt;= 0"
+                                                required="qty_done &lt; 0"
+                                                placeholder="Ex. 2 m³ déclarés en trop hier"/>
                                             <field name="qty_before" invisible="not phase_qty"/>
-                                            <field name="progress_pct" invisible="phase_qty"/>
+                                            <field name="status" widget="radio" invisible="phase_qty" readonly="state == 'validated'"
+                                                options="{'horizontal': true}"/>
                                             <field name="progress_after" widget="progressbar"/>
                                         </group>
                                     </group>
+                                    <div class="text-muted small mb-1">
+                                        Erreur dans un journal précédent ? Saisir une quantité négative
+                                        avec son motif : elle corrige le réalisé cumulé.
+                                    </div>
+                                    <field name="check_html" nolabel="1" readonly="1"/>
                                     <notebook>
                                         <page string="Main-d'œuvre" name="labor">
                                             <field name="labor_line_ids">
                                                 <tree editable="bottom">
                                                     <field name="currency_id" column_invisible="1"/>
-                                                    <field name="employee_id" options="{'no_create': True}"/>
-                                                    <field name="hours" widget="float_time" sum="Heures"/>
-                                                    <field name="hourly_cost" optional="show"/>
+                                                    <field name="journal_state" column_invisible="1"/>
+                                                    <field name="employee_id" options="{'no_create': True}" readonly="state == 'validated'"/>
+                                                    <field name="hours" widget="float_time" sum="Heures" readonly="state == 'validated'"/>
+                                                    <field name="hourly_cost" optional="show" readonly="state == 'validated'"/>
                                                     <field name="cost" sum="Total"/>
+                                                    <field name="state" widget="badge" decoration-success="state == 'validated'"/>
+                                                    <button name="action_validate_line" type="object" icon="fa-check"
+                                                        title="Valider la ligne"
+                                                        invisible="state == 'validated' or journal_state == 'validated'"/>
+                                                    <button name="action_reset_line" type="object" icon="fa-undo"
+                                                        title="Remettre en brouillon" groups="project.group_project_manager"
+                                                        invisible="state != 'validated' or journal_state == 'validated'"/>
                                                 </tree>
                                             </field>
                                         </page>
@@ -108,6 +158,7 @@
                                                 <tree editable="bottom" create="false"
                                                     decoration-danger="planned_qty and quantity &gt; planned_qty">
                                                     <field name="currency_id" column_invisible="1"/>
+                                                    <field name="journal_state" column_invisible="1"/>
                                                     <field name="task_id" column_invisible="1"/>
                                                     <field name="need_id" column_invisible="1"/>
                                                     <field name="category_id"/>
@@ -115,10 +166,17 @@
                                                     <field name="need_qty" optional="hide"/>
                                                     <field name="qty_remaining" optional="show"/>
                                                     <field name="planned_qty"/>
-                                                    <field name="quantity"/>
+                                                    <field name="quantity" readonly="state == 'validated'"/>
                                                     <field name="uom_id"/>
-                                                    <field name="unit_cost" optional="hide"/>
+                                                    <field name="unit_cost" optional="hide" readonly="state == 'validated'"/>
                                                     <field name="cost" sum="Total"/>
+                                                    <field name="state" widget="badge" decoration-success="state == 'validated'"/>
+                                                    <button name="action_validate_line" type="object" icon="fa-check"
+                                                        title="Valider la ligne"
+                                                        invisible="state == 'validated' or journal_state == 'validated'"/>
+                                                    <button name="action_reset_line" type="object" icon="fa-undo"
+                                                        title="Remettre en brouillon" groups="project.group_project_manager"
+                                                        invisible="state != 'validated' or journal_state == 'validated'"/>
                                                 </tree>
                                             </field>
                                         </page>
@@ -126,10 +184,18 @@
                                             <field name="equipment_line_ids">
                                                 <tree editable="bottom">
                                                     <field name="currency_id" column_invisible="1"/>
-                                                    <field name="equipment_id"/>
-                                                    <field name="hours" widget="float_time"/>
-                                                    <field name="hourly_cost" optional="show"/>
+                                                    <field name="journal_state" column_invisible="1"/>
+                                                    <field name="equipment_id" readonly="state == 'validated'"/>
+                                                    <field name="hours" widget="float_time" readonly="state == 'validated'"/>
+                                                    <field name="hourly_cost" optional="show" readonly="state == 'validated'"/>
                                                     <field name="cost" sum="Total"/>
+                                                    <field name="state" widget="badge" decoration-success="state == 'validated'"/>
+                                                    <button name="action_validate_line" type="object" icon="fa-check"
+                                                        title="Valider la ligne"
+                                                        invisible="state == 'validated' or journal_state == 'validated'"/>
+                                                    <button name="action_reset_line" type="object" icon="fa-undo"
+                                                        title="Remettre en brouillon" groups="project.group_project_manager"
+                                                        invisible="state != 'validated' or journal_state == 'validated'"/>
                                                 </tree>
                                             </field>
                                         </page>
@@ -137,9 +203,17 @@
                                             <field name="expense_line_ids">
                                                 <tree editable="bottom">
                                                     <field name="currency_id" column_invisible="1"/>
-                                                    <field name="name"/>
-                                                    <field name="partner_id" optional="show"/>
-                                                    <field name="amount" sum="Total"/>
+                                                    <field name="journal_state" column_invisible="1"/>
+                                                    <field name="name" readonly="state == 'validated'"/>
+                                                    <field name="partner_id" optional="show" readonly="state == 'validated'"/>
+                                                    <field name="amount" sum="Total" readonly="state == 'validated'"/>
+                                                    <field name="state" widget="badge" decoration-success="state == 'validated'"/>
+                                                    <button name="action_validate_line" type="object" icon="fa-check"
+                                                        title="Valider la ligne"
+                                                        invisible="state == 'validated' or journal_state == 'validated'"/>
+                                                    <button name="action_reset_line" type="object" icon="fa-undo"
+                                                        title="Remettre en brouillon" groups="project.group_project_manager"
+                                                        invisible="state != 'validated' or journal_state == 'validated'"/>
                                                 </tree>
                                             </field>
                                         </page>
@@ -156,20 +230,36 @@
                             <field name="site_equipment_line_ids" readonly="state == 'validated'">
                                 <tree editable="bottom">
                                     <field name="currency_id" column_invisible="1"/>
-                                    <field name="equipment_id"/>
-                                    <field name="hours" widget="float_time"/>
-                                    <field name="hourly_cost" optional="show"/>
+                                                    <field name="journal_state" column_invisible="1"/>
+                                    <field name="equipment_id" readonly="state == 'validated'"/>
+                                    <field name="hours" widget="float_time" readonly="state == 'validated'"/>
+                                    <field name="hourly_cost" optional="show" readonly="state == 'validated'"/>
                                     <field name="cost" sum="Total"/>
-                                </tree>
+                                    <field name="state" widget="badge" decoration-success="state == 'validated'"/>
+                                    <button name="action_validate_line" type="object" icon="fa-check"
+                                        title="Valider la ligne"
+                                        invisible="state == 'validated' or journal_state == 'validated'"/>
+                                    <button name="action_reset_line" type="object" icon="fa-undo"
+                                        title="Remettre en brouillon" groups="project.group_project_manager"
+                                        invisible="state != 'validated' or journal_state == 'validated'"/>
+                                                </tree>
                             </field>
                             <separator string="Dépenses"/>
                             <field name="site_expense_line_ids" readonly="state == 'validated'">
                                 <tree editable="bottom">
                                     <field name="currency_id" column_invisible="1"/>
-                                    <field name="name"/>
-                                    <field name="partner_id" optional="show"/>
-                                    <field name="amount" sum="Total"/>
-                                </tree>
+                                                    <field name="journal_state" column_invisible="1"/>
+                                    <field name="name" readonly="state == 'validated'"/>
+                                    <field name="partner_id" optional="show" readonly="state == 'validated'"/>
+                                    <field name="amount" sum="Total" readonly="state == 'validated'"/>
+                                    <field name="state" widget="badge" decoration-success="state == 'validated'"/>
+                                    <button name="action_validate_line" type="object" icon="fa-check"
+                                        title="Valider la ligne"
+                                        invisible="state == 'validated' or journal_state == 'validated'"/>
+                                    <button name="action_reset_line" type="object" icon="fa-undo"
+                                        title="Remettre en brouillon" groups="project.group_project_manager"
+                                        invisible="state != 'validated' or journal_state == 'validated'"/>
+                                                </tree>
                             </field>
                         </page>
                         <page string="Météo et incidents" name="weather">

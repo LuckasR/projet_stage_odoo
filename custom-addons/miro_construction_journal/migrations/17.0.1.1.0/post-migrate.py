@@ -42,8 +42,8 @@ def migrate(cr, version):
         journal_id, task_id = key
         qty_done, pct = progress.get(key, (0.0, 0.0))
         work = Work.search([('journal_id', '=', journal_id), ('task_id', '=', task_id)], limit=1) \
-            or Work.create({'journal_id': journal_id, 'task_id': task_id,
-                            'qty_done': qty_done, 'progress_pct': pct})
+            or Work.create({'journal_id': journal_id, 'task_id': task_id, 'qty_done': qty_done,
+                            'status': 'done' if pct >= 100 else 'doing' if pct > 0 else 'todo'})
         for model, line_id in orphans.get(key, []):
             env[model].browse(line_id).write({'work_id': work.id})
 

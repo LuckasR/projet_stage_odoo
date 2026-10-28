@@ -7,7 +7,7 @@ from odoo import _, models
 from odoo.exceptions import UserError, ValidationError
 
 from ...service.footing_detection_service import (
-    FOOTING_LAYERS,
+    FOOTING_ROLES,
     FootingDetectionService,
 )
 from ...service.plan_analysis import PlanContext
@@ -50,8 +50,9 @@ class ConstructionAnalysisFooting(models.Model):
             raise ValidationError(_(
                 "Aucun ouvrage de fondation détecté sur ce plan. Vérifiez que "
                 "les semelles et longrines sont bien dessinées sur les calques "
-                "%s, et que le plan est classé en vue « Plan ».")
-                % ", ".join(FOOTING_LAYERS))
+                "%s (convention de calques du chantier), et que le plan est "
+                "classé en vue « Plan ».")
+                % service.describe_layers(*FOOTING_ROLES))
 
         # Le dallage du RDC est toujours proposé : sans emprise lisible, sa
         # surface reste vide et le plan de coupes la complète.
@@ -79,7 +80,8 @@ class ConstructionAnalysisFooting(models.Model):
             tmp_path = tmp.name
         try:
             return FootingDetectionService(
-                tmp_path, context=context, unit_scale=unit_scale)
+                tmp_path, context=context, unit_scale=unit_scale,
+                layer_config=dwg._layer_config())
         finally:
             # ezdxf a déjà chargé le document en mémoire : le fichier
             # temporaire n'a plus lieu d'être.

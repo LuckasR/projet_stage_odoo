@@ -3,7 +3,7 @@
 
 {
     'name': "Gestion de Projets de Construction",
-    'version': '17.0.1.0.0',
+    'version': '17.0.1.1.0',
     'category': 'Services/Project',
     'summary': "Extension du module Project pour le suivi de chantiers de construction "
                 "(hiérarchie tâches/sous-tâches en diagramme, avancement, coûts, incidents).",
@@ -41,6 +41,7 @@ spécifiques de la gestion de chantiers de construction :
         'data/construction_phase_template_data.xml',
         'data/construction_opening_data.xml',
         'data/construction_formwork_data.xml',
+        'data/construction_dxf_layer_data.xml',
         'views/project_task_hierarchy_action.xml',
         'views/project_project_views_construction.xml', 
         'views/project_task_views.xml',
@@ -50,6 +51,7 @@ spécifiques de la gestion de chantiers de construction :
         'views/construction_wall_views.xml',
         'views/construction_facade_views.xml',
         'views/construction_element_views.xml',
+        'views/construction_dxf_layer_views.xml',
         'views/construction_opening_views.xml',
         'views/menu_views.xml',
         'data/construction_plan_type_analyzers.xml',

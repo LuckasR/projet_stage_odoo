@@ -112,7 +112,8 @@ class ProjectProject(models.Model):
     def _overview_activity(self, today):
         journals = self.miro_journal_ids
         validated = journals.filtered(lambda j: j.state == 'validated')
-        labor = validated.work_ids.labor_line_ids
+        # Les heures comptent dès que leur ligne est validée
+        labor = journals.work_ids.labor_line_ids.filtered(lambda l: l.state == 'validated')
         last = validated.sorted('date', reverse=True)[:1]
         return {
             'journals': journals.sorted('date', reverse=True)[:6],
@@ -173,6 +174,11 @@ class ProjectProject(models.Model):
             add('danger', _("Date de fin prévue dépassée de %d jour(s).") % -v['days_left'])
         if self.x_task_en_retard_count:
             add('warning', _("%d tâche(s) en retard.") % self.x_task_en_retard_count)
+        to_check = self.tasks.filtered(lambda t: not t.child_ids and t.x_avancement_confiance == 'check')
+        if to_check:
+            add('warning', _("%d phase(s) dont l'avancement est à vérifier (matière, heures ou "
+                             "phase précédente incohérentes) : voir la fiche de la phase.")
+                % len(to_check))
         if kpis['shortage']:
             add('warning', _("%d matériau(x) en stock insuffisant.") % kpis['shortage'])
         if kpis['overrun']:

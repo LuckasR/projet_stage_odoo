@@ -108,6 +108,8 @@
                                 widget="many2one_avatar_user" />
                             <field name="x_maitre_ouvrage" />
                             <field name="x_architecte" />
+                            <field name="dxf_layer_convention_id"
+                                options="{'no_create': True}" />
                         </group>
                         <group string="Localisation &amp; dimensions">
                             <field name="x_adresse_chantier" />

@@ -27,12 +27,16 @@ from __future__ import annotations
 import logging
 import math
 import re
-import unicodedata
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 import ezdxf
 from shapely.geometry import LineString, Point
+
+try:
+    from .dxf_layers import LayerConfig, normalize_text  # noqa: F401 (réexporté)
+except ImportError:  # exécution hors Odoo (tests, scripts)
+    from dxf_layers import LayerConfig, normalize_text  # type: ignore[no-redef] # noqa: F401
 
 logger = logging.getLogger("plan_analysis")
 
@@ -83,16 +87,6 @@ MAX_BLOCK_DEPTH = 3
 # ponctuel : sa longueur doit dépasser sa largeur de plus que l'erreur
 # d'arrondi du dessin.
 SQUARENESS_MARGIN = 1.000001
-
-
-def normalize_text(value: Optional[str]) -> str:
-    """Minuscules, sans accents, espaces normalisés — pour comparer des
-    libellés saisis librement par l'utilisateur (« Façade », « FACADE »)."""
-    if not value:
-        return ""
-    text = unicodedata.normalize("NFKD", str(value))
-    text = "".join(c for c in text if not unicodedata.combining(c))
-    return " ".join(text.lower().split())
 
 
 def normalize_view(value: Optional[str]) -> str:
@@ -222,13 +216,59 @@ class DxfPlanReader:
     """Accès géométrique à un DXF, calque par calque.
 
     Les services métier n'appellent jamais ezdxf directement : ils demandent
-    ici des segments, des contours ou des paires parallèles."""
+    ici des segments, des contours ou des paires parallèles.
 
-    def __init__(self, dxf_path: str):
+    Ils ne connaissent pas non plus le nom des calques : ils demandent un
+    rôle (« mur extérieur », « poteau »), que `layers` traduit en calques
+    réels du dessin d'après la convention de calques du chantier
+    (`layer_config`)."""
+
+    def __init__(self, dxf_path: str, layer_config: Optional[LayerConfig] = None):
         self.dxf_path = dxf_path
         self.doc = ezdxf.readfile(dxf_path)
         self.msp = self.doc.modelspace()
+        self.layer_config = layer_config or LayerConfig.default()
         self._block_content: Optional[List[Tuple[object, str]]] = None
+        self._layer_names: Optional[List[str]] = None
+        self._resolved: Dict[Tuple[str, ...], List[str]] = {}
+
+    # --------------------------------------------------------
+    # Calques : rôle -> calques réels du dessin
+    # --------------------------------------------------------
+
+    def layer_names(self) -> List[str]:
+        """Noms des calques du dessin : table des calques, plus les calques
+        portés par les entités (un DXF mal formé peut en oublier dans la
+        table)."""
+        if self._layer_names is None:
+            names: List[str] = []
+            try:
+                names.extend(layer.dxf.name for layer in self.doc.layers)
+            except Exception as exc:
+                logger.debug("Lecture de la table des calques impossible : %s", exc)
+            for entity in self.msp:
+                name = entity.dxf.get("layer")
+                if name:
+                    names.append(name)
+            self._layer_names = list(dict.fromkeys(names))
+        return self._layer_names
+
+    def layers(self, *roles: str) -> List[str]:
+        """Calques réels du dessin qui jouent ces rôles, selon la convention
+        de calques (noms exacts ou avec joker « * », sans tenir compte de la
+        casse)."""
+        if roles not in self._resolved:
+            self._resolved[roles] = self.layer_config.resolve(self.layer_names(), *roles)
+        return self._resolved[roles]
+
+    def _first_layer(self, *roles: str) -> str:
+        """Premier calque réel de ces rôles, pour étiqueter un ouvrage."""
+        found = self.layers(*roles)
+        return found[0] if found else ""
+
+    def describe_layers(self, *roles: str) -> str:
+        """Noms configurés pour ces rôles, pour les messages à l'utilisateur."""
+        return self.layer_config.describe(*roles)
 
     # --------------------------------------------------------
     # Contenu des blocs insérés (INSERT)

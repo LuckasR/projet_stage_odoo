@@ -73,10 +73,8 @@
             <xpath expr="//page[@name='construction_suivi']" position="before">
                 <page string="Matériaux" name="materials" invisible="not material_need_ids">
                     <div class="mb-2">
-                        <button name="action_declare_consumption" type="object"
-                            string="Déclarer la consommation" class="btn-primary"/>
                         <button name="action_refresh_material_needs" type="object"
-                            string="Recalculer" class="btn-secondary ms-2"
+                            string="Recalculer" class="btn-secondary"
                             confirm="Recalculer les besoins de cette phase, même commencée ? Les besoins déjà commandés ou consommés ne sont pas modifiés."/>
                     </div>
                     <field name="material_need_ids" readonly="1">

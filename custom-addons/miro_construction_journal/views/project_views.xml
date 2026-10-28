@@ -59,12 +59,32 @@
         </field>
     </record>
 
-    <!-- Phase : détail du coût réel -->
+    <!-- Phase : avancement calculé depuis les journaux, contrôles, détail du coût réel -->
     <record id="view_task_form_journal_costs" model="ir.ui.view">
         <field name="name">project.task.form.journal.costs</field>
         <field name="model">project.task</field>
         <field name="inherit_id" ref="miro_construction_project.view_project_task_form_construction"/>
         <field name="arch" type="xml">
+            <xpath expr="//field[@name='x_avancement_manuel']" position="attributes">
+                <attribute name="options">{}</attribute>
+                <attribute name="readonly">1</attribute>
+            </xpath>
+            <xpath expr="//field[@name='x_avancement_global']" position="after">
+                <field name="phase_qty" invisible="1"/>
+                <label for="x_qty_realisee" invisible="child_ids or not phase_qty"/>
+                <div class="o_row" invisible="child_ids or not phase_qty">
+                    <field name="x_qty_realisee" class="oe_inline"/>
+                    <span>sur <field name="phase_qty" class="oe_inline"/>
+                        <field name="phase_qty_label" class="oe_inline"/></span>
+                </div>
+                <field name="x_heures_reelles" invisible="child_ids"/>
+                <field name="x_poids_avancement"/>
+                <field name="x_avancement_confiance" widget="badge" invisible="child_ids"
+                    decoration-success="x_avancement_confiance == 'ok'"
+                    decoration-warning="x_avancement_confiance == 'check'"/>
+                <field name="x_controle_avancement" nolabel="1" readonly="1" colspan="2"
+                    invisible="not x_controle_avancement"/>
+            </xpath>
             <xpath expr="//field[@name='x_cout_reel']" position="after">
                 <field name="x_cout_mo_reel"/>
                 <field name="x_cout_matiere_reel"/>
